@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +21,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/assignment-board`,
       },
     });
 
@@ -38,6 +41,14 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-600">
           Packaging Department Dashboard
         </p>
+
+        {urlError && (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            {urlError === "otp_expired"
+              ? "This login link has expired. Please request a new one."
+              : "Login failed. Please try again."}
+          </p>
+        )}
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>
