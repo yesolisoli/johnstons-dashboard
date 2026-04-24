@@ -27,40 +27,64 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 h-screen w-72 border-r bg-white p-4">
-      <div className="mb-6 rounded-2xl bg-slate-900 p-4 text-white">
-        <p className="text-xs uppercase tracking-wide text-slate-300">
-          Johnston Packers 1995 LTD
-        </p>
-        <h2 className="mt-2 text-lg font-semibold">
-          Packaging Department Dashboard
-        </h2>
+    <aside className="group sticky top-0 h-screen w-24 shrink-0 overflow-hidden border-r bg-white transition-[width] duration-300 ease-out hover:w-80">
+      <div className="flex h-full flex-col px-5 py-5">
+        <div className="mb-8 grid h-16 grid-cols-[56px_1fr] items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+            <span className="text-xl font-bold">J</span>
+          </div>
+
+          <div className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <p className="truncate text-xs uppercase tracking-wide text-slate-500">
+              Johnston Packers 1995 LTD
+            </p>
+            <p className="text-lg font-semibold leading-tight text-slate-900">
+              Packaging Dashboard
+            </p>
+          </div>
+        </div>
+
+        <nav className="flex flex-1 flex-col gap-3">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const active =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  "grid h-14 grid-cols-[56px_1fr] items-center rounded-2xl text-sm font-medium transition-colors",
+                  active
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-700 hover:bg-slate-100"
+                )}
+              >
+                <div className="flex h-14 w-14 items-center justify-center">
+                  <Icon size={20} />
+                </div>
+
+                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="grid h-12 grid-cols-[56px_1fr] items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-white">
+            N
+          </div>
+
+          <div className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <p className="text-sm font-medium text-slate-900">User</p>
+            <p className="text-xs text-slate-500">Account</p>
+          </div>
+        </div>
       </div>
-
-      <nav className="space-y-2">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const active =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-                active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              )}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
     </aside>
   );
 }

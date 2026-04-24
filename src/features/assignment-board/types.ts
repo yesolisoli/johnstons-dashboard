@@ -1,5 +1,3 @@
-// ===== ENUMS =====
-
 export type ShiftCode = "shift_1" | "shift_2" | "shift_3";
 
 export type ModeCode =
@@ -18,8 +16,6 @@ export type EmployeeStatus =
   | "training"
   | "sick"
   | "injured";
-
-// ===== TABLE TYPES (DB 그대로) =====
 
 export type Employee = {
   id: string;
@@ -58,6 +54,12 @@ export type StationAssignment = {
   id: string;
   employee_id: string;
   station_id: string;
+  work_date: string;
+  shift_code: ShiftCode;
+  mode_code: ModeCode;
+};
+
+export type AssignmentBoardFilters = {
   work_date: string;
   shift_code: ShiftCode;
   mode_code: ModeCode;

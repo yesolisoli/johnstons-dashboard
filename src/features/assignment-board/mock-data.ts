@@ -1,20 +1,17 @@
 import type {
+  AssignmentBoardFilters,
   Employee,
-  WorkArea,
-  Station,
   EmployeeDailyStatus,
+  Station,
   StationAssignment,
+  WorkArea,
 } from "./types";
 
-// ===== FILTER (현재 선택 상태) =====
-
-export const mockFilters = {
+export const mockFilters: AssignmentBoardFilters = {
   work_date: "2026-04-16",
   shift_code: "shift_2",
   mode_code: "after_hog_break",
 };
-
-// ===== WORK AREAS =====
 
 export const mockWorkAreas: WorkArea[] = [
   {
@@ -49,9 +46,42 @@ export const mockWorkAreas: WorkArea[] = [
   },
 ];
 
-// ===== STATIONS =====
-
 export const mockStations: Station[] = [
+  {
+    id: "st_forklift",
+    work_area_id: "wa_loading",
+    name: "Operate Forklift",
+    required_headcount: 1,
+    display_order: 1,
+  },
+  {
+    id: "st_loading_support",
+    work_area_id: "wa_loading",
+    name: "Dock Support",
+    required_headcount: 2,
+    display_order: 2,
+  },
+  {
+    id: "st_sorting",
+    work_area_id: "wa_small",
+    name: "Sorting",
+    required_headcount: 2,
+    display_order: 1,
+  },
+  {
+    id: "st_trim",
+    work_area_id: "wa_small",
+    name: "Trim / Pack",
+    required_headcount: 2,
+    display_order: 2,
+  },
+  {
+    id: "st_cutting",
+    work_area_id: "wa_meat",
+    name: "Cutting Table",
+    required_headcount: 2,
+    display_order: 1,
+  },
   {
     id: "st_supervisor",
     work_area_id: "wa_packaging",
@@ -82,8 +112,6 @@ export const mockStations: Station[] = [
   },
 ];
 
-// ===== EMPLOYEES =====
-
 export const mockEmployees: Employee[] = [
   {
     id: "emp_1",
@@ -109,13 +137,32 @@ export const mockEmployees: Employee[] = [
   {
     id: "emp_4",
     employee_code: "E004",
-    full_name: "Yaw / Harpreet",
+    full_name: "Harpreet",
     default_department: "Packaging",
     active: true,
   },
+  {
+    id: "emp_5",
+    employee_code: "E005",
+    full_name: "Daniel",
+    default_department: "Loading Dock",
+    active: true,
+  },
+  {
+    id: "emp_6",
+    employee_code: "E006",
+    full_name: "Mina",
+    default_department: "Small Pro",
+    active: true,
+  },
+  {
+    id: "emp_7",
+    employee_code: "E007",
+    full_name: "Alex",
+    default_department: "Meat Cutting",
+    active: true,
+  },
 ];
-
-// ===== DAILY STATUS =====
 
 export const mockEmployeeStatuses: EmployeeDailyStatus[] = [
   {
@@ -154,9 +201,34 @@ export const mockEmployeeStatuses: EmployeeDailyStatus[] = [
     status: "vacation",
     reason: "Family event",
   },
+  {
+    id: "status_5",
+    employee_id: "emp_5",
+    work_date: "2026-04-16",
+    shift_code: "shift_2",
+    mode_code: "after_hog_break",
+    status: "available",
+    reason: null,
+  },
+  {
+    id: "status_6",
+    employee_id: "emp_6",
+    work_date: "2026-04-16",
+    shift_code: "shift_2",
+    mode_code: "after_hog_break",
+    status: "available",
+    reason: null,
+  },
+  {
+    id: "status_7",
+    employee_id: "emp_7",
+    work_date: "2026-04-16",
+    shift_code: "shift_2",
+    mode_code: "after_hog_break",
+    status: "sick",
+    reason: "Not feeling well",
+  },
 ];
-
-// ===== ASSIGNMENTS =====
 
 export const mockAssignments: StationAssignment[] = [
   {
@@ -179,6 +251,22 @@ export const mockAssignments: StationAssignment[] = [
     id: "assign_3",
     employee_id: "emp_3",
     station_id: "st_feed",
+    work_date: "2026-04-16",
+    shift_code: "shift_2",
+    mode_code: "after_hog_break",
+  },
+  {
+    id: "assign_4",
+    employee_id: "emp_5",
+    station_id: "st_forklift",
+    work_date: "2026-04-16",
+    shift_code: "shift_2",
+    mode_code: "after_hog_break",
+  },
+  {
+    id: "assign_5",
+    employee_id: "emp_6",
+    station_id: "st_sorting",
     work_date: "2026-04-16",
     shift_code: "shift_2",
     mode_code: "after_hog_break",
