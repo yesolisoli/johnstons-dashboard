@@ -1,3 +1,10 @@
+type BoardEmployee = {
+  id: string;
+  full_name: string;
+  employee_code: string | null;
+  status: string;
+};
+
 function isNotNull<T>(value: T | null): value is T {
   return value !== null;
 }
@@ -61,7 +68,7 @@ export function buildAssignmentBoardData({
           (assignment) => assignment.station_id === station.id
         );
 
-        const assignedEmployees = stationAssignments
+        const assignedEmployees: BoardEmployee[] = stationAssignments
           .map((assignment) => {
             const employee = employeeMap.get(assignment.employee_id);
             const status = statusMap.get(assignment.employee_id);
@@ -77,7 +84,7 @@ export function buildAssignmentBoardData({
               status: status?.status ?? "available",
             };
           })
-          .filter(Boolean);
+          .filter(isNotNull);
 
         return {
           ...station,
