@@ -24,7 +24,7 @@ export default async function DashboardLayout({
 
     userEmail = user.email ?? "";
   }
-  console.log("AUTH_ENABLED:", AUTH_ENABLED);
+  
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">

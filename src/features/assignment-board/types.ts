@@ -1,4 +1,4 @@
-export type ShiftCode = "shift_1" | "shift_2" | "shift_3";
+export type ShiftCode = string;
 
 export type ModeCode =
   | "normal"
@@ -17,6 +17,18 @@ export type EmployeeStatus =
   | "sick"
   | "injured";
 
+export type ShiftInfo = {
+  code: ShiftCode;
+  label: string;
+  time_range: string;
+};
+
+export type WorkAreaModeView = {
+  mode_code: ModeCode;
+  label: string;
+  time_range?: string;
+};
+
 export type Employee = {
   id: string;
   employee_code: string | null;
@@ -30,6 +42,7 @@ export type WorkArea = {
   name: string;
   color_hex: string | null;
   display_order: number;
+  mode_views?: WorkAreaModeView[];
 };
 
 export type Station = {
