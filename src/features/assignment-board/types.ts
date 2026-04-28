@@ -8,14 +8,7 @@ export type ModeCode =
   | "lunch"
   | "break_2";
 
-export type EmployeeStatus =
-  | "available"
-  | "absent"
-  | "vacation"
-  | "off_shift"
-  | "training"
-  | "sick"
-  | "injured";
+export type EmployeeStatus = string;
 
 export type ShiftInfo = {
   code: ShiftCode;

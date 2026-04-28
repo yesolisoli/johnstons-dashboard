@@ -29,7 +29,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
         <AppSidebar />
-        <div className="min-h-screen flex-1">
+        <div className="min-h-screen min-w-0 flex-1 overflow-x-hidden">
           <AppHeader userEmail={userEmail} />
           <main className="p-6">{children}</main>
         </div>
