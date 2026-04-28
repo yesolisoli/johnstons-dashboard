@@ -190,11 +190,11 @@ function WorkAreaModal({ initial, onClose, onSave }: {
 // ─── AssignmentGrid ───────────────────────────────────────────────────────────
 
 
-export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, stations: stationsProp, onStationsChange, onWorkAreasChange }: { employees?: Employee[]; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onWorkAreasChange?: (wa: WorkArea[]) => void } = {}) {
+export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange }: { employees?: Employee[]; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
-  const workAreas = localWorkAreas;
+  const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
-    const next = typeof updater === "function" ? updater(localWorkAreas) : updater;
+    const next = typeof updater === "function" ? updater(workAreas) : updater;
     setLocalWorkAreas(next);
     onWorkAreasChange?.(next);
   };

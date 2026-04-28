@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { mockWorkDate } from "../mock-data";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
+import { Modal } from "./modal";
 
 type EmployeeStatus = string;
 
@@ -60,238 +61,281 @@ function ManageStatusesModal({
   const [newColor, setNewColor] = useState(COLOR_OPTIONS[3].className);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-80 rounded-lg bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-base font-semibold text-slate-900">Manage Statuses</h3>
-
-        <div className="mt-3 space-y-1.5 max-h-72 overflow-y-auto">
-          {configs.map((cfg) => (
-            <div key={cfg.code}>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setColorPickerFor(colorPickerFor === cfg.code ? null : cfg.code)}
-                  className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}
-                  title="Click to change color"
-                >
-                  {cfg.label}
-                </button>
-
-                {editingCode === cfg.code ? (
-                  <input
-                    value={editingLabel}
-                    onChange={(e) => setEditingLabel(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && editingLabel.trim()) {
-                        onUpdate(cfg.code, { label: editingLabel.trim() });
-                        setEditingCode(null);
-                      }
-                      if (e.key === "Escape") setEditingCode(null);
-                    }}
-                    onBlur={() => {
-                      if (editingLabel.trim()) onUpdate(cfg.code, { label: editingLabel.trim() });
-                      setEditingCode(null);
-                    }}
-                    className="flex-1 rounded border px-2 py-0.5 text-sm"
-                    autoFocus
-                  />
-                ) : (
-                  <span
-                    className="flex-1 cursor-pointer text-sm text-slate-700 hover:text-blue-600"
-                    onClick={() => { setEditingCode(cfg.code); setEditingLabel(cfg.label); }}
-                    title="Click to edit label"
-                  >
-                    {cfg.label}
-                  </span>
-                )}
-
-                {!cfg.protected ? (
-                  <button
-                    onClick={() => onDelete(cfg.code)}
-                    className="text-slate-300 hover:text-red-400"
-                  >
-                    ×
-                  </button>
-                ) : (
-                  <span className="w-4" />
-                )}
-              </div>
-
-              {colorPickerFor === cfg.code && (
-                <div className="mt-1.5 ml-1 flex flex-wrap gap-1 pb-1">
-                  {COLOR_OPTIONS.map((c) => (
-                    <button
-                      key={c.className}
-                      onClick={() => { onUpdate(cfg.code, { className: c.className }); setColorPickerFor(null); }}
-                      className={`h-5 w-5 rounded border-2 ${c.className} ${cfg.className === c.className ? "border-slate-500" : "border-transparent"}`}
-                      title={c.label}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 border-t pt-3">
-          <p className="mb-2 text-xs font-medium text-slate-500">Add New Status</p>
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); }
-            }}
-            placeholder="Label..."
-            className="w-full rounded border px-2 py-1 text-sm"
-          />
-          <div className="mt-2 flex flex-wrap gap-1">
-            {COLOR_OPTIONS.map((c) => (
-              <button
-                key={c.className}
-                onClick={() => setNewColor(c.className)}
-                className={`h-5 w-5 rounded border-2 ${c.className} ${newColor === c.className ? "border-slate-500" : "border-transparent"}`}
-                title={c.label}
-              />
-            ))}
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            {newLabel && (
-              <span className={`rounded px-2 py-0.5 text-xs font-medium ${newColor}`}>{newLabel}</span>
-            )}
-            <button
-              onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); } }}
-              disabled={!newLabel.trim()}
-              className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-40"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
+    <Modal
+      title="Manage Statuses"
+      onClose={onClose}
+      width="w-80"
+      footer={
+        <div className="flex justify-end">
           <button onClick={onClose} className="rounded-md border px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
             Done
           </button>
         </div>
+      }
+    >
+      <div className="space-y-1.5 max-h-72 overflow-y-auto">
+        {configs.map((cfg) => (
+          <div key={cfg.code}>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setColorPickerFor(colorPickerFor === cfg.code ? null : cfg.code)}
+                className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}
+                title="Click to change color"
+              >
+                {cfg.label}
+              </button>
+
+              {editingCode === cfg.code ? (
+                <input
+                  value={editingLabel}
+                  onChange={(e) => setEditingLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && editingLabel.trim()) {
+                      onUpdate(cfg.code, { label: editingLabel.trim() });
+                      setEditingCode(null);
+                    }
+                    if (e.key === "Escape") setEditingCode(null);
+                  }}
+                  onBlur={() => {
+                    if (editingLabel.trim()) onUpdate(cfg.code, { label: editingLabel.trim() });
+                    setEditingCode(null);
+                  }}
+                  className="flex-1 rounded border px-2 py-0.5 text-sm"
+                  autoFocus
+                />
+              ) : (
+                <span
+                  className="flex-1 cursor-pointer text-sm text-slate-700 hover:text-blue-600"
+                  onClick={() => { setEditingCode(cfg.code); setEditingLabel(cfg.label); }}
+                  title="Click to edit label"
+                >
+                  {cfg.label}
+                </span>
+              )}
+
+              {!cfg.protected ? (
+                <button onClick={() => onDelete(cfg.code)} className="text-slate-300 hover:text-red-400">×</button>
+              ) : (
+                <span className="w-4" />
+              )}
+            </div>
+
+            {colorPickerFor === cfg.code && (
+              <div className="mt-1.5 ml-1 flex flex-wrap gap-1 pb-1">
+                {COLOR_OPTIONS.map((c) => (
+                  <button
+                    key={c.className}
+                    onClick={() => { onUpdate(cfg.code, { className: c.className }); setColorPickerFor(null); }}
+                    className={`h-5 w-5 rounded border-2 ${c.className} ${cfg.className === c.className ? "border-slate-500" : "border-transparent"}`}
+                    title={c.label}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
-    </div>
+
+      <div className="mt-3 border-t pt-3">
+        <p className="mb-2 text-xs font-medium text-slate-500">Add New Status</p>
+        <input
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); }
+          }}
+          placeholder="Label..."
+          className="w-full rounded border px-2 py-1 text-sm"
+        />
+        <div className="mt-2 flex flex-wrap gap-1">
+          {COLOR_OPTIONS.map((c) => (
+            <button
+              key={c.className}
+              onClick={() => setNewColor(c.className)}
+              className={`h-5 w-5 rounded border-2 ${c.className} ${newColor === c.className ? "border-slate-500" : "border-transparent"}`}
+              title={c.label}
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          {newLabel && (
+            <span className={`rounded px-2 py-0.5 text-xs font-medium ${newColor}`}>{newLabel}</span>
+          )}
+          <button
+            onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); } }}
+            disabled={!newLabel.trim()}
+            className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
-// ─── StatusPopover ────────────────────────────────────────────────────────────
+// ─── StatusModal ─────────────────────────────────────────────────────────────
 
-function StatusPopover({
+function StatusModal({
+  employee,
   current,
   configs,
   onSelect,
   onRemove,
   onClose,
 }: {
+  employee: Employee;
   current: EmployeeStatus;
   configs: StatusConfig[];
   onSelect: (s: EmployeeStatus) => void;
   onRemove: () => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [onClose]);
-
   const selectable = configs.filter((c) => c.code !== "assigned");
 
   return (
-    <div ref={ref} className="absolute right-0 top-full z-30 mt-1 w-44 rounded-lg border bg-white shadow-xl">
-      <div className="p-1.5">
+    <Modal
+      title="Update Status"
+      onClose={onClose}
+      footer={
+        <button onClick={onRemove} className="text-sm text-red-500 hover:text-red-600">
+          Remove from roster
+        </button>
+      }
+    >
+      <div className="mb-4">
+        <p className="text-base font-semibold text-slate-800">
+          {employee.full_name}
+          {employee.employee_code && <span className="ml-2 text-sm font-normal text-slate-400">{employee.employee_code}</span>}
+        </p>
+      </div>
+      <div className="space-y-1">
         {selectable.map((cfg) => (
-          <button key={cfg.code} onClick={() => onSelect(cfg.code)}
-            className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${cfg.code === current ? "font-semibold" : ""}`}>
-            <span className={`rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}>
+          <button
+            key={cfg.code}
+            onClick={() => onSelect(cfg.code)}
+            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-slate-50 ${cfg.code === current ? "bg-slate-50" : ""}`}
+          >
+            <span className={`rounded px-2.5 py-0.5 text-xs font-medium ${cfg.className}`}>
               {cfg.label}
             </span>
             {cfg.code === current && <span className="ml-auto text-xs text-slate-400">✓</span>}
           </button>
         ))}
-        <div className="my-1 border-t border-slate-100" />
-        <button onClick={onRemove}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50">
-          Remove from roster
-        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
-// ─── DepartmentPopover ───────────────────────────────────────────────────────
+// ─── AssignmentModal ──────────────────────────────────────────────────────────
 
-function DepartmentPopover({
-  current, workAreas, stations, onSelect, onClear, onAssignStation, onClose,
+function AssignmentModal({
+  employee, workAreas, stations, assignedStationIds, onSave, onClear, onClose,
 }: {
-  current: string | null;
+  employee: Employee;
   workAreas: WorkArea[];
   stations: Station[];
-  onSelect: (deptName: string) => void;
+  assignedStationIds: Set<string>;
+  onSave: (deptName: string, toAdd: string[], toRemove: string[]) => void;
   onClear: () => void;
-  onAssignStation: (stationId: string) => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [previewId, setPreviewId] = useState<string | null>(
-    workAreas.find((wa) => wa.name === current)?.id ?? workAreas[0]?.id ?? null,
+  const [selectedWaId, setSelectedWaId] = useState<string | null>(
+    workAreas.find((wa) => wa.name === employee.default_department)?.id ?? null,
   );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(assignedStationIds));
 
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [onClose]);
+  const waStations = stations.filter((s) => s.work_area_id === selectedWaId);
+  const selectedWa = workAreas.find((wa) => wa.id === selectedWaId);
 
-  const previewStations = stations.filter((s) => s.work_area_id === previewId);
-  const previewWa = workAreas.find((wa) => wa.id === previewId);
+  const toggleStation = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleSave = () => {
+    if (!selectedWa) return;
+    const toAdd = waStations.filter((s) => selectedIds.has(s.id) && !assignedStationIds.has(s.id)).map((s) => s.id);
+    const toRemove = waStations.filter((s) => !selectedIds.has(s.id) && assignedStationIds.has(s.id)).map((s) => s.id);
+    onSave(selectedWa.name, toAdd, toRemove);
+  };
 
   return (
-    <div ref={ref} className="absolute left-0 top-full z-30 mt-1 w-52 rounded-lg border bg-white shadow-xl">
-      <div className="p-1.5">
-        {workAreas.map((wa) => (
-          <button key={wa.id}
-            onClick={() => setPreviewId(wa.id)}
-            onMouseEnter={() => { onSelect(wa.name); setPreviewId(wa.id); }}
-            className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm hover:bg-slate-50 ${wa.name === current ? "font-semibold text-blue-600" : "text-slate-700"}`}>
-            <span>{wa.name}</span>
-            {wa.name === current && <span className="text-xs text-slate-400">✓</span>}
-          </button>
-        ))}
-      </div>
-      {previewStations.length > 0 && (
-        <div className="border-t p-2.5">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {previewWa?.name} Stations
-          </p>
-          {previewStations.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => { if (previewWa) onSelect(previewWa.name); onAssignStation(s.id); onClose(); }}
-              className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700"
-            >
-              <span className="text-slate-300">·</span> {s.name}
+    <Modal
+      title="Assign Department & Station"
+      onClose={onClose}
+      footer={
+        <div className="flex items-center justify-between">
+          {employee.default_department ? (
+            <button onClick={() => { onClear(); onClose(); }} className="text-sm text-red-500 hover:text-red-600">
+              Clear Department
             </button>
-          ))}
+          ) : <div />}
+          <div className="flex gap-2">
+            <button onClick={onClose} className="rounded-md border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+            <button
+              onClick={handleSave}
+              disabled={!selectedWa}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
         </div>
-      )}
-      {current && (
-        <div className="border-t p-1.5">
-          <button onClick={() => { onClear(); onClose(); }}
-            className="flex w-full items-center rounded-md px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50">
-            Clear Department
-          </button>
+      }
+    >
+      <div className="space-y-5">
+        <p className="text-base font-semibold text-slate-800">
+          {employee.full_name}
+          {employee.employee_code && <span className="ml-2 text-sm font-normal text-slate-400">{employee.employee_code}</span>}
+        </p>
+
+        {/* Department */}
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Department</p>
+          <div className="flex flex-wrap gap-2">
+            {workAreas.map((wa) => (
+              <button
+                key={wa.id}
+                onClick={() => { setSelectedWaId(wa.id); setSelectedIds(new Set()); }}
+                className="rounded-md border px-3 py-1.5 text-sm transition-all"
+                style={selectedWaId === wa.id
+                  ? { backgroundColor: wa.color_hex ?? "#334155", color: "#fff", borderColor: "transparent" }
+                  : { backgroundColor: "#fff", color: "#475569", borderColor: "#e2e8f0" }}
+              >
+                {wa.name}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Station */}
+        {waStations.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Station <span className="font-normal normal-case text-slate-400">(optional)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {waStations.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => toggleStation(s.id)}
+                  className="rounded-md border px-3 py-1.5 text-sm transition-all"
+                  style={selectedIds.has(s.id)
+                    ? { backgroundColor: selectedWa?.color_hex ?? "#334155", borderColor: "transparent", color: "#fff" }
+                    : { borderColor: "#e2e8f0", color: "#475569" }}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -319,6 +363,8 @@ export function AssignmentSidebar({
   onUpdate,
   onStatusChange,
   onAssignToStation,
+  onUnassignAll,
+  onUnassignFromStation,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
@@ -330,10 +376,12 @@ export function AssignmentSidebar({
   onUpdate: (id: string, updates: Partial<Employee>) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
+  onUnassignAll: (empId: string) => void;
+  onUnassignFromStation: (empId: string, stationId: string) => void;
 }) {
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>(DEFAULT_STATUS_CONFIGS);
-  const [openPopover, setOpenPopover] = useState<string | null>(null);
-  const [openDeptPopover, setOpenDeptPopover] = useState<string | null>(null);
+  const [statusModalEmp, setStatusModalEmp] = useState<Employee | null>(null);
+  const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [addingEmployee, setAddingEmployee] = useState(false);
@@ -494,48 +542,24 @@ export function AssignmentSidebar({
                       )}
                     </div>
                   )}
-                  <div className="relative">
+                  <div>
                     <button
-                      onClick={() => setOpenDeptPopover(openDeptPopover === emp.id ? null : emp.id)}
+                      onClick={() => setAssignModalEmp(emp)}
                       className="truncate text-xs text-slate-400 hover:text-blue-500"
                     >
                       {emp.default_department ?? "+ Dept"}
                     </button>
-                    {openDeptPopover === emp.id && (
-                      <DepartmentPopover
-                        current={emp.default_department}
-                        workAreas={workAreas}
-                        stations={stations}
-                        onSelect={(name) => onUpdate(emp.id, { default_department: name })}
-                        onClear={() => onUpdate(emp.id, { default_department: null })}
-                        onAssignStation={(stationId) => onAssignToStation(emp.id, stationId)}
-                        onClose={() => setOpenDeptPopover(null)}
-                      />
-                    )}
                   </div>
                   {stationNames.length > 0 && (
                     <p className="truncate text-xs text-blue-400">{stationNames.join(", ")}</p>
                   )}
                 </div>
-                <div className="relative shrink-0">
+                <div className="shrink-0">
                   <button
-                    onClick={() => setOpenPopover(openPopover === emp.id ? null : emp.id)}
+                    onClick={() => setStatusModalEmp(emp)}
                     className={`rounded px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 ${cfg.className}`}>
                     {cfg.label}
                   </button>
-                  {openPopover === emp.id && (
-                    <StatusPopover
-                      current={emp.status}
-                      configs={statusConfigs}
-                      onSelect={(s) => {
-                        if (s === "unassigned") onUpdate(emp.id, { default_department: null });
-                        onStatusChange(emp.id, s);
-                        setOpenPopover(null);
-                      }}
-                      onRemove={() => { onRemove(emp.id); setOpenPopover(null); }}
-                      onClose={() => setOpenPopover(null)}
-                    />
-                  )}
                 </div>
               </div>
             );
@@ -550,6 +574,41 @@ export function AssignmentSidebar({
           onDelete={handleDeleteConfig}
           onAdd={handleAddConfig}
           onClose={() => setShowManage(false)}
+        />
+      )}
+
+      {assignModalEmp && (
+        <AssignmentModal
+          employee={assignModalEmp}
+          workAreas={workAreas}
+          stations={stations}
+          assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id).map((a) => a.station_id))}
+          onSave={(deptName: string, toAdd: string[], toRemove: string[]) => {
+            onUpdate(assignModalEmp.id, { default_department: deptName });
+            toAdd.forEach((sid) => onAssignToStation(assignModalEmp.id, sid));
+            toRemove.forEach((sid) => onUnassignFromStation(assignModalEmp.id, sid));
+            setAssignModalEmp(null);
+          }}
+          onClear={() => {
+            onUpdate(assignModalEmp.id, { default_department: null });
+            onUnassignAll(assignModalEmp.id);
+          }}
+          onClose={() => setAssignModalEmp(null)}
+        />
+      )}
+
+      {statusModalEmp && (
+        <StatusModal
+          employee={statusModalEmp}
+          current={getStatus(statusModalEmp.id)}
+          configs={statusConfigs}
+          onSelect={(s: EmployeeStatus) => {
+            if (s === "unassigned") onUpdate(statusModalEmp.id, { default_department: null });
+            onStatusChange(statusModalEmp.id, s);
+            setStatusModalEmp(null);
+          }}
+          onRemove={() => { onRemove(statusModalEmp.id); setStatusModalEmp(null); }}
+          onClose={() => setStatusModalEmp(null)}
         />
       )}
     </div>

@@ -41,6 +41,12 @@ export function AssignmentBoardClient() {
     setAssignments((prev) => prev.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)));
   };
 
+  const handleUnassignAll = (employeeId: string) =>
+    setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
+
+  const handleUnassignFromStation = (employeeId: string, stationId: string) =>
+    setAssignments((prev) => prev.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId)));
+
   const handleQuickAssign = (employeeId: string, stationId: string) => {
     const wa = workAreas.find((w) => stations.find((s) => s.id === stationId)?.work_area_id === w.id);
     const defaultMode: ModeCode = (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? "normal";
@@ -60,6 +66,8 @@ export function AssignmentBoardClient() {
         onUpdate={handleUpdate}
         onStatusChange={handleStatusChange}
         onAssignToStation={handleQuickAssign}
+        onUnassignAll={handleUnassignAll}
+        onUnassignFromStation={handleUnassignFromStation}
       />
       <div className="min-w-0 flex-1 overflow-x-hidden">
         <AssignmentGrid
@@ -67,6 +75,7 @@ export function AssignmentBoardClient() {
           disabledEmployeeIds={disabledIds}
           assignments={assignments}
           stations={stations}
+          workAreas={workAreas}
           onAssign={handleAssign}
           onUnassign={handleUnassign}
           onStationsChange={setStations}
