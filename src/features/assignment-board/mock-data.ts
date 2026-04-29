@@ -79,14 +79,24 @@ export const mockStations: Station[] = [
 export const mockEmployees: Employee[] = [
   { id: "emp_1", employee_code: "E001", full_name: "Margareta", default_department: "Packaging", active: true },
   { id: "emp_2", employee_code: "E002", full_name: "Oana", default_department: "Packaging", active: true },
-  { id: "emp_3", employee_code: "E003", full_name: "Josh Miller", default_department: "Packaging", active: true },
-  { id: "emp_4", employee_code: "E004", full_name: "Harpreet", default_department: "Packaging", active: true },
+  { id: "emp_3", employee_code: "E003", full_name: "Josh Miller", default_department: "Meat Cutting", active: true },
+  { id: "emp_4", employee_code: "E004", full_name: "Harpreet", default_department: "Meat Cutting", active: true },
   { id: "emp_5", employee_code: "E005", full_name: "Daniel", default_department: "Loading Dock", active: true },
   { id: "emp_6", employee_code: "E006", full_name: "Mina", default_department: "Small Pro", active: true },
   { id: "emp_7", employee_code: "E007", full_name: "Alex", default_department: "Meat Cutting", active: true },
   { id: "emp_8", employee_code: "E008", full_name: "Ryan Cooper", default_department: "Loading Dock", active: true },
   { id: "emp_9", employee_code: "E009", full_name: "Alberto", default_department: "Packaging", active: true },
   { id: "emp_10", employee_code: "E010", full_name: "Anthony", default_department: "Packaging", active: true },
+  { id: "emp_11", employee_code: "E011", full_name: "Sandra Kowalski", default_department: "Processing Floor", active: true },
+  { id: "emp_12", employee_code: "E012", full_name: "James Nguyen", default_department: "Meat Cutting", active: true },
+  { id: "emp_13", employee_code: "E013", full_name: "Priya Sharma", default_department: "Packaging", active: true },
+  { id: "emp_14", employee_code: "E014", full_name: "Carlos Reyes", default_department: "Loading Dock", active: true },
+  { id: "emp_15", employee_code: "E015", full_name: "Elena Vasquez", default_department: "Small Pro", active: true },
+  { id: "emp_16", employee_code: "E016", full_name: "Tommy Larsen", default_department: "Meat Cutting", active: true },
+  { id: "emp_17", employee_code: "E017", full_name: "Fatima Al-Hassan", default_department: "Processing Floor", active: true },
+  { id: "emp_18", employee_code: "E018", full_name: "David Park", default_department: "Packaging", active: true },
+  { id: "emp_19", employee_code: "E019", full_name: "Nina Petrov", default_department: "Small Pro", active: true },
+  { id: "emp_20", employee_code: "E020", full_name: "Marcus Williams", default_department: "Loading Dock", active: true },
 ];
 
 export const mockEmployeeStatuses: EmployeeDailyStatus[] = [

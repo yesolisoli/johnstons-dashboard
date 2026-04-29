@@ -24,11 +24,8 @@ import type {
 
 function EmployeeCard({ employee, onRemove }: { employee: Employee; onRemove: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md bg-white px-3 py-2 text-sm shadow-sm">
-      <div>
-        <p className="font-medium text-slate-900">{employee.full_name}</p>
-        {employee.employee_code && <p className="text-xs text-slate-500">{employee.employee_code}</p>}
-      </div>
+    <div className="flex items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm">
+      <p className="font-bold text-slate-600">{employee.full_name}</p>
       <button onClick={onRemove} className="text-slate-300 transition-colors hover:text-red-400">
         ×
       </button>
@@ -71,46 +68,49 @@ function AssignmentCell({
   const available = allEmployees.filter((e) => !assignedIds.has(e.id) && !disabledEmployeeIds?.has(e.id));
 
   return (
-    <div ref={ref} className="relative space-y-2">
-      {assignedEmployees.map((emp) => (
-        <EmployeeCard
-          key={emp.id}
-          employee={emp}
-          onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
-        />
-      ))}
-      {assignedEmployees.length === 0 && !isOpen && (
-        <div className="rounded-md border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-400">
-          No assignment
-        </div>
-      )}
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen((v) => !v)}
-          className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 py-1.5 text-sm text-slate-400 transition-colors hover:border-slate-400 hover:text-slate-600"
-        >
-          + Add
-        </button>
-        {isOpen && (
-          <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-lg border bg-white shadow-xl">
-            <div className="p-2">
-              {available.length > 0 ? (
-                available.map((emp) => (
-                  <button
-                    key={emp.id}
-                    onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); }}
-                    className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-slate-50"
-                  >
-                    <span className="text-sm font-medium text-slate-800">{emp.full_name}</span>
-                    {emp.employee_code && <span className="text-xs text-slate-400">{emp.employee_code}</span>}
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-2 text-sm text-slate-400">No more staff available</p>
-              )}
-            </div>
+    <div ref={ref} className="relative">
+      <div className="flex items-center gap-2">
+        {assignedEmployees.length === 0 && !isOpen && (
+          <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-400" style={{ minHeight: "2.5rem" }}>
+            No assignment
           </div>
         )}
+        {assignedEmployees.map((emp) => (
+          <div key={emp.id} className="flex-1">
+            <EmployeeCard
+              employee={emp}
+              onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
+            />
+          </div>
+        ))}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-600"
+          >
+            +
+          </button>
+          {isOpen && (
+            <div className="absolute right-0 top-full z-30 mt-1 w-48 rounded-lg border bg-white shadow-xl">
+              <div className="p-2">
+                {available.length > 0 ? (
+                  available.map((emp) => (
+                    <button
+                      key={emp.id}
+                      onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); }}
+                      className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-slate-50"
+                    >
+                      <span className="text-sm font-medium text-slate-800">{emp.full_name}</span>
+                      {emp.employee_code && <span className="text-xs text-slate-400">{emp.employee_code}</span>}
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-sm text-slate-400">No more staff available</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -381,8 +381,24 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
           <thead>
             <tr>
               {/* Station label */}
-              <th className="sticky left-0 z-10 w-48 bg-slate-50 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Station
+              <th className="sticky left-0 z-10 w-48 bg-slate-800 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                <div className="flex items-center justify-between gap-2">
+                  <span>Station</span>
+                  {addingStation ? (
+                    <div className="flex items-center gap-1" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { setAddingStation(false); setNewStationName(""); } }}>
+                      <input value={newStationName} onChange={(e) => setNewStationName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleAddStation(); if (e.key === "Escape") { setAddingStation(false); setNewStationName(""); } }}
+                        placeholder="Name..." className="w-24 rounded border border-slate-600 bg-slate-700 px-2 py-0.5 text-xs font-normal text-white placeholder-slate-400" autoFocus />
+                      <button onClick={handleAddStation} className="text-slate-300 hover:text-white">✓</button>
+                      <button onClick={() => { setAddingStation(false); setNewStationName(""); }} className="text-slate-500 hover:text-slate-300">✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setAddingStation(true)}
+                      className="flex h-5 w-5 items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 hover:border-slate-300 hover:text-white">
+                      +
+                    </button>
+                  )}
+                </div>
               </th>
 
               {/* Shift column headers */}
@@ -436,11 +452,11 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
             </tr>
           </thead>
 
-          <tbody>
+          <tbody style={{ backgroundColor: color + "1a" }}>
             {workAreaStations.map((station) => (
-              <tr key={station.id} className="group border-t hover:bg-slate-50/50">
+              <tr key={station.id} className="group border-t">
                 {/* Station name */}
-                <td className="sticky left-0 z-10 bg-white px-5 py-4 align-top group-hover:bg-slate-50/50">
+                <td className="sticky left-0 z-10 bg-slate-800 px-5 py-4 align-top group-hover:bg-slate-700">
                   {editingStationId === station.id ? (
                     <div className="flex flex-col gap-1.5">
                       <input value={editingStationName} onChange={(e) => setEditingStationName(e.target.value)}
@@ -453,13 +469,13 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="cursor-pointer text-sm italic text-slate-700 hover:text-blue-600"
+                      <span className="cursor-pointer text-sm italic text-slate-200 hover:text-white"
                         onDoubleClick={() => { setEditingStationId(station.id); setEditingStationName(station.name); }}
                         title="Double-click to edit">
                         {station.name}
                       </span>
                       <button onClick={() => handleDeleteStation(station.id)}
-                        className="ml-auto hidden text-slate-300 hover:text-red-400 group-hover:block">×</button>
+                        className="ml-auto hidden text-slate-500 hover:text-red-400 group-hover:block">×</button>
                     </div>
                   )}
                 </td>
@@ -478,26 +494,6 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
             ))}
           </tbody>
 
-          <tfoot>
-            <tr>
-              <td colSpan={currentShifts.length + 2} className="border-t border-slate-100 px-5 py-3">
-                {addingStation ? (
-                  <div className="flex items-center gap-2">
-                    <input value={newStationName} onChange={(e) => setNewStationName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleAddStation(); if (e.key === "Escape") { setAddingStation(false); setNewStationName(""); } }}
-                      placeholder="Station name..." className="rounded-md border px-3 py-1.5 text-sm" autoFocus />
-                    <button onClick={handleAddStation} className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white">Add</button>
-                    <button onClick={() => { setAddingStation(false); setNewStationName(""); }} className="text-sm text-slate-500">Cancel</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setAddingStation(true)}
-                    className="flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-4 py-1.5 text-sm text-slate-500 hover:border-slate-400 hover:text-slate-700">
-                    + Add Station
-                  </button>
-                )}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
