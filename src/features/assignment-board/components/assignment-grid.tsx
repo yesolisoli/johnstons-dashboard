@@ -22,9 +22,41 @@ import type {
 
 // ─── EmployeeCard ─────────────────────────────────────────────────────────────
 
-function EmployeeCard({ employee, onRemove }: { employee: Employee; onRemove: () => void }) {
+function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove }: {
+  employee: Employee;
+  stationId: string;
+  shiftCode: ShiftCode;
+  modeCode: ModeCode;
+  onRemove: () => void;
+}) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      employeeId: employee.id,
+      fromStationId: stationId,
+      fromShiftCode: shiftCode,
+      fromModeCode: modeCode,
+    }));
+    const ghost = document.createElement("div");
+    ghost.textContent = employee.full_name;
+    Object.assign(ghost.style, {
+      position: "fixed", top: "-200px", left: "-200px",
+      background: "white", padding: "6px 12px", borderRadius: "6px",
+      fontSize: "13px", fontWeight: "600", color: "#475569",
+      boxShadow: "0 4px 14px rgba(0,0,0,0.18)", border: "1px solid #e2e8f0",
+      whiteSpace: "nowrap", pointerEvents: "none",
+    });
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+    setTimeout(() => document.body.removeChild(ghost), 0);
+  };
+
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm">
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      className="flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
+    >
       <p className="font-bold text-slate-600">{employee.full_name}</p>
       <button onClick={onRemove} className="text-slate-300 transition-colors hover:text-red-400">
         ×
@@ -36,11 +68,12 @@ function EmployeeCard({ employee, onRemove }: { employee: Employee; onRemove: ()
 // ─── AssignmentCell ───────────────────────────────────────────────────────────
 
 function AssignmentCell({
-  stationId, shiftCode, modeCode, assignments, allEmployees, disabledEmployeeIds, onAssign, onRemove,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, disabledEmployeeIds, onAssign, onRemove,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
   modeCode: ModeCode;
+  color: string;
   assignments: StationAssignment[];
   allEmployees: Employee[];
   disabledEmployeeIds?: Set<string>;
@@ -48,6 +81,7 @@ function AssignmentCell({
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -67,22 +101,58 @@ function AssignmentCell({
     .filter((e): e is Employee => !!e && !disabledEmployeeIds?.has(e.id));
   const available = allEmployees.filter((e) => !assignedIds.has(e.id) && !disabledEmployeeIds?.has(e.id));
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => setIsDragOver(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const { employeeId, fromStationId, fromShiftCode, fromModeCode } = JSON.parse(e.dataTransfer.getData("application/json"));
+      if (fromStationId === stationId && fromShiftCode === shiftCode && fromModeCode === modeCode) return;
+      if (assignedIds.has(employeeId)) return;
+      if (fromStationId) onRemove(employeeId, fromStationId, fromShiftCode, fromModeCode);
+      onAssign(employeeId, stationId, shiftCode, modeCode);
+    } catch {}
+  };
+
   return (
-    <div ref={ref} className="relative">
-      <div className="flex items-center gap-2">
-        {assignedEmployees.length === 0 && !isOpen && (
-          <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-400" style={{ minHeight: "2.5rem" }}>
-            No assignment
-          </div>
-        )}
-        {assignedEmployees.map((emp) => (
-          <div key={emp.id} className="flex-1">
+    <div
+      ref={ref}
+      className="relative h-full min-h-12 rounded-md transition-all"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={isDragOver ? { backgroundColor: color + "22", outline: `2px solid ${color}99`, outlineOffset: "2px" } : {}}
+    >
+      <div
+        className="flex items-start gap-2"
+      >
+        <div className="flex flex-1 flex-col gap-1.5">
+          {assignedEmployees.length === 0 && !isOpen && (
+            <div
+              className="flex items-center justify-center rounded-md border border-dashed px-3 py-2 text-sm transition-colors"
+              style={{ minHeight: "2.5rem", ...(isDragOver ? { borderColor: color, color } : { borderColor: "#cbd5e1", color: "#94a3b8" }) }}
+            >
+              {isDragOver ? "Drop here" : "No assignment"}
+            </div>
+          )}
+          {assignedEmployees.map((emp) => (
             <EmployeeCard
+              key={emp.id}
               employee={emp}
+              stationId={stationId}
+              shiftCode={shiftCode}
+              modeCode={modeCode}
               onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
             />
-          </div>
-        ))}
+          ))}
+        </div>
         <div className="relative shrink-0">
           <button
             onClick={() => setIsOpen((v) => !v)}
@@ -91,7 +161,7 @@ function AssignmentCell({
             +
           </button>
           {isOpen && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-48 rounded-lg border bg-white shadow-xl">
+            <div className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg border bg-white shadow-xl">
               <div className="p-2">
                 {available.length > 0 ? (
                   available.map((emp) => (
@@ -116,7 +186,7 @@ function AssignmentCell({
   );
 }
 
-// ─── WorkAreaModal ────────────────────────────────────────────────────────────
+// ─── WorkAreaModal ──────────────────────────────────────────────────────────
 
 function WorkAreaModal({ initial, onClose, onSave }: {
   initial?: WorkArea;
@@ -190,7 +260,7 @@ function WorkAreaModal({ initial, onClose, onSave }: {
 // ─── AssignmentGrid ───────────────────────────────────────────────────────────
 
 
-export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange }: { employees?: Employee[]; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void } = {}) {
+export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange }: { employees?: Employee[]; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
@@ -217,7 +287,8 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
   };
   const employees = (employeesProp ?? mockEmployees).filter((e) => e.active);
 
-  const [selectedWorkAreaId, setSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
+  const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
+  const selectedWorkAreaId = selectedWorkAreaIdProp ?? localSelectedWorkAreaId;
   const [selectedMode, setSelectedMode] = useState<ModeCode>("normal");
 
   // Shift editing state
@@ -241,7 +312,8 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
     .sort((a, b) => a.display_order - b.display_order);
 
   const selectWorkArea = (waId: string) => {
-    setSelectedWorkAreaId(waId);
+    setLocalSelectedWorkAreaId(waId);
+    onWorkAreaChange?.(waId);
     const wa = workAreas.find((w) => w.id === waId);
     setSelectedMode(wa?.mode_views?.[0]?.mode_code ?? "normal");
     setEditingShift(null);
@@ -338,9 +410,9 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
   const color = selectedWorkArea?.color_hex ?? "#334155";
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="flex h-full min-w-0 flex-col gap-4">
       {/* Work Area Tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className="shrink-0 flex flex-wrap items-center gap-2">
         {sortedWorkAreas.map((wa) => (
           <button key={wa.id} onClick={() => selectWorkArea(wa.id)} onDoubleClick={() => setWorkAreaModal(wa)} title="Double-click to edit"
             className="cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all"
@@ -352,11 +424,17 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
           className="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-500 hover:border-slate-400 hover:text-slate-700">
           + Add Dept
         </button>
+        <button
+          onClick={() => onClearWorkArea?.(selectedWorkAreaId)}
+          className="ml-auto rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        >
+          Clear All
+        </button>
       </div>
 
       {/* Mode toggle */}
       {hasModes && (
-        <div className="flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2">
           <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">Mode:</span>
           {selectedWorkArea.mode_views!.map((mv) => (
             <button
@@ -376,9 +454,9 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
       )}
 
       {/* Table */}
-      <div className="max-w-full overflow-x-auto rounded-lg border bg-white shadow-sm">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-white shadow-sm">
         <table className="w-full border-collapse" style={{ minWidth: "max-content" }}>
-          <thead>
+          <thead className="sticky top-0 z-20">
             <tr>
               {/* Station label */}
               <th className="sticky left-0 z-10 w-48 bg-slate-800 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
@@ -454,9 +532,9 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
 
           <tbody style={{ backgroundColor: color + "1a" }}>
             {workAreaStations.map((station) => (
-              <tr key={station.id} className="group border-t">
+              <tr key={station.id} className="group border-t" style={{ borderColor: color + "40" }}>
                 {/* Station name */}
-                <td className="sticky left-0 z-10 bg-slate-800 px-5 py-4 align-top group-hover:bg-slate-700">
+                <td className="sticky left-0 z-10 border-t bg-slate-800 px-5 py-4 align-top group-hover:bg-slate-700" style={{ borderColor: "#475569" }}>
                   {editingStationId === station.id ? (
                     <div className="flex flex-col gap-1.5">
                       <input value={editingStationName} onChange={(e) => setEditingStationName(e.target.value)}
@@ -482,9 +560,11 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
 
                 {/* Assignment cells */}
                 {currentShifts.map((shift) => (
-                  <td key={shift.code} className="px-4 py-4 align-top">
-                    <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode}
-                      assignments={assignments} allEmployees={employees} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} />
+                  <td key={shift.code} className="h-px p-0 align-top">
+                    <div className="h-full px-4 py-4">
+                      <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
+                        assignments={assignments} allEmployees={employees} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} />
+                    </div>
                   </td>
                 ))}
 

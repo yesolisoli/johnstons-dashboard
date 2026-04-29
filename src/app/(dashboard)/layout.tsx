@@ -26,12 +26,12 @@ export default async function DashboardLayout({
   }
   
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="flex">
+    <div className="h-screen overflow-hidden bg-slate-100">
+      <div className="flex h-full">
         <AppSidebar />
-        <div className="min-h-screen min-w-0 flex-1 overflow-x-hidden">
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <AppHeader userEmail={userEmail} />
-          <main className="p-6">{children}</main>
+          <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
     </div>

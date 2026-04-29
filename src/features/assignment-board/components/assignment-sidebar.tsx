@@ -30,8 +30,6 @@ const COLOR_OPTIONS: { label: string; className: string }[] = [
 const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
   { code: "available",  label: "Available",  className: "bg-green-100 text-green-700",  protected: true },
   { code: "assigned",   label: "Assigned",   className: "bg-blue-100 text-blue-700",    protected: true },
-  { code: "unassigned", label: "Unassigned", className: "bg-slate-200 text-slate-500",  protected: true },
-  { code: "absent",     label: "Absent",     className: "bg-red-100 text-red-600" },
   { code: "sick",       label: "Sick",       className: "bg-red-100 text-red-600" },
   { code: "vacation",   label: "Vacation",   className: "bg-yellow-100 text-yellow-700" },
   { code: "injured",    label: "Injured",    className: "bg-orange-100 text-orange-700" },
@@ -174,59 +172,6 @@ function ManageStatusesModal({
   );
 }
 
-// ─── StatusModal ─────────────────────────────────────────────────────────────
-
-function StatusModal({
-  employee,
-  current,
-  configs,
-  onSelect,
-  onRemove,
-  onClose,
-}: {
-  employee: Employee;
-  current: EmployeeStatus;
-  configs: StatusConfig[];
-  onSelect: (s: EmployeeStatus) => void;
-  onRemove: () => void;
-  onClose: () => void;
-}) {
-  const selectable = configs.filter((c) => c.code !== "assigned");
-
-  return (
-    <Modal
-      title="Update Status"
-      onClose={onClose}
-      footer={
-        <button onClick={onRemove} className="w-full rounded-md border border-red-200 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:border-red-300 transition-colors">
-          Remove from roster
-        </button>
-      }
-    >
-      <div className="mb-4">
-        <p className="text-base font-semibold text-slate-800">
-          {employee.full_name}
-          {employee.employee_code && <span className="ml-2 text-sm font-normal text-slate-400">{employee.employee_code}</span>}
-        </p>
-      </div>
-      <div className="space-y-1">
-        {selectable.map((cfg) => (
-          <button
-            key={cfg.code}
-            onClick={() => onSelect(cfg.code)}
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-slate-50 ${cfg.code === current ? "bg-slate-50" : ""}`}
-          >
-            <span className={`rounded px-2.5 py-0.5 text-xs font-medium ${cfg.className}`}>
-              {cfg.label}
-            </span>
-            {cfg.code === current && <span className="ml-auto text-xs text-slate-400">✓</span>}
-          </button>
-        ))}
-      </div>
-    </Modal>
-  );
-}
-
 // ─── AssignmentModal ──────────────────────────────────────────────────────────
 
 function AssignmentModal({
@@ -345,119 +290,190 @@ function AssignmentModal({
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, color = "text-slate-900", bg = "bg-slate-50", labelColor = "text-slate-500" }: { label: string; value: string | number; color?: string; bg?: string; labelColor?: string }) {
+function StatCard({ label, value, color = "text-slate-900", bg = "bg-slate-50", labelColor = "text-slate-500", borderColor = "border-slate-200" }: { label: string; value: string | number; color?: string; bg?: string; labelColor?: string; borderColor?: string }) {
   return (
-    <div className={`rounded-lg border p-3 ${bg}`}>
+    <div className={`rounded-lg border p-3 ${bg} ${borderColor}`}>
       <p className={`text-xs font-medium ${labelColor}`}>{label}</p>
       <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );
 }
 
-// ─── DeptCellDropdown ────────────────────────────────────────────────────────
+// ─── DeptSelect ──────────────────────────────────────────────────────────────
 
-function DeptCellDropdown({
-  emp,
-  workAreas,
-  stations,
-  assignments,
-  onUpdateDept,
-  onAssignToStation,
-  onUnassignAll,
-  onUnassignFromStation,
-  onClose,
-}: {
-  emp: Employee;
+function DeptSelect({ value, workAreas, onChange }: {
+  value: string | null;
   workAreas: WorkArea[];
-  stations: Station[];
-  assignments: StationAssignment[];
-  onUpdateDept: (dept: string | null) => void;
-  onAssignToStation: (stationId: string) => void;
-  onUnassignAll: () => void;
-  onUnassignFromStation: (stationId: string) => void;
-  onClose: () => void;
+  onChange: (dept: string | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const [selectedWaId, setSelectedWaId] = useState<string | null>(
-    workAreas.find((wa) => wa.name === emp.default_department)?.id ?? null,
-  );
+  const selectedWa = workAreas.find((wa) => wa.name === value);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, []);
 
-  const assignedStationIds = new Set(
-    assignments.filter((a) => a.employee_id === emp.id).map((a) => a.station_id),
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"
+        style={{ color: selectedWa?.color_hex ?? "#94a3b8" }}
+      >
+        <span>{value ?? "— None —"}</span>
+        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-40 rounded-lg border bg-white shadow-lg">
+          <button
+            onClick={() => { onChange(null); setOpen(false); }}
+            className="w-full px-3 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-50"
+          >
+            — None —
+          </button>
+          {workAreas.map((wa) => (
+            <button
+              key={wa.id}
+              onClick={() => { onChange(wa.name); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
+              style={{ color: wa.color_hex ?? "#475569" }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
+              {wa.name}
+              {value === wa.name && <span className="ml-auto text-slate-300">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
-  const selectedWa = workAreas.find((wa) => wa.id === selectedWaId);
-  const waStations = stations.filter((s) => s.work_area_id === selectedWaId);
+}
 
-  const handleSelectWa = (wa: WorkArea) => {
-    if (wa.id === selectedWaId) return;
-    onUnassignAll();
-    onUpdateDept(wa.name);
-    setSelectedWaId(wa.id);
-  };
+// ─── StationSelect ────────────────────────────────────────────────────────────
 
-  const toggleStation = (stationId: string) => {
-    if (assignedStationIds.has(stationId)) onUnassignFromStation(stationId);
-    else onAssignToStation(stationId);
+function StationSelect({ employeeId, empDept, assignments, stations, workAreas, onAssign, onUnassign }: {
+  employeeId: string;
+  empDept: string | null;
+  assignments: StationAssignment[];
+  stations: Station[];
+  workAreas: WorkArea[];
+  onAssign: (stationId: string) => void;
+  onUnassign: (stationId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const wa = workAreas.find((w) => w.name === empDept);
+  const deptStations = wa ? stations.filter((s) => s.work_area_id === wa.id) : [];
+  const assignedIds = new Set(
+    assignments.filter((a) => a.employee_id === employeeId).map((a) => a.station_id)
+  );
+  const assignedStations = deptStations.filter((s) => assignedIds.has(s.id));
+  const label = assignedStations.length === 0 ? "— None —" : assignedStations.length === 1 ? assignedStations[0].name : `${assignedStations.length} stations`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={!empDept}
+        className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        style={{ color: assignedStations.length > 0 ? (wa?.color_hex ?? "#475569") : "#94a3b8" }}
+      >
+        <span>{label}</span>
+        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {open && deptStations.length > 0 && (
+        <div className="absolute left-0 top-full z-50 mt-0.5 max-h-52 min-w-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
+          {deptStations.map((s) => {
+            const assigned = assignedIds.has(s.id);
+            return (
+              <button
+                key={s.id}
+                onClick={() => { assigned ? onUnassign(s.id) : onAssign(s.id); }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
+                style={{ color: assigned ? (wa?.color_hex ?? "#475569") : "#64748b" }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: assigned ? (wa?.color_hex ?? "#475569") : "#cbd5e1" }} />
+                {s.name}
+                {assigned && <span className="ml-auto text-slate-300">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── StatusSelect ─────────────────────────────────────────────────────────────
+
+function StatusSelect({ value, configs, onChange }: {
+  value: string;
+  configs: StatusConfig[];
+  onChange: (status: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const options = configs.filter((c) => c.code !== "assigned");
+  const current = options.find((c) => c.code === value) ?? options[0];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+    setOpen((v) => !v);
   };
 
   return (
-    <div
-      ref={ref}
-      className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border bg-white shadow-xl"
-    >
-      <div className="py-1">
-        {workAreas.map((wa) => (
-          <button
-            key={wa.id}
-            onClick={() => handleSelectWa(wa)}
-            className="flex w-full items-center px-4 py-2 text-sm hover:bg-slate-50"
-            style={wa.id === selectedWaId ? { color: wa.color_hex ?? undefined, fontWeight: 600 } : { color: "#475569" }}
-          >
-            <span className="flex-1 text-left">{wa.name}</span>
-            {wa.id === selectedWaId && <span className="text-xs text-slate-400">✓</span>}
-          </button>
-        ))}
-      </div>
-
-      {waStations.length > 0 && (
-        <>
-          <div className="border-t" />
-          <div className="py-1">
-            <p className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              {selectedWa?.name} Stations
-            </p>
-            {waStations.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => toggleStation(s.id)}
-                className="flex w-full items-center gap-2 px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
-              >
-                <span className="flex-1 text-left">{s.name}</span>
-                {assignedStationIds.has(s.id) && <span className="text-xs text-blue-500">✓</span>}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {emp.default_department && (
-        <>
-          <div className="border-t" />
-          <button
-            onClick={() => { onUnassignAll(); onUpdateDept(null); onClose(); }}
-            className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-50"
-          >
-            Clear Department
-          </button>
-        </>
+    <div ref={ref} className="relative">
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${current.className}`}
+      >
+        {current.label}
+        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {open && (
+        <div
+          className="fixed z-50 rounded-lg border bg-white shadow-lg"
+          style={{ top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 100) }}
+        >
+          {options.map((cfg) => (
+            <button
+              key={cfg.code}
+              onClick={() => { onChange(cfg.code); setOpen(false); }}
+              className="flex w-full items-center justify-center py-1.5 hover:bg-slate-50"
+            >
+              <span className={`rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}>{cfg.label}</span>
+              {cfg.code === value && <span className="ml-auto text-slate-300 text-xs">✓</span>}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -468,31 +484,31 @@ function DeptCellDropdown({
 function RosterManageModal({
   employees,
   statuses,
-  workAreas,
-  stations,
   assignments,
+  stations,
+  workAreas,
   statusConfigs,
   onAdd,
   onRemove,
   onUpdate,
   onStatusChange,
-  onAssignToStation,
   onUnassignAll,
+  onAssignToStation,
   onUnassignFromStation,
   onClose,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
-  workAreas: WorkArea[];
-  stations: Station[];
   assignments: StationAssignment[];
+  stations: Station[];
+  workAreas: WorkArea[];
   statusConfigs: StatusConfig[];
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Employee>) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
-  onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignAll: (empId: string) => void;
+  onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
   onClose: () => void;
 }) {
@@ -502,7 +518,18 @@ function RosterManageModal({
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [deptDropdownId, setDeptDropdownId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status">("dept");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+  const SortIcon = ({ col }: { col: typeof sortKey }) => (
+    <span className="ml-1 text-slate-400">
+      {sortKey === col ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+    </span>
+  );
 
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
   const getDisplayStatus = (emp: Employee): EmployeeStatus => {
@@ -510,17 +537,28 @@ function RosterManageModal({
     if (s === "available" && emp.default_department) return "assigned";
     return s;
   };
-  const getConfig = (code: string): StatusConfig =>
-    statusConfigs.find((c) => c.code === code) ?? { code, label: code, className: "bg-slate-100 text-slate-600" };
 
   const active = employees.filter((e) => e.active);
 
-  const filtered = active.filter((e) => {
-    if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
-    if (filterStatus && getDisplayStatus(e) !== filterStatus) return false;
-    if (filterDept && e.default_department !== filterDept) return false;
-    return true;
-  });
+  const filtered = active
+    .filter((e) => {
+      if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
+      if (filterStatus && (statuses[e.id] ?? "available") !== filterStatus) return false;
+      if (filterDept && e.default_department !== filterDept) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
+      else if (sortKey === "code") cmp = (a.employee_code ?? "").localeCompare(b.employee_code ?? "");
+      else if (sortKey === "dept") {
+        const aOrder = workAreas.find((w) => w.name === a.default_department)?.display_order ?? 999;
+        const bOrder = workAreas.find((w) => w.name === b.default_department)?.display_order ?? 999;
+        cmp = aOrder - bOrder;
+      }
+      else if (sortKey === "status") cmp = getDisplayStatus(a).localeCompare(getDisplayStatus(b));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -529,7 +567,9 @@ function RosterManageModal({
       return match ? Math.max(max, parseInt(match[1], 10)) : max;
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
-    onAdd({ id: `emp_${Date.now()}`, employee_code: nextCode, full_name: newName.trim(), default_department: null, active: true });
+    const newId = `emp_${Date.now()}`;
+    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), default_department: null, active: true });
+    onStatusChange(newId, "available");
     setNewName("");
   };
 
@@ -542,7 +582,7 @@ function RosterManageModal({
     <Modal
       title="Manage Roster"
       onClose={onClose}
-      width="w-[680px]"
+      width="w-[960px]"
       footer={
         <div className="flex items-center gap-2">
           <input
@@ -579,7 +619,7 @@ function RosterManageModal({
           {statusConfigs.filter((c) => c.code !== "assigned").map((c) => (
             <option key={c.code} value={c.code}>{c.label}</option>
           ))}
-          <option value="assigned">Assigned</option>
+
         </select>
         <select
           value={filterDept}
@@ -596,25 +636,32 @@ function RosterManageModal({
       {/* Employee table */}
       <div className="h-[calc(100vh-320px)] max-h-140 overflow-y-auto rounded-md border">
         <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 bg-slate-50">
+          <thead className="sticky top-0 z-60 bg-slate-800">
             <tr>
-              <th className="border-b px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
-              <th className="border-b px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Code</th>
-              <th className="border-b px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Department</th>
-              <th className="border-b px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
-              <th className="border-b px-4 py-2.5" />
+              {(["name", "code", "dept"] as const).map((col) => (
+                <th key={col} className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                  <button onClick={() => handleSort(col)} className="flex items-center hover:text-white">
+                    {col === "name" ? "Name" : col === "code" ? "Code" : "Department"}
+                    <SortIcon col={col} />
+                  </button>
+                </th>
+              ))}
+              <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Station</th>
+              <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                <button onClick={() => handleSort("status")} className="flex items-center hover:text-white">
+                  Status <SortIcon col="status" />
+                </button>
+              </th>
+              <th className="border-b border-slate-700 px-4 py-2.5" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-slate-400">No employees found</td>
+                <td colSpan={6} className="py-10 text-center text-sm text-slate-400">No employees found</td>
               </tr>
             )}
             {filtered.map((emp) => {
-              const displayStatus = getDisplayStatus(emp);
-              const cfg = getConfig(displayStatus);
-              const wa = workAreas.find((w) => w.name === emp.default_department);
               return (
                 <tr key={emp.id} className="border-b last:border-b-0 hover:bg-slate-50">
                   <td className="px-4 py-2.5">
@@ -643,38 +690,35 @@ function RosterManageModal({
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-xs text-slate-400">{emp.employee_code ?? "—"}</td>
-                  <td className="relative px-4 py-2.5">
-                    <button
-                      onClick={() => setDeptDropdownId(deptDropdownId === emp.id ? null : emp.id)}
-                      className="rounded px-2 py-1 text-xs font-medium hover:bg-slate-100"
-                      style={wa ? { color: wa.color_hex ?? undefined } : { color: "#94a3b8" }}
-                    >
-                      {emp.default_department ?? "— None —"}
-                    </button>
-                    {deptDropdownId === emp.id && (
-                      <DeptCellDropdown
-                        emp={emp}
-                        workAreas={workAreas}
-                        stations={stations}
-                        assignments={assignments}
-                        onUpdateDept={(dept) => onUpdate(emp.id, { default_department: dept })}
-                        onAssignToStation={(sid) => onAssignToStation(emp.id, sid)}
-                        onUnassignAll={() => onUnassignAll(emp.id)}
-                        onUnassignFromStation={(sid) => onUnassignFromStation(emp.id, sid)}
-                        onClose={() => setDeptDropdownId(null)}
-                      />
-                    )}
+                  <td className="px-4 py-2.5">
+                    <DeptSelect
+                      value={emp.default_department ?? null}
+                      workAreas={workAreas}
+                      onChange={(dept) => {
+                        onUpdate(emp.id, { default_department: dept });
+                        if (!dept) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
+                      }}
+                    />
                   </td>
                   <td className="px-4 py-2.5">
-                    <select
+                    <StationSelect
+                      employeeId={emp.id}
+                      empDept={emp.default_department ?? null}
+                      assignments={assignments}
+                      stations={stations}
+                      workAreas={workAreas}
+                      onAssign={(stationId) => onAssignToStation(emp.id, stationId)}
+                      onUnassign={(stationId) => onUnassignFromStation(emp.id, stationId)}
+                    />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <StatusSelect
                       value={statuses[emp.id] ?? "available"}
-                      onChange={(e) => onStatusChange(emp.id, e.target.value)}
-                      className={`rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 focus:border-slate-300 focus:outline-none cursor-pointer ${cfg.className}`}
-                    >
-                      {statusConfigs.filter((c) => c.code !== "assigned").map((c) => (
-                        <option key={c.code} value={c.code}>{c.label}</option>
-                      ))}
-                    </select>
+                      configs={statusConfigs}
+                      onChange={(val) => {
+                        onStatusChange(emp.id, val);
+                      }}
+                    />
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
@@ -702,6 +746,7 @@ export function AssignmentSidebar({
   assignments,
   stations,
   workAreas,
+  selectedWorkAreaId,
   onAdd,
   onRemove,
   onUpdate,
@@ -715,6 +760,7 @@ export function AssignmentSidebar({
   assignments: StationAssignment[];
   stations: Station[];
   workAreas: WorkArea[];
+  selectedWorkAreaId?: string;
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Employee>) => void;
@@ -724,7 +770,6 @@ export function AssignmentSidebar({
   onUnassignFromStation: (empId: string, stationId: string) => void;
 }) {
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>(DEFAULT_STATUS_CONFIGS);
-  const [statusModalEmp, setStatusModalEmp] = useState<Employee | null>(null);
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -733,34 +778,18 @@ export function AssignmentSidebar({
 
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
 
-  const getConfig = (code: string): StatusConfig =>
-    statusConfigs.find((c) => c.code === code) ?? { code, label: code, className: "bg-slate-100 text-slate-600" };
-
   const activeEmployees = employees.filter((e) => e.active);
   const totalStaff = activeEmployees.length;
-
-  const getDisplayStatus = (emp: Employee): EmployeeStatus => {
-    const s = getStatus(emp.id);
-    if (s === "available" && emp.default_department) return "assigned";
-    return s;
-  };
 
   const assignedCount = activeEmployees.filter(
     (e) => e.default_department !== null && getStatus(e.id) === "available",
   ).length;
 
-  const notAssignedCount = activeEmployees.filter((e) => getStatus(e.id) === "unassigned").length;
+  const notAssignedCount = activeEmployees.filter((e) => !e.default_department).length;
 
   const efficiency = totalStaff > 0 ? ((assignedCount / totalStaff) * 100).toFixed(1) : "0.0";
 
 
-  const sorted = [...activeEmployees]
-    .map((e) => ({ ...e, status: getStatus(e.id) }))
-    .sort((a, b) => {
-      if (a.status === "available" && b.status !== "available") return 1;
-      if (a.status !== "available" && b.status === "available") return -1;
-      return a.full_name.localeCompare(b.full_name);
-    });
 
   const handleSaveName = (id: string) => {
     if (editingName.trim()) onUpdate(id, { full_name: editingName.trim() });
@@ -779,32 +808,32 @@ export function AssignmentSidebar({
   };
 
   return (
-    <div className="w-72 shrink-0 space-y-4">
+    <div className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-hidden">
       {/* Today's Status */}
-      <div className="rounded-lg border bg-white p-5 shadow-sm">
+      <div className="shrink-0 rounded-lg border bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Today's Status</p>
           <button
             onClick={() => setShowManage(true)}
-            className="text-xs text-slate-400 hover:text-slate-600"
+            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             title="Manage statuses"
           >
-            ⚙ Manage
+            <Settings size={14} />
           </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <StatCard label="Total Staff" value={totalStaff} bg="bg-slate-50" />
-          <StatCard label="Assigned" value={assignedCount} color="text-green-700" bg="bg-green-50" labelColor="text-green-600" />
-          <StatCard label="Unassigned" value={notAssignedCount} color="text-red-600" bg="bg-red-50" labelColor="text-red-400" />
-          <StatCard label="Efficiency" value={`${efficiency}%`} bg="bg-slate-50" />
+          <StatCard label="Total Staff" value={totalStaff} bg="bg-white" labelColor="text-slate-400" color="text-slate-800" borderColor="border-slate-200" />
+          <StatCard label="Assigned" value={assignedCount} color="text-indigo-700" bg="bg-indigo-50" labelColor="text-indigo-400" borderColor="border-indigo-100" />
+          <StatCard label="Unassigned" value={notAssignedCount} color="text-red-600" bg="bg-red-50" labelColor="text-red-400" borderColor="border-red-100" />
+          <StatCard label="Efficiency" value={`${efficiency}%`} bg="bg-slate-800" labelColor="text-slate-400" color="text-white" borderColor="border-slate-700" />
         </div>
       </div>
 
-      {/* Employee Roster */}
-      <div className="rounded-lg border bg-white shadow-sm">
+      {/* Station Pending */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-lg border bg-white shadow-sm">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-            Employee Roster
+            Station Pending
             <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
               {totalStaff}
             </span>
@@ -817,38 +846,194 @@ export function AssignmentSidebar({
           </button>
         </div>
 
-        <div className="max-h-130 overflow-y-auto">
-          {sorted.map((emp) => {
-            const displayStatus = getDisplayStatus(emp);
-            const cfg = getConfig(displayStatus);
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {(() => {
+            const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
+            const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
+            const noDept = !selectedWa ? activeEmployees.filter((e) => !e.default_department) : [];
+            const unassignedEmps = activeEmployees.filter((e) => !e.default_department);
             return (
-              <div key={emp.id} className="group flex items-center gap-2 border-b px-4 py-2.5 last:border-b-0 hover:bg-slate-50/50">
-                {editingId === emp.id ? (
-                  <input value={editingName} onChange={(e) => setEditingName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(emp.id); if (e.key === "Escape") setEditingId(null); }}
-                    onBlur={() => handleSaveName(emp.id)}
-                    className="flex-1 rounded border px-2 py-0.5 text-sm" autoFocus />
-                ) : (
-                  <p className="cursor-pointer truncate text-sm font-medium text-slate-800 hover:text-blue-600"
-                    onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}
-                    title="Double-click to edit">
-                    {emp.full_name}
-                  </p>
+              <>
+                {visibleWorkAreas.map((wa) => {
+                  const deptEmps = activeEmployees.filter((e) =>
+                    e.default_department === wa.name && !assignments.some((a) => a.employee_id === e.id)
+                  );
+                  if (deptEmps.length === 0) return null;
+                  return (
+                    <div key={wa.id}>
+                      <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#64748b" }} />
+                        <span className="text-xs font-semibold text-slate-600">{wa.name}</span>
+                        <span className="ml-auto text-xs text-slate-400">{deptEmps.length}</span>
+                      </div>
+                      {deptEmps.map((emp) => {
+                        return (
+                          <div
+                            key={emp.id}
+                            className="group flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50"
+                          >
+                            {editingId === emp.id ? (
+                              <input value={editingName} onChange={(e) => setEditingName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(emp.id); if (e.key === "Escape") setEditingId(null); }}
+                                onBlur={() => handleSaveName(emp.id)}
+                                className="flex-1 rounded border px-2 py-0.5 text-sm" autoFocus />
+                            ) : (
+                              <p
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.effectAllowed = "move";
+                                  e.dataTransfer.setData("application/json", JSON.stringify({
+                                    employeeId: emp.id,
+                                    fromStationId: null,
+                                    fromShiftCode: null,
+                                    fromModeCode: null,
+                                  }));
+                                  const ghost = document.createElement("div");
+                                  ghost.textContent = emp.full_name;
+                                  Object.assign(ghost.style, {
+                                    position: "fixed", top: "-200px", left: "0",
+                                    padding: "4px 10px", borderRadius: "6px",
+                                    background: wa.color_hex ?? "#64748b", color: "#fff",
+                                    fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap",
+                                    boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                                  });
+                                  document.body.appendChild(ghost);
+                                  e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+                                  setTimeout(() => document.body.removeChild(ghost), 0);
+                                }}
+                                className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
+                                onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}
+                                title="Drag to assign station · Double-click to edit">
+                                {emp.full_name}
+                              </p>
+                            )}
+                            <StatusSelect
+                              value={getStatus(emp.id)}
+                              configs={statusConfigs}
+                              onChange={(val) => onStatusChange(emp.id, val)}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {unassignedEmps.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                      <span className="h-2 w-2 rounded-full bg-red-300 shrink-0" />
+                      <span className="text-xs font-semibold text-slate-600">Unassigned</span>
+                      <span className="ml-auto text-xs text-slate-400">{unassignedEmps.length}</span>
+                    </div>
+                    {unassignedEmps.map((emp) => {
+                      return (
+                        <div key={emp.id} className="group flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
+                          <p
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("application/json", JSON.stringify({ employeeId: emp.id, fromStationId: null, fromShiftCode: null, fromModeCode: null }));
+                              const ghost = document.createElement("div");
+                              ghost.textContent = emp.full_name;
+                              Object.assign(ghost.style, { position: "fixed", top: "-200px", left: "0", padding: "4px 10px", borderRadius: "6px", background: "#94a3b8", color: "#fff", fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" });
+                              document.body.appendChild(ghost);
+                              e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+                              setTimeout(() => document.body.removeChild(ghost), 0);
+                            }}
+                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
+                          >{emp.full_name}</p>
+                          <StatusSelect
+                            value={getStatus(emp.id)}
+                            configs={statusConfigs}
+                            onChange={(val) => onStatusChange(emp.id, val)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
-                <button
-                  onClick={() => setAssignModalEmp(emp)}
-                  className="shrink-0 text-xs text-slate-400 hover:text-blue-500"
-                >
-                  {emp.default_department ?? "+ Dept"}
-                </button>
-                <button
-                  onClick={() => setStatusModalEmp(emp)}
-                  className={`ml-auto shrink-0 rounded px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 ${cfg.className}`}>
-                  {cfg.label}
-                </button>
-              </div>
+                {/* Assigned section */}
+                {visibleWorkAreas.map((wa) => {
+                  const assignedEmps = activeEmployees.filter((e) =>
+                    e.default_department === wa.name && assignments.some((a) => a.employee_id === e.id)
+                  );
+                  if (assignedEmps.length === 0) return null;
+                  return (
+                    <div key={`assigned-${wa.id}`}>
+                      <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#64748b" }} />
+                        <span className="text-xs font-semibold text-slate-600">{wa.name}</span>
+                        <span className="ml-auto text-xs text-slate-400">{assignedEmps.length}</span>
+                      </div>
+                      {assignedEmps.map((emp) => {
+                        const empStations = [...new Set(assignments.filter((a) => a.employee_id === emp.id).map((a) => stations.find((s) => s.id === a.station_id)?.name).filter(Boolean))];
+                        return (
+                          <div key={emp.id} className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
+                            <p
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("application/json", JSON.stringify({ employeeId: emp.id, fromStationId: null, fromShiftCode: null, fromModeCode: null }));
+                                const ghost = document.createElement("div");
+                                ghost.textContent = emp.full_name;
+                                Object.assign(ghost.style, { position: "fixed", top: "-200px", left: "0", padding: "4px 10px", borderRadius: "6px", background: wa.color_hex ?? "#64748b", color: "#fff", fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" });
+                                document.body.appendChild(ghost);
+                                e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+                                setTimeout(() => document.body.removeChild(ghost), 0);
+                              }}
+                              className="flex-1 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
+                            >{emp.full_name}</p>
+                            <span className="shrink-0 truncate text-xs text-slate-400">{empStations.join(", ")}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {noDept.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                      <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
+                      <span className="text-xs font-semibold text-slate-600">No Department</span>
+                      <span className="ml-auto text-xs text-slate-400">{noDept.length}</span>
+                    </div>
+                    {noDept.map((emp) => {
+                      return (
+                        <div key={emp.id} className="group flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
+                          <p
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("application/json", JSON.stringify({ employeeId: emp.id, fromStationId: null, fromShiftCode: null, fromModeCode: null }));
+                              const ghost = document.createElement("div");
+                              ghost.textContent = emp.full_name;
+                              Object.assign(ghost.style, { position: "fixed", top: "-200px", left: "0", padding: "4px 10px", borderRadius: "6px", background: "#64748b", color: "#fff", fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap", boxShadow: "0 2px 8px rgba(0,0,0,0.18)" });
+                              document.body.appendChild(ghost);
+                              e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+                              setTimeout(() => document.body.removeChild(ghost), 0);
+                            }}
+                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
+                            onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}>
+                            {emp.full_name}
+                          </p>
+                          <button
+                            onClick={() => setAssignModalEmp(emp)}
+                            className="shrink-0 text-xs text-slate-400 hover:text-blue-500">
+                            + Dept
+                          </button>
+                          <StatusSelect
+                            value={getStatus(emp.id)}
+                            configs={statusConfigs}
+                            onChange={(val) => onStatusChange(emp.id, val)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             );
-          })}
+          })()}
         </div>
       </div>
 
@@ -886,35 +1071,21 @@ export function AssignmentSidebar({
         <RosterManageModal
           employees={employees}
           statuses={statuses}
+          assignments={assignments}
+          stations={stations}
           workAreas={workAreas}
           statusConfigs={statusConfigs}
           onAdd={onAdd}
           onRemove={onRemove}
           onUpdate={onUpdate}
-          stations={stations}
-          assignments={assignments}
           onStatusChange={onStatusChange}
-          onAssignToStation={onAssignToStation}
           onUnassignAll={onUnassignAll}
+          onAssignToStation={onAssignToStation}
           onUnassignFromStation={onUnassignFromStation}
           onClose={() => setShowRosterManage(false)}
         />
       )}
 
-      {statusModalEmp && (
-        <StatusModal
-          employee={statusModalEmp}
-          current={getStatus(statusModalEmp.id)}
-          configs={statusConfigs}
-          onSelect={(s: EmployeeStatus) => {
-            if (s === "unassigned") onUpdate(statusModalEmp.id, { default_department: null });
-            onStatusChange(statusModalEmp.id, s);
-            setStatusModalEmp(null);
-          }}
-          onRemove={() => { onRemove(statusModalEmp.id); setStatusModalEmp(null); }}
-          onClose={() => setStatusModalEmp(null)}
-        />
-      )}
     </div>
   );
 }
