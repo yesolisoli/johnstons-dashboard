@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Modal } from "./modal";
 import {
   mockAssignments,
   mockEmployees,
@@ -299,51 +300,85 @@ function WorkAreaModal({ initial, onClose, onSave }: {
     hasModes ? modeCodes.map((mc, i) => ({ mode_code: mc, label: modeLabels[i], time_range: modeTimeRanges[i] || undefined })) : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-96 rounded-lg bg-white p-6 shadow-2xl">
-        <h3 className="text-lg font-semibold text-slate-900">{initial ? "Edit Department" : "Add Department"}</h3>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="text-sm font-medium text-slate-700">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm" placeholder="e.g. Shipping" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700">Color</label>
-            <div className="mt-1 flex items-center gap-3">
+    <Modal
+      title={initial ? "Edit Department" : "Add Department"}
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button
+            onClick={() => name.trim() && onSave(name.trim(), color, buildViews())}
+            disabled={!name.trim()}
+            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+          >
+            {initial ? "Save" : "Add Department"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        {/* Name */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Name</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            placeholder="e.g. Shipping"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+        </div>
+
+        {/* Color */}
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Color</label>
+          <div className="flex items-center gap-3">
+            <label className="relative cursor-pointer">
+              <span className="block h-9 w-9 rounded-lg border-2 border-white shadow-md" style={{ backgroundColor: color }} />
               <input type="color" value={color} onChange={(e) => setColor(e.target.value)}
-                className="h-9 w-14 cursor-pointer rounded-md border" />
-              <span className="text-sm text-slate-500">{color}</span>
-            </div>
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+            </label>
+            <span className="rounded-md bg-slate-50 px-2.5 py-1 font-mono text-sm text-slate-500">{color}</span>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" checked={hasModes} onChange={(e) => setHasModes(e.target.checked)} className="rounded" />
-            Has mode views (e.g. During / After Hog Break)
+        </div>
+
+        {/* Mode views toggle */}
+        <div className="rounded-xl border border-slate-200 p-4">
+          <label className="flex cursor-pointer items-center gap-3">
+            <div className={`relative h-5 w-9 rounded-full transition-colors ${hasModes ? "bg-slate-800" : "bg-slate-200"}`}
+              onClick={() => setHasModes((v) => !v)}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${hasModes ? "translate-x-4" : "translate-x-0.5"}`} />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Has mode views</span>
+            <span className="text-xs text-slate-400">(e.g. Hog Break / After Hog Break)</span>
           </label>
+
           {hasModes && (
-            <div className="space-y-3 pl-5">
+            <div className="mt-4 space-y-3">
               {([0, 1] as const).map((i) => (
-                <div key={i} className="flex gap-2">
-                  <input value={modeLabels[i]}
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-14 shrink-0 text-xs font-medium text-slate-400">Mode {i + 1}</span>
+                  <input
+                    value={modeLabels[i]}
                     onChange={(e) => setModeLabels((prev) => { const n = [...prev] as [string, string]; n[i] = e.target.value; return n; })}
-                    className="flex-1 rounded-md border px-3 py-1.5 text-sm" placeholder={`Mode ${i + 1} label`} />
-                  <input value={modeTimeRanges[i]}
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    placeholder={`Mode ${i + 1} label`}
+                  />
+                  <input
+                    value={modeTimeRanges[i]}
                     onChange={(e) => setModeTimeRanges((prev) => { const n = [...prev] as [string, string]; n[i] = e.target.value; return n; })}
-                    className="w-32 rounded-md border px-3 py-1.5 text-sm" placeholder="05:00 - 09:00" />
+                    className="w-32 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    placeholder="05:00–09:00"
+                  />
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={() => name.trim() && onSave(name.trim(), color, buildViews())} disabled={!name.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-            {initial ? "Save" : "Add"}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -549,7 +584,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           <thead className="sticky top-0 z-20">
             <tr>
               {/* Station label */}
-              <th className="sticky left-0 z-10 w-48 bg-slate-800 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+              <th className="sticky left-0 z-10 w-48 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200">
                 <div className="flex items-center justify-between gap-2">
                   <span>Station</span>
                   {addingStation ? (
@@ -624,8 +659,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
             {workAreaStations.map((station) => (
               <tr key={station.id} className="group border-t" style={{ borderColor: color + "40" }}>
                 {/* Station name */}
-                <td className="sticky left-0 z-10 border-t bg-slate-800 px-5 py-4 align-top group-hover:bg-slate-700" style={{ borderColor: "#475569" }}>
-                  {editingStationId === station.id ? (
+                <td className="sticky left-0 z-10 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0" }}>
+                  {station.protected ? (
+                    <span className="text-sm font-semibold text-slate-800">{station.name}</span>
+                  ) : editingStationId === station.id ? (
                     <div className="flex flex-col gap-1.5">
                       <input value={editingStationName} onChange={(e) => setEditingStationName(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSaveStation(station.id)}
@@ -637,7 +674,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="cursor-pointer text-sm italic text-slate-200 hover:text-white"
+                      <span className="cursor-pointer text-sm italic text-slate-600 hover:text-slate-900"
                         onDoubleClick={() => { setEditingStationId(station.id); setEditingStationName(station.name); }}
                         title="Double-click to edit">
                         {station.name}

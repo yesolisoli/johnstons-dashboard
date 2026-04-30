@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { mockAssignments, mockEmployeeStatuses, mockEmployees, mockStations, mockWorkAreas, mockWorkDate } from "../mock-data";
 import type { Employee, EmployeeStatus, ModeCode, ShiftCode, Station, StationAssignment, WorkArea } from "../types";
 import { AssignmentGrid } from "./assignment-grid";
@@ -92,24 +93,56 @@ export function AssignmentBoardClient() {
     handleAssign(employeeId, stationId, "shift_1", defaultMode);
   };
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
-    <div className="flex h-full items-stretch gap-6">
-      <AssignmentSidebar
-        employees={employees}
-        statuses={statuses}
-        assignments={assignments}
-        stations={stations}
-        workAreas={workAreas}
-        selectedWorkAreaId={selectedWorkAreaId}
-        onAdd={handleAdd}
-        onRemove={handleRemove}
-        onUpdate={handleUpdate}
-        onStatusChange={handleStatusChange}
-        onAssignToStation={handleQuickAssign}
-        onUnassignAll={handleUnassignAll}
-        onUnassignFromStation={handleUnassignFromStation}
-      />
-      <div className="min-w-0 flex-1 overflow-hidden">
+    <div className="flex h-full items-stretch gap-0">
+      {/* Sidebar + collapse toggle */}
+      <div className={`relative flex shrink-0 transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0" : "w-72 opacity-100"}`}>
+        <AssignmentSidebar
+          employees={employees}
+          statuses={statuses}
+          assignments={assignments}
+          stations={stations}
+          workAreas={workAreas}
+          selectedWorkAreaId={selectedWorkAreaId}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+          onUpdate={handleUpdate}
+          onStatusChange={handleStatusChange}
+          onAssignToStation={handleQuickAssign}
+          onUnassignAll={handleUnassignAll}
+          onUnassignFromStation={handleUnassignFromStation}
+        />
+      </div>
+
+      {/* Collapsed bar / toggle */}
+      {sidebarCollapsed ? (
+        <button
+          onClick={() => setSidebarCollapsed(false)}
+          className="group relative flex h-full w-4 shrink-0 cursor-pointer flex-col items-center justify-center gap-1"
+          title="Show sidebar"
+        >
+          {/* thin line */}
+          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 rounded-full bg-slate-200 transition-colors group-hover:bg-slate-400" />
+          {/* arrow chip */}
+          <div className="relative z-10 flex h-7 w-4 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors group-hover:border-slate-400 group-hover:bg-slate-50">
+            <ChevronRight size={11} className="text-slate-400 group-hover:text-slate-600" />
+          </div>
+        </button>
+      ) : (
+        <div className="relative flex w-10 shrink-0 items-center justify-center">
+          <button
+            onClick={() => setSidebarCollapsed(true)}
+            className="z-10 flex h-7 w-4 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm text-slate-400 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+            title="Hide sidebar"
+          >
+            <ChevronLeft size={11} />
+          </button>
+        </div>
+      )}
+
+      <div className={`min-w-0 flex-1 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? "ml-4" : "ml-0"}`}>
         <AssignmentGrid
           employees={employees}
           statuses={statuses}

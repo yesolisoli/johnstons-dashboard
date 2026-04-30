@@ -45,6 +45,7 @@ export type Station = {
   required_headcount: number;
   display_order: number;
   mode_code?: ModeCode;
+  protected?: boolean;
 };
 
 export type EmployeeDailyStatus = {

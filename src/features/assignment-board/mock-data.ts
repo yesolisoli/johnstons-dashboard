@@ -19,25 +19,25 @@ export const mockWorkAreas: WorkArea[] = [
   {
     id: "wa_loading",
     name: "Loading Dock",
-    color_hex: "#1f8b4c",
+    color_hex: "#0f172a",
     display_order: 1,
   },
   {
     id: "wa_small",
     name: "Small Pro",
-    color_hex: "#d89b1d",
+    color_hex: "#0f172a",
     display_order: 2,
   },
   {
     id: "wa_processing",
     name: "Processing Floor",
-    color_hex: "#2f66d0",
+    color_hex: "#0f172a",
     display_order: 3,
   },
   {
     id: "wa_meat",
     name: "Meat Cutting",
-    color_hex: "#7a4cc2",
+    color_hex: "#0f172a",
     display_order: 4,
     mode_views: [
       { mode_code: "hog_break", label: "Hog Break", time_range: "05:00 - 09:00" },
@@ -47,7 +47,7 @@ export const mockWorkAreas: WorkArea[] = [
   {
     id: "wa_packaging",
     name: "Packaging",
-    color_hex: "#cc3232",
+    color_hex: "#0f172a",
     display_order: 5,
     mode_views: [
       { mode_code: "hog_break", label: "Hog Break", time_range: "05:00 - 09:00" },
@@ -58,7 +58,7 @@ export const mockWorkAreas: WorkArea[] = [
 
 export const mockStations: Station[] = [
   // Loading Dock
-  { id: "st_loading_supervisor", work_area_id: "wa_loading", name: "Supervisor / Trucks", required_headcount: 1, display_order: 1 },
+  { id: "st_loading_supervisor", work_area_id: "wa_loading", name: "Supervisor", required_headcount: 1, display_order: 0, protected: true },
   { id: "st_loading_helper_1", work_area_id: "wa_loading", name: "Helper #1", required_headcount: 1, display_order: 2 },
   { id: "st_loading_hogselector", work_area_id: "wa_loading", name: "Hog Selector", required_headcount: 1, display_order: 3 },
   { id: "st_loading_cooler", work_area_id: "wa_loading", name: "Cooler", required_headcount: 1, display_order: 4 },
@@ -69,6 +69,7 @@ export const mockStations: Station[] = [
   { id: "st_loading_helper_5", work_area_id: "wa_loading", name: "Helper #5", required_headcount: 1, display_order: 9 },
   { id: "st_loading_helper_6", work_area_id: "wa_loading", name: "Helper #6", required_headcount: 1, display_order: 10 },
   // Small Pro
+  { id: "st_small_supervisor", work_area_id: "wa_small", name: "Supervisor", required_headcount: 1, display_order: 0, protected: true },
   { id: "st_small_slab_off", work_area_id: "wa_small", name: "Slab Off", required_headcount: 1, display_order: 1 },
   { id: "st_small_slab_on", work_area_id: "wa_small", name: "Slab On", required_headcount: 1, display_order: 2 },
   { id: "st_small_slab_garlic", work_area_id: "wa_small", name: "Slab Garlic", required_headcount: 1, display_order: 3 },
@@ -85,6 +86,7 @@ export const mockStations: Station[] = [
   { id: "st_small_kaiser", work_area_id: "wa_small", name: "Kaiser", required_headcount: 1, display_order: 14 },
   { id: "st_small_custom", work_area_id: "wa_small", name: "Custom", required_headcount: 1, display_order: 15 },
   // Processing Floor
+  { id: "st_proc_supervisor", work_area_id: "wa_processing", name: "Supervisor", required_headcount: 1, display_order: 0, protected: true },
   { id: "st_proc_barn_setup", work_area_id: "wa_processing", name: "Barn Set Up (45 min-1 hr)", required_headcount: 1, display_order: 1 },
   { id: "st_proc_blood_pit", work_area_id: "wa_processing", name: "Set Up Blood pit (30 min)", required_headcount: 1, display_order: 2 },
   { id: "st_proc_clean_side", work_area_id: "wa_processing", name: "Set Up Clean side (30 min)", required_headcount: 1, display_order: 3 },
@@ -93,6 +95,7 @@ export const mockStations: Station[] = [
   { id: "st_proc_rollers_gams", work_area_id: "wa_processing", name: "Unload rollers and gams (2 staff 15 min)", required_headcount: 2, display_order: 6 },
   { id: "st_proc_bone_heads", work_area_id: "wa_processing", name: "Bone Heads", required_headcount: 1, display_order: 7 },
   // Meat Cutting - Main Room (Hog Break)
+  { id: "st_meat_supervisor", work_area_id: "wa_meat", name: "Supervisor", required_headcount: 1, display_order: 0, mode_code: "hog_break", protected: true },
   { id: "st_meat_saw", work_area_id: "wa_meat", name: "Saw", required_headcount: 1, display_order: 1, mode_code: "hog_break" },
   { id: "st_meat_neck_bones", work_area_id: "wa_meat", name: "Neck Bones", required_headcount: 1, display_order: 2, mode_code: "hog_break" },
   { id: "st_meat_proof", work_area_id: "wa_meat", name: "Proof", required_headcount: 1, display_order: 3, mode_code: "hog_break" },
@@ -117,7 +120,7 @@ export const mockStations: Station[] = [
   { id: "st_meat_cr_1", work_area_id: "wa_meat", name: "Cutting Room", required_headcount: 1, display_order: 20, mode_code: "hog_break" },
   { id: "st_meat_cr_2", work_area_id: "wa_meat", name: "Cutting Room", required_headcount: 1, display_order: 21, mode_code: "hog_break" },
   // Packaging (Hog Break)
-  { id: "st_supervisor", work_area_id: "wa_packaging", name: "Supervisor", required_headcount: 1, display_order: 1, mode_code: "hog_break" },
+  { id: "st_supervisor", work_area_id: "wa_packaging", name: "Supervisor", required_headcount: 1, display_order: 0, mode_code: "hog_break", protected: true },
   { id: "st_lead", work_area_id: "wa_packaging", name: "Main Room - Lead Hand", required_headcount: 1, display_order: 2, mode_code: "hog_break" },
   { id: "st_feed", work_area_id: "wa_packaging", name: "Feed Line", required_headcount: 1, display_order: 3, mode_code: "hog_break" },
   { id: "st_end", work_area_id: "wa_packaging", name: "End of the Line Bag/ Box product", required_headcount: 2, display_order: 4, mode_code: "hog_break" },
@@ -133,6 +136,7 @@ export const mockStations: Station[] = [
   { id: "st_pack_vac_pac_box", work_area_id: "wa_packaging", name: "Vac pac & box", required_headcount: 1, display_order: 14, mode_code: "hog_break" },
   { id: "st_pack_forklift", work_area_id: "wa_packaging", name: "Operate Forklift", required_headcount: 1, display_order: 15, mode_code: "hog_break" },
   // Meat Cutting - Main Room (After Hog Break)
+  { id: "st_ahb_meat_supervisor", work_area_id: "wa_meat", name: "Supervisor", required_headcount: 1, display_order: 0, mode_code: "after_hog_break", protected: true },
   { id: "st_ahb_meat_saw", work_area_id: "wa_meat", name: "Saw", required_headcount: 1, display_order: 1, mode_code: "after_hog_break" },
   { id: "st_ahb_meat_proof", work_area_id: "wa_meat", name: "Proof", required_headcount: 1, display_order: 2, mode_code: "after_hog_break" },
   { id: "st_ahb_meat_skinner", work_area_id: "wa_meat", name: "Skinner", required_headcount: 1, display_order: 3, mode_code: "after_hog_break" },
@@ -152,7 +156,7 @@ export const mockStations: Station[] = [
   { id: "st_ahb_meat_cr_2", work_area_id: "wa_meat", name: "Cutting Room", required_headcount: 1, display_order: 15, mode_code: "after_hog_break" },
   { id: "st_ahb_meat_wash", work_area_id: "wa_meat", name: "Wash Down", required_headcount: 2, display_order: 16, mode_code: "after_hog_break" },
   // Packaging (After Hog Break)
-  { id: "st_ahb_supervisor", work_area_id: "wa_packaging", name: "Supervisor", required_headcount: 1, display_order: 1, mode_code: "after_hog_break" },
+  { id: "st_ahb_supervisor", work_area_id: "wa_packaging", name: "Supervisor", required_headcount: 1, display_order: 0, mode_code: "after_hog_break", protected: true },
   { id: "st_ahb_lead", work_area_id: "wa_packaging", name: "Main Room - Lead Hand", required_headcount: 1, display_order: 2, mode_code: "after_hog_break" },
   { id: "st_ahb_feed", work_area_id: "wa_packaging", name: "Feed Line", required_headcount: 1, display_order: 3, mode_code: "after_hog_break" },
   { id: "st_ahb_end", work_area_id: "wa_packaging", name: "End of Line Bag/ Box product", required_headcount: 2, display_order: 4, mode_code: "after_hog_break" },
