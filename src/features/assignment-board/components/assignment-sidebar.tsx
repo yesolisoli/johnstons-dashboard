@@ -11,8 +11,19 @@ type StatusConfig = {
   code: string;
   label: string;
   className: string;
+  colorHex?: string;
   protected?: boolean;
 };
+
+function cfgBadge(cfg: StatusConfig): { cls: string; sty?: React.CSSProperties } {
+  if (cfg.colorHex) {
+    return {
+      cls: "rounded-md px-2.5 py-1 text-xs font-semibold",
+      sty: { backgroundColor: cfg.colorHex + "28", color: cfg.colorHex },
+    };
+  }
+  return { cls: `rounded-md px-2.5 py-1 text-xs font-semibold ${cfg.className}` };
+}
 
 const COLOR_OPTIONS: { label: string; className: string }[] = [
   { label: "Green",  className: "bg-green-100 text-green-700" },
@@ -44,45 +55,90 @@ function ManageStatusesModal({
   onUpdate,
   onDelete,
   onAdd,
+  onReorder,
   onClose,
 }: {
   configs: StatusConfig[];
   onUpdate: (code: string, updates: Partial<StatusConfig>) => void;
   onDelete: (code: string) => void;
-  onAdd: (label: string, className: string) => void;
+  onAdd: (label: string, colorHex: string) => void;
+  onReorder: (newConfigs: StatusConfig[]) => void;
   onClose: () => void;
 }) {
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
-  const [newColor, setNewColor] = useState(COLOR_OPTIONS[3].className);
+  const [newColorHex, setNewColorHex] = useState("#312e81");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const startEdit = (cfg: StatusConfig) => {
+    setEditingCode(cfg.code);
+    setEditingLabel(cfg.label);
+    setColorPickerFor(null);
+  };
+
+  const handleDragEnd = () => {
+    if (dragIndex !== null && dropIndex !== null && dragIndex !== dropIndex) {
+      const next = [...configs];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, moved);
+      onReorder(next);
+    }
+    setDragIndex(null);
+    setDropIndex(null);
+  };
 
   return (
     <Modal
       title="Manage Statuses"
       onClose={onClose}
-      width="w-80"
+      width="w-[42rem] max-w-[calc(100vw-2rem)]"
       footer={
         <div className="flex justify-end">
-          <button onClick={onClose} className="rounded-md border px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
+          <button onClick={onClose} className="rounded-lg bg-indigo-900 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-800">
             Done
           </button>
         </div>
       }
     >
-      <div className="space-y-1.5 max-h-72 overflow-y-auto">
-        {configs.map((cfg) => (
-          <div key={cfg.code}>
-            <div className="flex items-center gap-2">
+      {/* Status list */}
+      <div className="max-h-[28rem] space-y-1.5 overflow-y-auto">
+        {configs.map((cfg, idx) => (
+          <div
+            key={cfg.code}
+            className="group"
+            draggable
+            onDragStart={() => setDragIndex(idx)}
+            onDragEnter={() => setDropIndex(idx)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => e.preventDefault()}
+            style={{ opacity: dragIndex === idx ? 0.4 : 1 }}
+          >
+            <div className={`flex items-center gap-3 rounded-lg border border-slate-300 px-2 py-2 hover:bg-slate-50 ${dropIndex === idx && dragIndex !== idx ? "border-t-2 border-blue-400" : ""}`}>
+              {/* Drag handle */}
+              <span className="shrink-0 cursor-grab text-slate-400 active:cursor-grabbing">
+                <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                  <circle cx="5" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/>
+                  <circle cx="11" cy="4" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
+                </svg>
+              </span>
+              {/* Color badge */}
               <button
-                onClick={() => setColorPickerFor(colorPickerFor === cfg.code ? null : cfg.code)}
-                className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}
-                title="Click to change color"
+                onClick={() => {
+                  if (cfg.protected) return;
+                  setColorPickerFor(colorPickerFor === cfg.code ? null : cfg.code);
+                  setEditingCode(null);
+                }}
+                className={`shrink-0 transition-transform hover:scale-105 ${cfgBadge(cfg).cls} ${cfg.protected ? "cursor-default" : "cursor-pointer"}`}
+                style={cfgBadge(cfg).sty}
+                title={cfg.protected ? undefined : "Click to change color"}
               >
                 {cfg.label}
               </button>
 
+              {/* Label edit */}
               {editingCode === cfg.code ? (
                 <input
                   value={editingLabel}
@@ -98,33 +154,49 @@ function ManageStatusesModal({
                     if (editingLabel.trim()) onUpdate(cfg.code, { label: editingLabel.trim() });
                     setEditingCode(null);
                   }}
-                  className="flex-1 rounded border px-2 py-0.5 text-sm"
+                  className="flex-1 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
                   autoFocus
                 />
               ) : (
-                <span
-                  className="flex-1 cursor-pointer text-sm text-slate-700 hover:text-blue-600"
-                  onClick={() => { setEditingCode(cfg.code); setEditingLabel(cfg.label); }}
-                  title="Click to edit label"
-                >
-                  {cfg.label}
-                </span>
+                <span className="flex-1 text-sm text-slate-700">{cfg.label}</span>
               )}
 
-              {!cfg.protected ? (
-                <button onClick={() => onDelete(cfg.code)} className="text-slate-300 hover:text-red-400">×</button>
-              ) : (
-                <span className="w-4" />
-              )}
+              {/* Actions */}
+              <div className="flex shrink-0 items-center gap-1">
+                {!cfg.protected && editingCode !== cfg.code && (
+                  <button
+                    onClick={() => startEdit(cfg)}
+                    className="rounded p-1 text-slate-600 hover:bg-slate-700 hover:text-white"
+                    title="Edit label"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M11 2l3 3-9 9H2v-3L11 2z" />
+                    </svg>
+                  </button>
+                )}
+                {!cfg.protected && (
+                  <button
+                    onClick={() => { onDelete(cfg.code); setColorPickerFor(null); }}
+                    className="rounded p-1 text-slate-600 hover:bg-red-500 hover:text-white"
+                    title="Delete"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3 4h10M6 4V2h4v2M5 4l1 9h4l1-9" />
+                    </svg>
+                  </button>
+                )}
+                {cfg.protected && <span className="w-6 shrink-0" />}
+              </div>
             </div>
 
+            {/* Inline color picker */}
             {colorPickerFor === cfg.code && (
-              <div className="mt-1.5 ml-1 flex flex-wrap gap-1 pb-1">
+              <div className="mb-1 ml-2 flex flex-wrap gap-2 rounded-lg bg-slate-50 px-3 py-2">
                 {COLOR_OPTIONS.map((c) => (
                   <button
                     key={c.className}
                     onClick={() => { onUpdate(cfg.code, { className: c.className }); setColorPickerFor(null); }}
-                    className={`h-5 w-5 rounded border-2 ${c.className} ${cfg.className === c.className ? "border-slate-500" : "border-transparent"}`}
+                    className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${c.className} ${cfg.className === c.className ? "border-slate-600 scale-110" : "border-transparent"}`}
                     title={c.label}
                   />
                 ))}
@@ -134,39 +206,50 @@ function ManageStatusesModal({
         ))}
       </div>
 
-      <div className="mt-3 border-t pt-3">
-        <p className="mb-2 text-xs font-medium text-slate-500">Add New Status</p>
-        <input
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); }
-          }}
-          placeholder="Label..."
-          className="w-full rounded border px-2 py-1 text-sm"
-        />
-        <div className="mt-2 flex flex-wrap gap-1">
-          {COLOR_OPTIONS.map((c) => (
-            <button
-              key={c.className}
-              onClick={() => setNewColor(c.className)}
-              className={`h-5 w-5 rounded border-2 ${c.className} ${newColor === c.className ? "border-slate-500" : "border-transparent"}`}
-              title={c.label}
+      {/* Add new status */}
+      <div className="mt-3 rounded-xl border border-indigo-300 bg-white p-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">Add New Status</p>
+        <div className="flex items-center gap-2">
+          {/* Color picker */}
+          <label className="relative shrink-0 cursor-pointer" title="Pick color">
+            <span
+              className="block h-8 w-8 rounded-full border-2 border-white shadow-md"
+              style={{ backgroundColor: newColorHex }}
             />
-          ))}
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          {newLabel && (
-            <span className={`rounded px-2 py-0.5 text-xs font-medium ${newColor}`}>{newLabel}</span>
-          )}
+            <input
+              type="color"
+              value={newColorHex}
+              onChange={(e) => setNewColorHex(e.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); }
+            }}
+            placeholder="Status name..."
+            className="flex-1 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm text-indigo-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
           <button
-            onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColor); setNewLabel(""); } }}
+            onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); } }}
             disabled={!newLabel.trim()}
-            className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-40"
+            className="shrink-0 rounded-lg border border-indigo-900 bg-indigo-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-800 disabled:opacity-40"
           >
-            Add
+            + Add
           </button>
         </div>
+        {newLabel.trim() && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="text-xs text-indigo-700">Preview:</span>
+            <span
+              className="rounded-md border border-indigo-300 px-2.5 py-1 text-xs font-semibold text-indigo-900"
+            >
+              {newLabel}
+            </span>
+          </div>
+        )}
       </div>
     </Modal>
   );
@@ -453,7 +536,8 @@ function StatusSelect({ value, configs, onChange }: {
       <button
         ref={btnRef}
         onClick={handleOpen}
-        className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${current.className}`}
+        className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${cfgBadge(current).cls}`}
+        style={cfgBadge(current).sty}
       >
         {current.label}
         <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
@@ -469,7 +553,7 @@ function StatusSelect({ value, configs, onChange }: {
               onClick={() => { onChange(cfg.code); setOpen(false); }}
               className="flex w-full items-center justify-center py-1.5 hover:bg-slate-50"
             >
-              <span className={`rounded px-2 py-0.5 text-xs font-medium ${cfg.className}`}>{cfg.label}</span>
+              <span className={cfgBadge(cfg).cls} style={cfgBadge(cfg).sty}>{cfg.label}</span>
               {cfg.code === value && <span className="ml-auto text-slate-300 text-xs">✓</span>}
             </button>
           ))}
@@ -540,6 +624,9 @@ function RosterManageModal({
 
   const active = employees.filter((e) => e.active);
 
+  const hasNoStation = (emp: Employee) =>
+    !!emp.default_department && !assignments.some((a) => a.employee_id === emp.id);
+
   const filtered = active
     .filter((e) => {
       if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
@@ -548,6 +635,10 @@ function RosterManageModal({
       return true;
     })
     .sort((a, b) => {
+      // Always float "dept set but no station" to top
+      const aAlert = hasNoStation(a) ? 0 : 1;
+      const bAlert = hasNoStation(b) ? 0 : 1;
+      if (aAlert !== bAlert) return aAlert - bAlert;
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "code") cmp = (a.employee_code ?? "").localeCompare(b.employee_code ?? "");
@@ -662,8 +753,9 @@ function RosterManageModal({
               </tr>
             )}
             {filtered.map((emp) => {
+              const alert = hasNoStation(emp);
               return (
-                <tr key={emp.id} className="border-b last:border-b-0 hover:bg-slate-50">
+                <tr key={emp.id} className={`border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
@@ -802,15 +894,18 @@ export function AssignmentSidebar({
   const handleDeleteConfig = (code: string) =>
     setStatusConfigs((prev) => prev.filter((c) => c.code !== code));
 
-  const handleAddConfig = (label: string, className: string) => {
+  const handleAddConfig = (label: string, colorHex: string) => {
     const code = `status_${Date.now()}`;
-    setStatusConfigs((prev) => [...prev, { code, label, className }]);
+    setStatusConfigs((prev) => [...prev, { code, label, className: "", colorHex }]);
   };
+
+  const handleReorderConfig = (newConfigs: StatusConfig[]) =>
+    setStatusConfigs(newConfigs);
 
   return (
     <div className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-hidden">
       {/* Today's Status */}
-      <div className="shrink-0 rounded-lg border bg-white p-5 shadow-sm">
+      <div className="shrink-0 rounded-lg border border-slate-700 bg-white p-5">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Today's Status</p>
           <button
@@ -830,7 +925,7 @@ export function AssignmentSidebar({
       </div>
 
       {/* Station Pending */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-lg border bg-white shadow-sm">
+      <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-700 bg-white">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
             Station Pending
@@ -861,9 +956,9 @@ export function AssignmentSidebar({
                   if (deptEmps.length === 0) return null;
                   return (
                     <div key={wa.id}>
-                      <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#64748b" }} />
-                        <span className="text-xs font-semibold text-slate-600">{wa.name}</span>
+                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                        <span className="h-2 w-2 rounded-full shrink-0 bg-red-600" />
+                        <span className="text-xs font-semibold text-slate-600">No Station</span>
                         <span className="ml-auto text-xs text-slate-400">{deptEmps.length}</span>
                       </div>
                       {deptEmps.map((emp) => {
@@ -920,7 +1015,7 @@ export function AssignmentSidebar({
                 })}
                 {unassignedEmps.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
                       <span className="h-2 w-2 rounded-full bg-red-300 shrink-0" />
                       <span className="text-xs font-semibold text-slate-600">Unassigned</span>
                       <span className="ml-auto text-xs text-slate-400">{unassignedEmps.length}</span>
@@ -960,7 +1055,7 @@ export function AssignmentSidebar({
                   if (assignedEmps.length === 0) return null;
                   return (
                     <div key={`assigned-${wa.id}`}>
-                      <div className="flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
                         <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#64748b" }} />
                         <span className="text-xs font-semibold text-slate-600">{wa.name}</span>
                         <span className="ml-auto text-xs text-slate-400">{assignedEmps.length}</span>
@@ -983,7 +1078,7 @@ export function AssignmentSidebar({
                               }}
                               className="flex-1 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
                             >{emp.full_name}</p>
-                            <span className="shrink-0 truncate text-xs text-slate-400">{empStations.join(", ")}</span>
+                            <span className="min-w-0 max-w-[45%] truncate text-xs text-slate-400">{empStations.join(", ")}</span>
                           </div>
                         );
                       })}
@@ -1043,6 +1138,7 @@ export function AssignmentSidebar({
           onUpdate={handleUpdateConfig}
           onDelete={handleDeleteConfig}
           onAdd={handleAddConfig}
+          onReorder={handleReorderConfig}
           onClose={() => setShowManage(false)}
         />
       )}

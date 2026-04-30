@@ -67,8 +67,17 @@ function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove }: {
 
 // ─── AssignmentCell ───────────────────────────────────────────────────────────
 
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  available:  { label: "Available",  className: "bg-green-100 text-green-700" },
+  sick:       { label: "Sick",       className: "bg-red-100 text-red-600" },
+  vacation:   { label: "Vacation",   className: "bg-yellow-100 text-yellow-600" },
+  injured:    { label: "Injured",    className: "bg-orange-100 text-orange-600" },
+  training:   { label: "Training",   className: "bg-purple-100 text-purple-600" },
+  off_shift:  { label: "Off Shift",  className: "bg-slate-100 text-slate-500" },
+};
+
 function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, disabledEmployeeIds, onAssign, onRemove,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -76,20 +85,33 @@ function AssignmentCell({
   color: string;
   assignments: StationAssignment[];
   allEmployees: Employee[];
+  statuses?: Record<string, string>;
   disabledEmployeeIds?: Set<string>;
   onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"all" | "unassigned">("all");
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearch("");
+      }
     }
     if (isOpen) document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
   }, [isOpen]);
 
   const cellAssignments = assignments.filter(
@@ -99,7 +121,30 @@ function AssignmentCell({
   const assignedEmployees = cellAssignments
     .map((a) => allEmployees.find((e) => e.id === a.employee_id))
     .filter((e): e is Employee => !!e && !disabledEmployeeIds?.has(e.id));
-  const available = allEmployees.filter((e) => !assignedIds.has(e.id) && !disabledEmployeeIds?.has(e.id));
+  const UNAVAILABLE = new Set(["sick", "vacation", "injured"]);
+  const allPickable = allEmployees.filter((e) => !assignedIds.has(e.id));
+  const unassignedPickable = allPickable.filter((e) =>
+    !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
+  );
+
+  const sortedAllPickable = [...allPickable].sort((a, b) => {
+    if (!a.default_department && b.default_department) return 1;
+    if (a.default_department && !b.default_department) return -1;
+    return (a.default_department ?? "").localeCompare(b.default_department ?? "");
+  });
+  const baseList = tab === "unassigned" ? unassignedPickable : sortedAllPickable;
+  const filtered = search.trim()
+    ? baseList.filter((e) => e.full_name.toLowerCase().includes(search.toLowerCase()))
+    : baseList;
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropPos({ top: rect.bottom + 6, left: rect.right - 288 });
+    }
+    setIsOpen((v) => !v);
+    setSearch("");
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -130,9 +175,7 @@ function AssignmentCell({
       onDrop={handleDrop}
       style={isDragOver ? { backgroundColor: color + "22", outline: `2px solid ${color}99`, outlineOffset: "2px" } : {}}
     >
-      <div
-        className="flex items-start gap-2"
-      >
+      <div className="flex items-start gap-2">
         <div className="flex flex-1 flex-col gap-1.5">
           {assignedEmployees.length === 0 && !isOpen && (
             <div
@@ -153,30 +196,77 @@ function AssignmentCell({
             />
           ))}
         </div>
-        <div className="relative shrink-0">
+        <div className="shrink-0">
           <button
-            onClick={() => setIsOpen((v) => !v)}
+            ref={btnRef}
+            onClick={handleOpen}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-600"
           >
             +
           </button>
           {isOpen && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg border bg-white shadow-xl">
-              <div className="p-2">
-                {available.length > 0 ? (
-                  available.map((emp) => (
+            <div
+              className="fixed z-50 w-72 rounded-xl border bg-white shadow-2xl"
+              style={{ top: dropPos.top, left: dropPos.left }}
+            >
+              {/* Search */}
+              <div className="p-2 pb-0">
+                <input
+                  ref={searchRef}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                />
+              </div>
+              {/* Tabs */}
+              <div className="flex gap-1 px-2 pt-2">
+                <button
+                  onClick={() => setTab("all")}
+                  className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "all" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                >
+                  All ({allPickable.length})
+                </button>
+                <button
+                  onClick={() => setTab("unassigned")}
+                  className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "unassigned" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                >
+                  Unassigned ({unassignedPickable.length})
+                </button>
+              </div>
+              {/* List */}
+              <div className="max-h-56 overflow-y-auto p-2">
+                {filtered.length === 0 && (
+                  <p className="px-3 py-3 text-center text-sm text-slate-400">
+                    {search ? "No results" : "No staff available"}
+                  </p>
+                )}
+                {filtered.map((emp) => {
+                  const status = statuses?.[emp.id] ?? "available";
+                  const badge = STATUS_BADGE[status] ?? STATUS_BADGE.available;
+                  const empAssignCount = assignments.filter((a) => a.employee_id === emp.id).length;
+                  return (
                     <button
                       key={emp.id}
-                      onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); }}
-                      className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-slate-50"
+                      onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); setSearch(""); }}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-slate-50"
                     >
                       <span className="text-sm font-medium text-slate-800">{emp.full_name}</span>
-                      {emp.employee_code && <span className="text-xs text-slate-400">{emp.employee_code}</span>}
+                      {tab === "unassigned" ? (
+                        <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                      ) : (
+                        <div className="ml-2 flex shrink-0 items-center gap-1.5">
+                          {emp.default_department && (
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{emp.default_department}</span>
+                          )}
+                          {empAssignCount > 0 && (
+                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
+                          )}
+                        </div>
+                      )}
                     </button>
-                  ))
-                ) : (
-                  <p className="px-3 py-2 text-sm text-slate-400">No more staff available</p>
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -260,7 +350,7 @@ function WorkAreaModal({ initial, onClose, onSave }: {
 // ─── AssignmentGrid ───────────────────────────────────────────────────────────
 
 
-export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange }: { employees?: Employee[]; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void } = {}) {
+export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
@@ -308,7 +398,7 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
   const hasModes = !!selectedWorkArea?.mode_views?.length;
   const currentShifts = workAreaShifts[selectedWorkAreaId] ?? [];
   const workAreaStations = stations
-    .filter((s) => s.work_area_id === selectedWorkAreaId)
+    .filter((s) => s.work_area_id === selectedWorkAreaId && (!hasModes || s.mode_code === selectedMode))
     .sort((a, b) => a.display_order - b.display_order);
 
   const selectWorkArea = (waId: string) => {
@@ -379,7 +469,7 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
 
   const handleAddStation = () => {
     if (!newStationName.trim()) return;
-    setStations((prev) => [...prev, { id: `st_${Date.now()}`, work_area_id: selectedWorkAreaId, name: newStationName.trim(), required_headcount: 1, display_order: workAreaStations.length + 1 }]);
+    setStations((prev) => [...prev, { id: `st_${Date.now()}`, work_area_id: selectedWorkAreaId, name: newStationName.trim(), required_headcount: 1, display_order: workAreaStations.length + 1, ...(hasModes ? { mode_code: selectedMode } : {}) }]);
     setNewStationName("");
     setAddingStation(false);
   };
@@ -454,7 +544,7 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
       )}
 
       {/* Table */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-white shadow-sm">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-white">
         <table className="w-full border-collapse" style={{ minWidth: "max-content" }}>
           <thead className="sticky top-0 z-20">
             <tr>
@@ -563,7 +653,7 @@ export function AssignmentGrid({ employees: employeesProp, disabledEmployeeIds, 
                   <td key={shift.code} className="h-px p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} />
                     </div>
                   </td>
                 ))}
