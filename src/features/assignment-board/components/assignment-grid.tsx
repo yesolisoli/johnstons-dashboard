@@ -417,8 +417,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const [selectedMode, setSelectedMode] = useState<ModeCode>("normal");
 
   // Shift editing state
-  const [editingShift, setEditingShift] = useState<{ code: ShiftCode; label: string; timeRange: string } | null>(null);
-  const [addingShift, setAddingShift] = useState<{ label: string; timeRange: string } | null>(null);
+  const [editingShift, setEditingShift] = useState<{ code: ShiftCode; label: string; startTime: string; endTime: string } | null>(null);
+  const [addingShift, setAddingShift] = useState<{ label: string; startTime: string; endTime: string } | null>(null);
 
   // Station editing state
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
@@ -451,7 +451,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setWorkAreaShifts((prev) => ({
       ...prev,
       [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).map((s) =>
-        s.code === editingShift.code ? { ...s, label: editingShift.label, time_range: editingShift.timeRange } : s,
+        s.code === editingShift.code ? { ...s, label: editingShift.label, time_range: editingShift.startTime && editingShift.endTime ? `${editingShift.startTime}-${editingShift.endTime}` : "" } : s,
       ),
     }));
     setEditingShift(null);
@@ -464,7 +464,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       ...prev,
       [selectedWorkAreaId]: [
         ...(prev[selectedWorkAreaId] ?? []),
-        { code: next, label: addingShift.label.trim(), time_range: addingShift.timeRange.trim() },
+        { code: next, label: addingShift.label.trim(), time_range: addingShift.startTime && addingShift.endTime ? `${addingShift.startTime}-${addingShift.endTime}` : "" },
       ],
     }));
     setAddingShift(null);
@@ -560,8 +560,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {/* Mode toggle */}
       {hasModes && (
         <div className="shrink-0 flex items-center gap-2">
-          <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">Mode:</span>
-          {selectedWorkArea.mode_views!.map((mv) => (
+{selectedWorkArea.mode_views!.map((mv) => (
             <button
               key={mv.mode_code}
               onClick={() => setSelectedMode(mv.mode_code)}
@@ -611,16 +610,22 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     <div className="flex items-center gap-1.5" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) handleSaveEditShift(); }}>
                       <input value={editingShift.label} onChange={(e) => setEditingShift((s) => s && { ...s, label: e.target.value })}
                         className="w-24 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" autoFocus />
-                      <input value={editingShift.timeRange} onChange={(e) => setEditingShift((s) => s && { ...s, timeRange: e.target.value })}
+                      <input type="time" value={editingShift.startTime} onChange={(e) => setEditingShift((s) => s && { ...s, startTime: e.target.value })}
+                        className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                      <span className="text-white/60 text-xs">–</span>
+                      <input type="time" value={editingShift.endTime} onChange={(e) => setEditingShift((s) => s && { ...s, endTime: e.target.value })}
                         onKeyDown={(e) => e.key === "Enter" && handleSaveEditShift()}
-                        className="w-28 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" placeholder="5:00-7:30" />
+                        className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
                       <button onClick={handleSaveEditShift} className="text-white hover:opacity-70">✓</button>
                       <button onClick={() => setEditingShift(null)} className="text-white/60 hover:text-white">✕</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="cursor-pointer hover:opacity-80"
-                        onClick={() => setEditingShift({ code: shift.code, label: shift.label, timeRange: shift.time_range })}
+                        onClick={() => {
+                          const [start, end] = (shift.time_range ?? "").split("-");
+                          setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
+                        }}
                         title="Click to edit">
                         {shift.label}
                         {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
@@ -639,14 +644,17 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     <input value={addingShift.label} onChange={(e) => setAddingShift((s) => s && { ...s, label: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
                       className="w-24 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" placeholder="Name" autoFocus />
-                    <input value={addingShift.timeRange} onChange={(e) => setAddingShift((s) => s && { ...s, timeRange: e.target.value })}
+                    <input type="time" value={addingShift.startTime} onChange={(e) => setAddingShift((s) => s && { ...s, startTime: e.target.value })}
+                      className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                    <span className="text-white/60 text-xs">–</span>
+                    <input type="time" value={addingShift.endTime} onChange={(e) => setAddingShift((s) => s && { ...s, endTime: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
-                      className="w-28 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" placeholder="5:00-7:30" />
+                      className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
                     <button onClick={handleAddShift} className="text-white hover:opacity-70">✓</button>
                     <button onClick={() => setAddingShift(null)} className="text-white/60 hover:text-white">✕</button>
                   </div>
                 ) : (
-                  <button onClick={() => setAddingShift({ label: "", timeRange: "" })}
+                  <button onClick={() => setAddingShift({ label: "", startTime: "", endTime: "" })}
                     className="whitespace-nowrap rounded-md border border-white/30 px-3 py-1 text-sm text-white/80 hover:border-white hover:text-white">
                     + Shift
                   </button>

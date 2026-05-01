@@ -614,7 +614,7 @@ function RosterManageModal({
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status">("dept");
+  const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const handleSort = (key: typeof sortKey) => {
@@ -660,6 +660,7 @@ function RosterManageModal({
         cmp = aOrder - bOrder;
       }
       else if (sortKey === "status") cmp = getDisplayStatus(a).localeCompare(getDisplayStatus(b));
+      else if (sortKey === "level") cmp = (a.level ?? 0) - (b.level ?? 0);
       return sortDir === "asc" ? cmp : -cmp;
     });
 
@@ -750,6 +751,12 @@ function RosterManageModal({
                 </th>
               ))}
               <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Station</th>
+              <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Gender</th>
+              <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                <button onClick={() => handleSort("level")} className="flex items-center hover:text-white">
+                  Level <SortIcon col="level" />
+                </button>
+              </th>
               <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
                 <button onClick={() => handleSort("status")} className="flex items-center hover:text-white">
                   Status <SortIcon col="status" />
@@ -761,7 +768,7 @@ function RosterManageModal({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-slate-400">No employees found</td>
+                <td colSpan={8} className="py-10 text-center text-sm text-slate-400">No employees found</td>
               </tr>
             )}
             {filtered.map((emp) => {
@@ -814,6 +821,26 @@ function RosterManageModal({
                       onAssign={(stationId) => onAssignToStation(emp.id, stationId)}
                       onUnassign={(stationId) => onUnassignFromStation(emp.id, stationId)}
                     />
+                  </td>
+                  {/* Gender */}
+                  <td className="px-3 py-2.5">
+                    <button
+                      onClick={() => onUpdate(emp.id, { gender: emp.gender === "M" ? "F" : "M" })}
+                      className={`rounded px-2 py-0.5 text-xs font-semibold transition-colors ${emp.gender === "M" ? "bg-sky-50 text-sky-600 hover:bg-sky-100" : emp.gender === "F" ? "bg-rose-50 text-rose-500 hover:bg-rose-100" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
+                      title="Click to toggle"
+                    >
+                      {emp.gender ?? "—"}
+                    </button>
+                  </td>
+                  {/* Level */}
+                  <td className="px-3 py-2.5">
+                    <button
+                      onClick={() => onUpdate(emp.id, { level: emp.level === 3 ? 1 : ((emp.level ?? 0) + 1) as 1 | 2 | 3 })}
+                      className={`rounded px-2 py-0.5 text-xs font-semibold transition-colors ${emp.level === 3 ? "bg-slate-800 text-white hover:bg-slate-700" : emp.level === 2 ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}
+                      title="Click to cycle level"
+                    >
+                      {emp.level ? `Lv.${emp.level}` : "—"}
+                    </button>
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusSelect

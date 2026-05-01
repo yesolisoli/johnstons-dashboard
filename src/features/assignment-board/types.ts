@@ -28,6 +28,8 @@ export type Employee = {
   full_name: string;
   default_department: string | null;
   active: boolean;
+  gender?: "M" | "F";
+  level?: 1 | 2 | 3;
 };
 
 export type WorkArea = {
