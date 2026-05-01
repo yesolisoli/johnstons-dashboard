@@ -273,7 +273,7 @@ function AssignmentModal({
       const firstStation = stations.find((s) => assignedStationIds.has(s.id));
       if (firstStation) return firstStation.work_area_id;
     }
-    return workAreas.find((wa) => wa.name === employee.default_department)?.id ?? null;
+    return workAreas.find((wa) => wa.name === employee.departments[0])?.id ?? null;
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(assignedStationIds));
 
@@ -311,7 +311,7 @@ function AssignmentModal({
               Save
             </button>
           </div>
-          {employee.default_department && (
+          {employee.departments[0] && (
             <button onClick={() => { onClear(); onClose(); }} className="w-full rounded-md border border-red-200 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:border-red-300 transition-colors">
               Clear Department
             </button>
@@ -382,16 +382,16 @@ function StatCard({ label, value, color = "text-slate-900", bg = "bg-slate-50", 
   );
 }
 
-// ─── DeptSelect ──────────────────────────────────────────────────────────────
+// ─── MultiFilterSelect ───────────────────────────────────────────────────────
 
-function DeptSelect({ value, workAreas, onChange }: {
-  value: string | null;
-  workAreas: WorkArea[];
-  onChange: (dept: string | null) => void;
+function MultiFilterSelect({ placeholder, options, selected, onChange }: {
+  placeholder: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (val: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const selectedWa = workAreas.find((wa) => wa.name === value);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -401,20 +401,82 @@ function DeptSelect({ value, workAreas, onChange }: {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const toggle = (val: string) =>
+    onChange(selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]);
+
+  const label = selected.length === 0 ? `All ${placeholder}s` : selected.length === 1
+    ? (options.find((o) => o.value === selected[0])?.label ?? selected[0])
+    : `${placeholder} (${selected.length})`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`flex w-36 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm text-slate-600 hover:border-slate-400 ${selected.length > 0 ? "border-slate-400 bg-slate-50 font-medium" : "border-slate-200"}`}
+      >
+        <span className="flex-1 truncate text-left">{label}</span>
+        {selected.length > 0 && (
+          <span onClick={(e) => { e.stopPropagation(); onChange([]); }}
+            className="ml-0.5 rounded-full text-slate-400 hover:text-slate-600">×</span>
+        )}
+        <svg className="h-3.5 w-3.5 opacity-40" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-70 mt-1 min-w-40 rounded-lg border bg-white shadow-lg">
+          {options.map((opt) => (
+            <button key={opt.value} onClick={() => toggle(opt.value)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50">
+              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected.includes(opt.value) ? "border-slate-700 bg-slate-700 text-white" : "border-slate-300"}`}>
+                {selected.includes(opt.value) && <svg viewBox="0 0 10 8" fill="currentColor" className="h-2.5 w-2.5"><path d="M1 4l3 3 5-6"/></svg>}
+              </span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── DeptSelect ──────────────────────────────────────────────────────────────
+
+function DeptSelect({ values, workAreas, onChange }: {
+  values: string[];
+  workAreas: WorkArea[];
+  onChange: (depts: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (name: string) => {
+    onChange(values.includes(name) ? values.filter((d) => d !== name) : [...values, name]);
+  };
+
+  const label = values.length === 0 ? "— None —" : values.length === 1 ? values[0] : `${values.length} depts`;
+  const firstWa = workAreas.find((w) => w.name === values[0]);
+
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"
-        style={{ color: selectedWa?.color_hex ?? "#94a3b8" }}
+        style={{ color: values.length > 0 ? (firstWa?.color_hex ?? "#475569") : "#94a3b8" }}
       >
-        <span>{value ?? "— None —"}</span>
+        <span>{label}</span>
         <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-0.5 min-w-40 rounded-lg border bg-white shadow-lg">
           <button
-            onClick={() => { onChange(null); setOpen(false); }}
+            onClick={() => { onChange([]); setOpen(false); }}
             className="w-full px-3 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-50"
           >
             — None —
@@ -422,13 +484,13 @@ function DeptSelect({ value, workAreas, onChange }: {
           {workAreas.map((wa) => (
             <button
               key={wa.id}
-              onClick={() => { onChange(wa.name); setOpen(false); }}
+              onClick={() => toggle(wa.name)}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
               style={{ color: wa.color_hex ?? "#475569" }}
             >
               <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
               {wa.name}
-              {value === wa.name && <span className="ml-auto text-slate-300">✓</span>}
+              {values.includes(wa.name) && <span className="ml-auto text-slate-400">✓</span>}
             </button>
           ))}
         </div>
@@ -439,9 +501,9 @@ function DeptSelect({ value, workAreas, onChange }: {
 
 // ─── StationSelect ────────────────────────────────────────────────────────────
 
-function StationSelect({ employeeId, empDept, assignments, stations, workAreas, onAssign, onUnassign }: {
+function StationSelect({ employeeId, empDepts, assignments, stations, workAreas, onAssign, onUnassign }: {
   employeeId: string;
-  empDept: string | null;
+  empDepts: string[];
   assignments: StationAssignment[];
   stations: Station[];
   workAreas: WorkArea[];
@@ -459,40 +521,56 @@ function StationSelect({ employeeId, empDept, assignments, stations, workAreas, 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const wa = workAreas.find((w) => w.name === empDept);
-  const deptStations = wa ? stations.filter((s) => s.work_area_id === wa.id) : [];
+  const deptWas = workAreas.filter((w) => empDepts.includes(w.name));
+  const deptStations = stations.filter((s) => deptWas.some((wa) => wa.id === s.work_area_id));
   const assignedIds = new Set(
     assignments.filter((a) => a.employee_id === employeeId).map((a) => a.station_id)
   );
   const assignedStations = deptStations.filter((s) => assignedIds.has(s.id));
   const label = assignedStations.length === 0 ? "— None —" : assignedStations.length === 1 ? assignedStations[0].name : `${assignedStations.length} stations`;
-
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        disabled={!empDept}
-        className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        style={{ color: assignedStations.length > 0 ? (wa?.color_hex ?? "#475569") : "#94a3b8" }}
+        disabled={empDepts.length === 0}
+        className="flex w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        style={{ color: assignedStations.length > 0 ? (deptWas[0]?.color_hex ?? "#475569") : "#94a3b8" }}
       >
-        <span>{label}</span>
-        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+        <span className="truncate">{label}</span>
+        <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
       </button>
       {open && deptStations.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 max-h-52 min-w-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
-          {deptStations.map((s) => {
-            const assigned = assignedIds.has(s.id);
+        <div className="absolute left-0 top-full z-50 mt-0.5 max-h-64 min-w-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
+          {deptWas.map((wa, waIdx) => {
+            const waStations = deptStations.filter((s) => s.work_area_id === wa.id);
+            if (waStations.length === 0) return null;
             return (
-              <button
-                key={s.id}
-                onClick={() => { assigned ? onUnassign(s.id) : onAssign(s.id); }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
-                style={{ color: assigned ? (wa?.color_hex ?? "#475569") : "#64748b" }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: assigned ? (wa?.color_hex ?? "#475569") : "#cbd5e1" }} />
-                {s.name}
-                {assigned && <span className="ml-auto text-slate-300">✓</span>}
-              </button>
+              <div key={wa.id}>
+                {deptWas.length > 1 && (
+                  <div
+                    className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${waIdx > 0 ? "border-t-2 border-slate-300" : ""}`}
+                    style={{ color: wa.color_hex ?? "#475569" }}
+                  >
+                    {wa.name}
+                  </div>
+                )}
+                {waStations.map((s) => {
+                  const assigned = assignedIds.has(s.id);
+                  const waColor = wa.color_hex ?? "#475569";
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => { assigned ? onUnassign(s.id) : onAssign(s.id); }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
+                      style={{ color: assigned ? waColor : "#64748b" }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: assigned ? waColor : "#cbd5e1" }} />
+                      {s.name}
+                      {assigned && <span className="ml-auto text-slate-300">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
@@ -609,13 +687,13 @@ function RosterManageModal({
   onClose: () => void;
 }) {
   const [searchName, setSearchName] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterDept, setFilterDept] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterDept, setFilterDept] = useState<string[]>([]);
   const [newName, setNewName] = useState("");
   const [newTemporary, setNewTemporary] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level">("dept");
+  const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level" | "gender">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const handleSort = (key: typeof sortKey) => {
@@ -631,20 +709,20 @@ function RosterManageModal({
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
   const getDisplayStatus = (emp: Employee): EmployeeStatus => {
     const s = getStatus(emp.id);
-    if (s === "available" && emp.default_department) return "assigned";
+    if (s === "available" && emp.departments.length > 0) return "assigned";
     return s;
   };
 
   const active = employees.filter((e) => e.active);
 
   const hasNoStation = (emp: Employee) =>
-    !!emp.default_department && !assignments.some((a) => a.employee_id === emp.id);
+    emp.departments.length > 0 && !assignments.some((a) => a.employee_id === emp.id);
 
   const filtered = active
     .filter((e) => {
       if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
-      if (filterStatus && (statuses[e.id] ?? "available") !== filterStatus) return false;
-      if (filterDept && e.default_department !== filterDept) return false;
+      if (filterStatus.length > 0 && !filterStatus.includes(statuses[e.id] ?? "available")) return false;
+      if (filterDept.length > 0 && !filterDept.some((d) => e.departments.includes(d))) return false;
       return true;
     })
     .sort((a, b) => {
@@ -656,12 +734,13 @@ function RosterManageModal({
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "code") cmp = (a.employee_code ?? "").localeCompare(b.employee_code ?? "");
       else if (sortKey === "dept") {
-        const aOrder = workAreas.find((w) => w.name === a.default_department)?.display_order ?? 999;
-        const bOrder = workAreas.find((w) => w.name === b.default_department)?.display_order ?? 999;
+        const aOrder = workAreas.find((w) => a.departments.includes(w.name))?.display_order ?? 999;
+        const bOrder = workAreas.find((w) => b.departments.includes(w.name))?.display_order ?? 999;
         cmp = aOrder - bOrder;
       }
       else if (sortKey === "status") cmp = getDisplayStatus(a).localeCompare(getDisplayStatus(b));
       else if (sortKey === "level") cmp = (a.level ?? 0) - (b.level ?? 0);
+      else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
       return sortDir === "asc" ? cmp : -cmp;
     });
 
@@ -673,7 +752,7 @@ function RosterManageModal({
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
     const newId = `emp_${Date.now()}`;
-    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), default_department: null, active: true, ...(newTemporary ? { temporary: true } : {}) });
+    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), departments: [], active: true, ...(newTemporary ? { temporary: true } : {}) });
     onStatusChange(newId, "available");
     setNewName("");
     setNewTemporary(false);
@@ -688,7 +767,7 @@ function RosterManageModal({
     <Modal
       title="Manage Roster"
       onClose={onClose}
-      width="w-[960px]"
+      width="w-[1200px]"
       footer={
         <div className="flex items-center gap-2">
           <input
@@ -725,32 +804,33 @@ function RosterManageModal({
           placeholder="Search by name..."
           className="flex-1 rounded-md border px-3 py-1.5 text-sm"
         />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-md border px-2 py-1.5 text-sm text-slate-600"
-        >
-          <option value="">All Statuses</option>
-          {statusConfigs.filter((c) => c.code !== "assigned").map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
-          ))}
-
-        </select>
-        <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-          className="rounded-md border px-2 py-1.5 text-sm text-slate-600"
-        >
-          <option value="">All Depts</option>
-          {workAreas.map((wa) => (
-            <option key={wa.id} value={wa.name}>{wa.name}</option>
-          ))}
-        </select>
+        <MultiFilterSelect
+          placeholder="Status"
+          options={statusConfigs.filter((c) => c.code !== "assigned").map((c) => ({ value: c.code, label: c.label }))}
+          selected={filterStatus}
+          onChange={setFilterStatus}
+        />
+        <MultiFilterSelect
+          placeholder="Dept"
+          options={workAreas.map((wa) => ({ value: wa.name, label: wa.name }))}
+          selected={filterDept}
+          onChange={setFilterDept}
+        />
       </div>
 
       {/* Employee table */}
       <div className="h-[calc(100vh-320px)] max-h-140 overflow-y-auto rounded-md border">
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-sm table-fixed">
+          <colgroup>
+            <col className="w-52" />
+            <col className="w-24" />
+            <col className="w-32" />
+            <col className="w-36" />
+            <col className="w-16" />
+            <col className="w-16" />
+            <col className="w-28" />
+            <col className="w-16" />
+          </colgroup>
           <thead className="sticky top-0 z-60 bg-slate-800">
             <tr>
               {(["name", "code", "dept"] as const).map((col) => (
@@ -762,7 +842,11 @@ function RosterManageModal({
                 </th>
               ))}
               <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Station</th>
-              <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Gender</th>
+              <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                <button onClick={() => handleSort("gender")} className="flex items-center hover:text-white">
+                  Gender <SortIcon col="gender" />
+                </button>
+              </th>
               <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
                 <button onClick={() => handleSort("level")} className="flex items-center hover:text-white">
                   Level <SortIcon col="level" />
@@ -802,35 +886,35 @@ function RosterManageModal({
                         />
                       ) : (
                         <span
-                          className="cursor-pointer font-medium text-slate-800 hover:text-blue-600"
+                          className="cursor-pointer font-medium text-slate-800 hover:text-blue-600 truncate"
                           onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}
-                          title="Double-click to edit"
+                          title={emp.full_name}
                         >
                           {emp.full_name}
                         </span>
                       )}
                       {emp.temporary && (
-                        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
-                          Temp
+                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">
+                          TEMP
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-400">{emp.employee_code ?? "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 text-xs text-slate-400"><span className="block truncate">{emp.employee_code ?? "—"}</span></td>
+                  <td className="px-4 py-2.5 max-w-0">
                     <DeptSelect
-                      value={emp.default_department ?? null}
+                      values={emp.departments}
                       workAreas={workAreas}
-                      onChange={(dept) => {
-                        onUpdate(emp.id, { default_department: dept });
-                        if (!dept) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
+                      onChange={(depts) => {
+                        onUpdate(emp.id, { departments: depts });
+                        if (depts.length === 0) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
                       }}
                     />
                   </td>
                   <td className="px-4 py-2.5">
                     <StationSelect
                       employeeId={emp.id}
-                      empDept={emp.default_department ?? null}
+                      empDepts={emp.departments}
                       assignments={assignments}
                       stations={stations}
                       workAreas={workAreas}
@@ -869,7 +953,7 @@ function RosterManageModal({
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
-                      onClick={() => onRemove(emp.id)}
+                      onClick={() => setConfirmRemoveEmp(emp)}
                       className="text-slate-300 transition-colors hover:text-red-400"
                     >
                       ✕
@@ -918,6 +1002,7 @@ export function AssignmentSidebar({
 }) {
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>(DEFAULT_STATUS_CONFIGS);
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
+  const [confirmRemoveEmp, setConfirmRemoveEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [showManage, setShowManage] = useState(false);
@@ -929,10 +1014,10 @@ export function AssignmentSidebar({
   const totalStaff = activeEmployees.length;
 
   const assignedCount = activeEmployees.filter(
-    (e) => e.default_department !== null && getStatus(e.id) === "available",
+    (e) => e.departments.length > 0 && getStatus(e.id) === "available",
   ).length;
 
-  const notAssignedCount = activeEmployees.filter((e) => !e.default_department).length;
+  const notAssignedCount = activeEmployees.filter((e) => e.departments.length === 0).length;
 
   const efficiency = totalStaff > 0 ? ((assignedCount / totalStaff) * 100).toFixed(1) : "0.0";
 
@@ -1000,13 +1085,13 @@ export function AssignmentSidebar({
           {(() => {
             const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
             const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
-            const noDept = !selectedWa ? activeEmployees.filter((e) => !e.default_department) : [];
-            const unassignedEmps = activeEmployees.filter((e) => !e.default_department);
+            const noDept = !selectedWa ? activeEmployees.filter((e) => e.departments.length === 0) : [];
+            const unassignedEmps = activeEmployees.filter((e) => e.departments.length === 0);
             return (
               <>
                 {visibleWorkAreas.map((wa) => {
                   const deptEmps = activeEmployees.filter((e) =>
-                    e.default_department === wa.name && !assignments.some((a) => a.employee_id === e.id)
+                    e.departments.includes(wa.name) && !assignments.some((a) => a.employee_id === e.id)
                   );
                   if (deptEmps.length === 0) return null;
                   return (
@@ -1058,13 +1143,15 @@ export function AssignmentSidebar({
                               </p>
                             )}
                             {emp.temporary && (
-                              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                             )}
-                            <StatusSelect
-                              value={getStatus(emp.id)}
-                              configs={statusConfigs}
-                              onChange={(val) => onStatusChange(emp.id, val)}
-                            />
+                            <div className="ml-auto shrink-0">
+                              <StatusSelect
+                                value={getStatus(emp.id)}
+                                configs={statusConfigs}
+                                onChange={(val) => onStatusChange(emp.id, val)}
+                              />
+                            </div>
                           </div>
                         );
                       })}
@@ -1096,13 +1183,15 @@ export function AssignmentSidebar({
                             className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
                           >{emp.full_name}</p>
                           {emp.temporary && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                            <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                           )}
-                          <StatusSelect
-                            value={getStatus(emp.id)}
-                            configs={statusConfigs}
-                            onChange={(val) => onStatusChange(emp.id, val)}
-                          />
+                          <div className="ml-auto shrink-0">
+                            <StatusSelect
+                              value={getStatus(emp.id)}
+                              configs={statusConfigs}
+                              onChange={(val) => onStatusChange(emp.id, val)}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -1111,7 +1200,7 @@ export function AssignmentSidebar({
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
                   const assignedEmps = activeEmployees.filter((e) =>
-                    e.default_department === wa.name && assignments.some((a) => a.employee_id === e.id)
+                    e.departments.includes(wa.name) && assignments.some((a) => a.employee_id === e.id)
                   );
                   if (assignedEmps.length === 0) return null;
                   return (
@@ -1140,7 +1229,7 @@ export function AssignmentSidebar({
                               className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
                             >{emp.full_name}</p>
                             {emp.temporary && (
-                              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                             )}
                             <span className="min-w-0 max-w-[45%] truncate text-xs text-slate-400">{empStations.join(", ")}</span>
                           </div>
@@ -1175,16 +1264,18 @@ export function AssignmentSidebar({
                             onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}>
                             {emp.full_name}
                           </p>
-                          <button
-                            onClick={() => setAssignModalEmp(emp)}
-                            className="shrink-0 text-xs text-slate-400 hover:text-blue-500">
-                            + Dept
-                          </button>
-                          <StatusSelect
-                            value={getStatus(emp.id)}
-                            configs={statusConfigs}
-                            onChange={(val) => onStatusChange(emp.id, val)}
-                          />
+                          <div className="ml-auto flex shrink-0 items-center gap-2">
+                            <button
+                              onClick={() => setAssignModalEmp(emp)}
+                              className="text-xs text-slate-400 hover:text-blue-500">
+                              + Dept
+                            </button>
+                            <StatusSelect
+                              value={getStatus(emp.id)}
+                              configs={statusConfigs}
+                              onChange={(val) => onStatusChange(emp.id, val)}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -1214,13 +1305,13 @@ export function AssignmentSidebar({
           stations={stations}
           assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id).map((a) => a.station_id))}
           onSave={(deptName: string, toAdd: string[], toRemove: string[]) => {
-            onUpdate(assignModalEmp.id, { default_department: deptName });
+            onUpdate(assignModalEmp.id, { departments: assignModalEmp.departments.includes(deptName) ? assignModalEmp.departments : [...assignModalEmp.departments, deptName] });
             toAdd.forEach((sid) => onAssignToStation(assignModalEmp.id, sid));
             toRemove.forEach((sid) => onUnassignFromStation(assignModalEmp.id, sid));
             setAssignModalEmp(null);
           }}
           onClear={() => {
-            onUpdate(assignModalEmp.id, { default_department: null });
+            onUpdate(assignModalEmp.id, { departments: [] });
             onUnassignAll(assignModalEmp.id);
           }}
           onClose={() => setAssignModalEmp(null)}

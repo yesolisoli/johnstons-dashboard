@@ -26,7 +26,7 @@ export type Employee = {
   id: string;
   employee_code: string | null;
   full_name: string;
-  default_department: string | null;
+  departments: string[];
   active: boolean;
   gender?: "M" | "F";
   level?: 1 | 2 | 3;

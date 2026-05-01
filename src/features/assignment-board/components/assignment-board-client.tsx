@@ -42,7 +42,9 @@ export function AssignmentBoardClient() {
     const station = stations.find((s) => s.id === stationId);
     const workArea = station ? workAreas.find((wa) => wa.id === station.work_area_id) : null;
     if (workArea) {
-      setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, default_department: workArea.name } : e));
+      setEmployees((prev) => prev.map((e) => e.id === employeeId
+        ? { ...e, departments: e.departments.includes(workArea.name) ? e.departments : [...e.departments, workArea.name] }
+        : e));
       setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
     }
   };
@@ -54,14 +56,20 @@ export function AssignmentBoardClient() {
     setAssignments(remaining);
     if (!remaining.some((a) => a.employee_id === employeeId)) {
       setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, default_department: null } : e));
+      const removedStation = stations.find((s) => s.id === stationId);
+      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
+      if (removedWa) {
+        setEmployees((prev) => prev.map((e) => e.id === employeeId
+          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
+          : e));
+      }
     }
   };
 
   const handleUnassignAll = (employeeId: string) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
     setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, default_department: null } : e));
+    setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, departments: [] } : e));
   };
 
   const handleUnassignFromStation = (employeeId: string, stationId: string) => {
@@ -69,7 +77,13 @@ export function AssignmentBoardClient() {
     setAssignments(remaining);
     if (!remaining.some((a) => a.employee_id === employeeId)) {
       setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, default_department: null } : e));
+      const removedStation = stations.find((s) => s.id === stationId);
+      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
+      if (removedWa) {
+        setEmployees((prev) => prev.map((e) => e.id === employeeId
+          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
+          : e));
+      }
     }
   };
 
@@ -78,11 +92,16 @@ export function AssignmentBoardClient() {
     const removed = assignments.filter((a) => stationIds.has(a.station_id));
     const remaining = assignments.filter((a) => !stationIds.has(a.station_id));
     setAssignments(remaining);
+    const clearedWa = workAreas.find((wa) => wa.id === workAreaId);
     const affectedEmpIds = new Set(removed.map((a) => a.employee_id));
     affectedEmpIds.forEach((empId) => {
       if (!remaining.some((a) => a.employee_id === empId)) {
         setStatuses((prev) => ({ ...prev, [empId]: "available" }));
-        setEmployees((prev) => prev.map((e) => e.id === empId ? { ...e, default_department: null } : e));
+      }
+      if (clearedWa) {
+        setEmployees((prev) => prev.map((e) => e.id === empId
+          ? { ...e, departments: e.departments.filter((d) => d !== clearedWa.name) }
+          : e));
       }
     });
   };

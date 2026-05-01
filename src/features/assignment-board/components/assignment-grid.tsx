@@ -85,7 +85,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaName,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -97,6 +97,7 @@ function AssignmentCell({
   disabledEmployeeIds?: Set<string>;
   onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
+  workAreaName?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -130,15 +131,18 @@ function AssignmentCell({
     .map((a) => allEmployees.find((e) => e.id === a.employee_id))
     .filter((e): e is Employee => !!e && !disabledEmployeeIds?.has(e.id));
   const UNAVAILABLE = new Set(["sick", "vacation", "injured"]);
-  const allPickable = allEmployees.filter((e) => !assignedIds.has(e.id));
+  const deptEmployees = workAreaName
+    ? allEmployees.filter((e) => e.departments.length === 0 || e.departments.includes(workAreaName))
+    : allEmployees;
+  const allPickable = deptEmployees.filter((e) => !assignedIds.has(e.id));
   const unassignedPickable = allPickable.filter((e) =>
     !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
   );
 
   const sortedAllPickable = [...allPickable].sort((a, b) => {
-    if (!a.default_department && b.default_department) return 1;
-    if (a.default_department && !b.default_department) return -1;
-    return (a.default_department ?? "").localeCompare(b.default_department ?? "");
+    if (a.departments.length === 0 && b.departments.length > 0) return 1;
+    if (a.departments.length > 0 && b.departments.length === 0) return -1;
+    return (a.departments[0] ?? "").localeCompare(b.departments[0] ?? "");
   });
   const baseList = tab === "unassigned" ? unassignedPickable : sortedAllPickable;
   const filtered = search.trim()
@@ -269,9 +273,9 @@ function AssignmentCell({
                         <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
                       ) : (
                         <div className="ml-2 flex shrink-0 items-center gap-1.5">
-                          {emp.default_department && (
-                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{emp.default_department}</span>
-                          )}
+                          {emp.departments.map((d) => (
+                            <span key={d} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{d}</span>
+                          ))}
                           {empAssignCount > 0 && (
                             <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
                           )}
@@ -745,7 +749,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
       {/* Table */}
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-white">
-        <table className="w-full border-collapse" style={{ minWidth: "max-content" }}>
+        <table className="w-full border-separate border-spacing-0" style={{ minWidth: "max-content" }}>
           <thead className="sticky top-0 z-20">
             <tr>
               {/* Station label */}
@@ -914,16 +918,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
                 {/* Assignment cells */}
                 {currentShifts.map((shift) => (
-                  <td key={shift.code} className="h-px p-0 align-top">
+                  <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaName={selectedWorkArea.name} />
                     </div>
                   </td>
                 ))}
 
                 {/* Empty cell under + Shift column */}
-                <td />
+                <td className="border-t border-black/6" />
               </tr>
                   </React.Fragment>
                 );
