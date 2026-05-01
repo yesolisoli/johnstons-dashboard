@@ -30,6 +30,7 @@ export type Employee = {
   active: boolean;
   gender?: "M" | "F";
   level?: 1 | 2 | 3;
+  temporary?: boolean;
 };
 
 export type WorkArea = {
@@ -48,6 +49,7 @@ export type Station = {
   display_order: number;
   mode_code?: ModeCode;
   protected?: boolean;
+  group?: string;
 };
 
 export type EmployeeDailyStatus = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Modal } from "./modal";
 import {
   mockAssignments,
@@ -58,8 +58,15 @@ function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove }: {
       onDragStart={handleDragStart}
       className="flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
     >
-      <p className="font-bold text-slate-600">{employee.full_name}</p>
-      <button onClick={onRemove} className="text-slate-300 transition-colors hover:text-red-400">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <p className="font-bold text-slate-600 truncate">{employee.full_name}</p>
+        {employee.temporary && (
+          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+            Temp
+          </span>
+        )}
+      </div>
+      <button onClick={onRemove} className="shrink-0 text-slate-300 transition-colors hover:text-red-400">
         ×
       </button>
     </div>
@@ -252,7 +259,12 @@ function AssignmentCell({
                       onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); setSearch(""); }}
                       className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-slate-50"
                     >
-                      <span className="text-sm font-medium text-slate-800">{emp.full_name}</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium text-slate-800 truncate">{emp.full_name}</span>
+                        {emp.temporary && (
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                        )}
+                      </div>
                       {tab === "unassigned" ? (
                         <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
                       ) : (
@@ -274,6 +286,77 @@ function AssignmentCell({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── AddStationModal ─────────────────────────────────────────────────────────
+
+function AddStationModal({ existingGroups, onClose, onSave }: {
+  existingGroups: string[];
+  onClose: () => void;
+  onSave: (name: string, group: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [group, setGroup] = useState("");
+
+  return (
+    <Modal
+      title="Add Station"
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button
+            onClick={() => name.trim() && onSave(name.trim(), group.trim())}
+            disabled={!name.trim()}
+            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+          >
+            Add Station
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Station Name</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && name.trim() && onSave(name.trim(), group.trim())}
+            autoFocus
+            placeholder="e.g. Saw, Helper #1"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Group <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+          <input
+            list="add-station-groups"
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            placeholder="Pick existing or type new group"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+          <datalist id="add-station-groups">
+            {existingGroups.map((g) => <option key={g} value={g} />)}
+          </datalist>
+          {existingGroups.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {existingGroups.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroup(g)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium border transition-colors ${group === g ? "bg-slate-800 text-white border-slate-800" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -423,8 +506,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // Station editing state
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const [editingStationName, setEditingStationName] = useState("");
+  const [editingStationGroup, setEditingStationGroup] = useState("");
   const [addingStation, setAddingStation] = useState(false);
-  const [newStationName, setNewStationName] = useState("");
+
+  // Group editing state
+  const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
+  const [editingGroupText, setEditingGroupText] = useState("");
+
+  // Station drag state
+  const [dragStationId, setDragStationId] = useState<string | null>(null);
+  const [dragOverStationId, setDragOverStationId] = useState<string | null>(null);
 
   const [workAreaModal, setWorkAreaModal] = useState<"add" | WorkArea | null>(null);
 
@@ -498,15 +589,90 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // ── Station handlers ──
   const handleSaveStation = (stationId: string) => {
     if (!editingStationName.trim()) return;
-    setStations((prev) => prev.map((s) => (s.id === stationId ? { ...s, name: editingStationName.trim() } : s)));
+    const newGroup = editingStationGroup.trim() || undefined;
+    setStations((prev) => {
+      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
+      const target = sorted.find((s) => s.id === stationId);
+      if (!target || target.group === newGroup) {
+        return prev.map((s) => s.id === stationId ? { ...s, name: editingStationName.trim(), group: newGroup } : s);
+      }
+      // Find insertion point: after last station of the new group in same work area
+      const sameArea = sorted.filter((s) => s.work_area_id === target.work_area_id && (!hasModes || s.mode_code === target.mode_code));
+      const groupStations = newGroup ? sameArea.filter((s) => s.id !== stationId && s.group === newGroup) : [];
+      let insertAfterOrder: number;
+      if (groupStations.length > 0) {
+        insertAfterOrder = groupStations[groupStations.length - 1].display_order;
+      } else {
+        insertAfterOrder = sameArea[sameArea.length - 1]?.display_order ?? 0;
+      }
+      // Rebuild display_orders: remove target, insert after insertAfterOrder
+      const withoutTarget = sameArea.filter((s) => s.id !== stationId);
+      const updated = withoutTarget.map((s) => ({ ...s }));
+      // Insert target after the insertAfterOrder position
+      const insertIdx = updated.findIndex((s) => s.display_order === insertAfterOrder);
+      updated.splice(insertIdx + 1, 0, { ...target, name: editingStationName.trim(), group: newGroup });
+      // Renormalize display_order
+      updated.forEach((s, i) => { s.display_order = i + 1; });
+      return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
+    });
     setEditingStationId(null);
   };
 
-  const handleAddStation = () => {
-    if (!newStationName.trim()) return;
-    setStations((prev) => [...prev, { id: `st_${Date.now()}`, work_area_id: selectedWorkAreaId, name: newStationName.trim(), required_headcount: 1, display_order: workAreaStations.length + 1, ...(hasModes ? { mode_code: selectedMode } : {}) }]);
-    setNewStationName("");
+  // ── Group handlers ──
+  const handleDeleteGroup = (groupName: string) => {
+    setStations((prev) => prev.map((s) =>
+      s.work_area_id === selectedWorkAreaId &&
+      (!hasModes || s.mode_code === selectedMode) &&
+      s.group === groupName
+        ? { ...s, group: undefined }
+        : s,
+    ));
+  };
+
+  const handleAddStation = (name: string, group: string) => {
+    setStations((prev) => [...prev, {
+      id: `st_${Date.now()}`,
+      work_area_id: selectedWorkAreaId,
+      name,
+      required_headcount: 1,
+      display_order: workAreaStations.length + 1,
+      ...(hasModes ? { mode_code: selectedMode } : {}),
+      ...(group ? { group } : {}),
+    }]);
     setAddingStation(false);
+  };
+
+  const handleSaveGroupName = (oldName: string) => {
+    if (!editingGroupText.trim() || editingGroupText.trim() === oldName) {
+      setEditingGroupKey(null);
+      return;
+    }
+    setStations((prev) => prev.map((s) =>
+      s.work_area_id === selectedWorkAreaId &&
+      (!hasModes || s.mode_code === selectedMode) &&
+      s.group === oldName
+        ? { ...s, group: editingGroupText.trim() }
+        : s,
+    ));
+    setEditingGroupKey(null);
+  };
+
+  const handleStationDrop = (targetStationId: string) => {
+    if (!dragStationId || dragStationId === targetStationId) return;
+    setStations((prev) => {
+      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
+      const dragged = sorted.find((s) => s.id === dragStationId);
+      const target = sorted.find((s) => s.id === targetStationId);
+      if (!dragged || !target) return prev;
+      const sameArea = sorted.filter((s) => s.work_area_id === dragged.work_area_id && (!hasModes || s.mode_code === dragged.mode_code));
+      const withoutDragged = sameArea.filter((s) => s.id !== dragStationId);
+      const targetIdx = withoutDragged.findIndex((s) => s.id === targetStationId);
+      withoutDragged.splice(targetIdx + 1, 0, { ...dragged, group: target.group });
+      withoutDragged.forEach((s, i) => { s.display_order = i + 1; });
+      return prev.map((s) => withoutDragged.find((u) => u.id === s.id) ?? s);
+    });
+    setDragStationId(null);
+    setDragOverStationId(null);
   };
 
   const handleDeleteStation = (stationId: string) => {
@@ -586,20 +752,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
               <th className="sticky left-0 z-10 w-48 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200">
                 <div className="flex items-center justify-between gap-2">
                   <span>Station</span>
-                  {addingStation ? (
-                    <div className="flex items-center gap-1" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { setAddingStation(false); setNewStationName(""); } }}>
-                      <input value={newStationName} onChange={(e) => setNewStationName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleAddStation(); if (e.key === "Escape") { setAddingStation(false); setNewStationName(""); } }}
-                        placeholder="Name..." className="w-24 rounded border border-slate-600 bg-slate-700 px-2 py-0.5 text-xs font-normal text-white placeholder-slate-400" autoFocus />
-                      <button onClick={handleAddStation} className="text-slate-300 hover:text-white">✓</button>
-                      <button onClick={() => { setAddingStation(false); setNewStationName(""); }} className="text-slate-500 hover:text-slate-300">✕</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setAddingStation(true)}
-                      className="flex h-5 w-5 items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 hover:border-slate-300 hover:text-white">
-                      +
-                    </button>
-                  )}
+                  <button onClick={() => setAddingStation(true)} title="Add station"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 hover:border-slate-300 hover:text-white text-xs">
+                    +
+                  </button>
                 </div>
               </th>
 
@@ -611,11 +767,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       <input value={editingShift.label} onChange={(e) => setEditingShift((s) => s && { ...s, label: e.target.value })}
                         className="w-24 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" autoFocus />
                       <input type="time" value={editingShift.startTime} onChange={(e) => setEditingShift((s) => s && { ...s, startTime: e.target.value })}
-                        className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                        className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
                       <span className="text-white/60 text-xs">–</span>
                       <input type="time" value={editingShift.endTime} onChange={(e) => setEditingShift((s) => s && { ...s, endTime: e.target.value })}
                         onKeyDown={(e) => e.key === "Enter" && handleSaveEditShift()}
-                        className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                        className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
                       <button onClick={handleSaveEditShift} className="text-white hover:opacity-70">✓</button>
                       <button onClick={() => setEditingShift(null)} className="text-white/60 hover:text-white">✕</button>
                     </div>
@@ -645,11 +801,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
                       className="w-24 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" placeholder="Name" autoFocus />
                     <input type="time" value={addingShift.startTime} onChange={(e) => setAddingShift((s) => s && { ...s, startTime: e.target.value })}
-                      className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                      className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
                     <span className="text-white/60 text-xs">–</span>
                     <input type="time" value={addingShift.endTime} onChange={(e) => setAddingShift((s) => s && { ...s, endTime: e.target.value })}
                       onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
-                      className="rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" />
+                      className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
                     <button onClick={handleAddShift} className="text-white hover:opacity-70">✓</button>
                     <button onClick={() => setAddingShift(null)} className="text-white/60 hover:text-white">✕</button>
                   </div>
@@ -664,10 +820,63 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           </thead>
 
           <tbody style={{ backgroundColor: color + "1a" }}>
-            {workAreaStations.map((station) => (
-              <tr key={station.id} className="group border-t" style={{ borderColor: color + "40" }}>
+            {(() => {
+              let prevGroup: string | undefined = "__init__";
+              return workAreaStations.map((station) => {
+                const showGroupHeader = station.group !== undefined && station.group !== prevGroup;
+                prevGroup = station.group;
+                return (
+                  <React.Fragment key={station.id}>
+                    {showGroupHeader && (
+                      <tr className="group/grp">
+                        <td
+                          colSpan={currentShifts.length + 2}
+                          className="border-t border-b py-0.5 text-center"
+                          style={{ borderTopColor: color + "40", borderBottomColor: color + "40", backgroundColor: color + "18" }}
+                        >
+                          {editingGroupKey === station.group ? (
+                            <input
+                              value={editingGroupText}
+                              onChange={(e) => setEditingGroupText(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleSaveGroupName(station.group!); if (e.key === "Escape") setEditingGroupKey(null); }}
+                              onBlur={() => handleSaveGroupName(station.group!)}
+                              className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 outline-none text-center"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className="cursor-pointer text-xs font-semibold uppercase tracking-wider hover:opacity-80"
+                                style={{ color, letterSpacing: "0.08em" }}
+                                onDoubleClick={() => { setEditingGroupKey(station.group!); setEditingGroupText(station.group!); }}
+                                title="Double-click to rename"
+                              >
+                                {station.group}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteGroup(station.group!)}
+                                className="hidden rounded px-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-400 group-hover/grp:inline-flex"
+                                title="Remove group (ungroup stations)"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    <tr
+                      className={`group border-t transition-colors ${dragOverStationId === station.id && dragStationId !== station.id ? "outline-2 -outline-offset-2" : ""}`}
+                      style={{ borderColor: color + "40", outlineColor: color }}
+                      draggable={!station.protected && editingStationId !== station.id}
+                      onDragStart={() => setDragStationId(station.id)}
+                      onDragEnd={() => { setDragStationId(null); setDragOverStationId(null); }}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverStationId(station.id); }}
+                      onDragLeave={() => setDragOverStationId(null)}
+                      onDrop={() => handleStationDrop(station.id)}
+                    >
                 {/* Station name */}
-                <td className="sticky left-0 z-10 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0" }}>
+                <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0" }}>
                   {station.protected ? (
                     <span className="text-sm font-semibold text-slate-800">{station.name}</span>
                   ) : editingStationId === station.id ? (
@@ -675,6 +884,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       <input value={editingStationName} onChange={(e) => setEditingStationName(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSaveStation(station.id)}
                         className="rounded-md border px-2 py-1 text-sm" autoFocus />
+                      <select
+                        value={editingStationGroup}
+                        onChange={(e) => setEditingStationGroup(e.target.value)}
+                        className="rounded-md border px-2 py-1 text-xs text-slate-500 bg-white"
+                      >
+                        <option value="">Group (optional)</option>
+                        {Array.from(new Set(workAreaStations.filter((s) => s.group).map((s) => s.group as string))).map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
                       <div className="flex gap-2">
                         <button onClick={() => handleSaveStation(station.id)} className="text-xs text-blue-600 hover:underline">Save</button>
                         <button onClick={() => setEditingStationId(null)} className="text-xs text-slate-500 hover:underline">Cancel</button>
@@ -683,7 +902,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="cursor-pointer text-sm italic text-slate-600 hover:text-slate-900"
-                        onDoubleClick={() => { setEditingStationId(station.id); setEditingStationName(station.name); }}
+                        onDoubleClick={() => { setEditingStationId(station.id); setEditingStationName(station.name); setEditingStationGroup(station.group ?? ""); }}
                         title="Double-click to edit">
                         {station.name}
                       </span>
@@ -706,11 +925,32 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 {/* Empty cell under + Shift column */}
                 <td />
               </tr>
-            ))}
+                  </React.Fragment>
+                );
+              });
+            })()}
           </tbody>
 
         </table>
       </div>
+
+      {/* Datalist for group autocomplete — must be outside <table> */}
+      <datalist id="group-datalist">
+        {Array.from(new Set(
+          workAreaStations.filter((s) => s.group).map((s) => s.group as string)
+        )).map((g) => <option key={g} value={g} />)}
+      </datalist>
+
+      {/* Add Station Modal */}
+      {addingStation && (
+        <AddStationModal
+          existingGroups={Array.from(new Set(
+            workAreaStations.filter((s) => s.group).map((s) => s.group as string)
+          ))}
+          onClose={() => setAddingStation(false)}
+          onSave={handleAddStation}
+        />
+      )}
 
       {/* Work Area Modal */}
       {workAreaModal && (

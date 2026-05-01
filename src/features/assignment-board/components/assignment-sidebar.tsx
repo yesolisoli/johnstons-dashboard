@@ -612,6 +612,7 @@ function RosterManageModal({
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [newName, setNewName] = useState("");
+  const [newTemporary, setNewTemporary] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level">("dept");
@@ -672,9 +673,10 @@ function RosterManageModal({
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
     const newId = `emp_${Date.now()}`;
-    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), default_department: null, active: true });
+    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), default_department: null, active: true, ...(newTemporary ? { temporary: true } : {}) });
     onStatusChange(newId, "available");
     setNewName("");
+    setNewTemporary(false);
   };
 
   const handleSaveName = (id: string) => {
@@ -696,12 +698,21 @@ function RosterManageModal({
             placeholder="New employee name..."
             className="flex-1 rounded-md border px-3 py-2 text-sm"
           />
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-600 select-none">
+            <input
+              type="checkbox"
+              checked={newTemporary}
+              onChange={(e) => setNewTemporary(e.target.checked)}
+              className="accent-amber-500"
+            />
+            Temporary
+          </label>
           <button
             onClick={handleAdd}
             disabled={!newName.trim()}
             className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-slate-700"
           >
-            + Add Employee
+            + Add
           </button>
         </div>
       }
@@ -796,6 +807,11 @@ function RosterManageModal({
                           title="Double-click to edit"
                         >
                           {emp.full_name}
+                        </span>
+                      )}
+                      {emp.temporary && (
+                        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+                          Temp
                         </span>
                       )}
                     </div>
@@ -1035,11 +1051,14 @@ export function AssignmentSidebar({
                                   e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                                   setTimeout(() => document.body.removeChild(ghost), 0);
                                 }}
-                                className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
+                                className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
                                 onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}
                                 title="Drag to assign station · Double-click to edit">
                                 {emp.full_name}
                               </p>
+                            )}
+                            {emp.temporary && (
+                              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
                             )}
                             <StatusSelect
                               value={getStatus(emp.id)}
@@ -1074,8 +1093,11 @@ export function AssignmentSidebar({
                               e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                               setTimeout(() => document.body.removeChild(ghost), 0);
                             }}
-                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
+                            className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
                           >{emp.full_name}</p>
+                          {emp.temporary && (
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                          )}
                           <StatusSelect
                             value={getStatus(emp.id)}
                             configs={statusConfigs}
@@ -1115,8 +1137,11 @@ export function AssignmentSidebar({
                                 e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                                 setTimeout(() => document.body.removeChild(ghost), 0);
                               }}
-                              className="flex-1 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
+                              className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
                             >{emp.full_name}</p>
+                            {emp.temporary && (
+                              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
+                            )}
                             <span className="min-w-0 max-w-[45%] truncate text-xs text-slate-400">{empStations.join(", ")}</span>
                           </div>
                         );
