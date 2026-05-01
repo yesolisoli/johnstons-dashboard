@@ -953,7 +953,7 @@ function RosterManageModal({
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
-                      onClick={() => setConfirmRemoveEmp(emp)}
+                      onClick={() => onRemove(emp.id)}
                       className="text-slate-300 transition-colors hover:text-red-400"
                     >
                       ✕
@@ -1002,7 +1002,6 @@ export function AssignmentSidebar({
 }) {
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>(DEFAULT_STATUS_CONFIGS);
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
-  const [confirmRemoveEmp, setConfirmRemoveEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [showManage, setShowManage] = useState(false);
