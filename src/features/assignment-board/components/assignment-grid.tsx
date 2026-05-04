@@ -302,62 +302,60 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
 }) {
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
+  const canSave = name.trim().length > 0;
 
   return (
-    <Modal
-      title="Add Station"
-      onClose={onClose}
+    <Modal onClose={onClose} title="New Station"
       footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
-            onClick={() => name.trim() && onSave(name.trim(), group.trim())}
-            disabled={!name.trim()}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+            onClick={() => canSave && onSave(name.trim(), group.trim())}
+            disabled={!canSave}
+            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
           >
             Add Station
           </button>
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Station Name</label>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-400">Station Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && name.trim() && onSave(name.trim(), group.trim())}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim())}
             autoFocus
             placeholder="e.g. Saw, Helper #1"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+            className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-300 focus:border-slate-800 focus:bg-white focus:outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Group <span className="normal-case font-normal text-slate-400">(optional)</span></label>
-          <input
-            list="add-station-groups"
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder="Pick existing or type new group"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-          />
-          <datalist id="add-station-groups">
-            {existingGroups.map((g) => <option key={g} value={g} />)}
-          </datalist>
+          <div className="mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Group</label>
+            <span className="text-xs text-slate-300">— optional</span>
+          </div>
           {existingGroups.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mb-2.5 flex flex-wrap gap-1.5">
               {existingGroups.map((g) => (
                 <button
                   key={g}
                   type="button"
-                  onClick={() => setGroup(g)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium border transition-colors ${group === g ? "bg-slate-800 text-white border-slate-800" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
+                  onClick={() => setGroup(group === g ? "" : g)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${group === g ? "bg-slate-800 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                 >
                   {g}
                 </button>
               ))}
             </div>
           )}
+          <input
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            placeholder={existingGroups.length > 0 ? "Or type a new group name..." : "Type a group name..."}
+            className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-300 focus:border-slate-800 focus:bg-white focus:outline-none transition-colors"
+          />
         </div>
       </div>
     </Modal>
@@ -512,6 +510,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const [editingStationName, setEditingStationName] = useState("");
   const [editingStationGroup, setEditingStationGroup] = useState("");
   const [addingStation, setAddingStation] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Group editing state
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
@@ -720,7 +719,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           + Add Dept
         </button>
         <button
-          onClick={() => onClearWorkArea?.(selectedWorkAreaId)}
+          onClick={() => setConfirmClear(true)}
           className="ml-auto rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           Clear All
@@ -750,7 +749,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {/* Table */}
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-white">
         <table className="w-full border-separate border-spacing-0" style={{ minWidth: "max-content" }}>
-          <thead className="sticky top-0 z-20">
+          <thead className="sticky top-0 z-30">
             <tr>
               {/* Station label */}
               <th className="sticky left-0 z-10 w-48 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200">
@@ -960,6 +959,35 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {workAreaModal && (
         <WorkAreaModal initial={workAreaModal === "add" ? undefined : workAreaModal}
           onClose={() => setWorkAreaModal(null)} onSave={handleSaveWorkArea} />
+      )}
+
+      {/* Clear All Confirm */}
+      {confirmClear && (
+        <Modal title="Clear All Assignments" onClose={() => setConfirmClear(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmClear(false)} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button
+                onClick={() => { onClearWorkArea?.(selectedWorkAreaId); setConfirmClear(false); }}
+                className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Clear All
+              </button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/></svg>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800">Remove all assignments?</p>
+              <p className="mt-1 text-sm text-slate-500">
+                All station assignments in <span className="font-medium text-slate-700">{selectedWorkArea?.name}</span> will be cleared. This cannot be undone.
+              </p>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

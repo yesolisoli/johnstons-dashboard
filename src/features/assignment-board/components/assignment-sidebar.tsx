@@ -693,6 +693,8 @@ function RosterManageModal({
   const [newTemporary, setNewTemporary] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [confirmRemoveEmp, setConfirmRemoveEmp] = useState<Employee | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level" | "gender">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -819,7 +821,7 @@ function RosterManageModal({
       </div>
 
       {/* Employee table */}
-      <div className="h-[calc(100vh-320px)] max-h-140 overflow-y-auto rounded-md border">
+      <div ref={scrollRef} className="h-[calc(100vh-320px)] max-h-140 overflow-y-auto rounded-md border">
         <table className="w-full border-collapse text-sm table-fixed">
           <colgroup>
             <col className="w-52" />
@@ -908,6 +910,10 @@ function RosterManageModal({
                       onChange={(depts) => {
                         onUpdate(emp.id, { departments: depts });
                         if (depts.length === 0) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
+                        // dept set but no assignment → row floats to top, scroll there
+                        if (depts.length > 0 && !assignments.some((a) => a.employee_id === emp.id)) {
+                          setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
+                        }
                       }}
                     />
                   </td>
@@ -965,6 +971,38 @@ function RosterManageModal({
           </tbody>
         </table>
       </div>
+
+      {confirmRemoveEmp && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-95 rounded-2xl bg-white shadow-2xl">
+            <div className="p-6">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                <svg className="h-6 w-6 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Remove employee?</h3>
+              <p className="mt-1.5 text-sm text-slate-500">
+                <span className="font-semibold text-slate-700">{confirmRemoveEmp.full_name}</span> will be permanently removed from the roster.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
+              <button
+                onClick={() => setConfirmRemoveEmp(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { onRemove(confirmRemoveEmp.id); setConfirmRemoveEmp(null); }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
