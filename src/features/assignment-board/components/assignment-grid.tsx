@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Modal } from "./modal";
+import React, { useState } from "react";
+import { Modal } from "@/components/shared/modal";
 import {
   mockAssignments,
   mockEmployees,
@@ -20,280 +20,9 @@ import type {
   WorkArea,
   WorkAreaModeView,
 } from "../types";
+import { AssignmentCell } from "./assignment-cell";
 
-// ─── EmployeeCard ─────────────────────────────────────────────────────────────
-
-function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove }: {
-  employee: Employee;
-  stationId: string;
-  shiftCode: ShiftCode;
-  modeCode: ModeCode;
-  onRemove: () => void;
-}) {
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("application/json", JSON.stringify({
-      employeeId: employee.id,
-      fromStationId: stationId,
-      fromShiftCode: shiftCode,
-      fromModeCode: modeCode,
-    }));
-    const ghost = document.createElement("div");
-    ghost.textContent = employee.full_name;
-    Object.assign(ghost.style, {
-      position: "fixed", top: "-200px", left: "-200px",
-      background: "white", padding: "6px 12px", borderRadius: "6px",
-      fontSize: "13px", fontWeight: "600", color: "#475569",
-      boxShadow: "0 4px 14px rgba(0,0,0,0.18)", border: "1px solid #e2e8f0",
-      whiteSpace: "nowrap", pointerEvents: "none",
-    });
-    document.body.appendChild(ghost);
-    e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-    setTimeout(() => document.body.removeChild(ghost), 0);
-  };
-
-  return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      className="flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
-    >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <p className="font-bold text-slate-600 truncate">{employee.full_name}</p>
-        {employee.temporary && (
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
-            Temp
-          </span>
-        )}
-      </div>
-      <button onClick={onRemove} className="shrink-0 text-slate-300 transition-colors hover:text-red-400">
-        ×
-      </button>
-    </div>
-  );
-}
-
-// ─── AssignmentCell ───────────────────────────────────────────────────────────
-
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  available:  { label: "Available",  className: "bg-green-100 text-green-700" },
-  sick:       { label: "Sick",       className: "bg-red-100 text-red-600" },
-  vacation:   { label: "Vacation",   className: "bg-yellow-100 text-yellow-600" },
-  injured:    { label: "Injured",    className: "bg-orange-100 text-orange-600" },
-  training:   { label: "Training",   className: "bg-purple-100 text-purple-600" },
-  off_shift:  { label: "Off Shift",  className: "bg-slate-100 text-slate-500" },
-};
-
-function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaName,
-}: {
-  stationId: string;
-  shiftCode: ShiftCode;
-  modeCode: ModeCode;
-  color: string;
-  assignments: StationAssignment[];
-  allEmployees: Employee[];
-  statuses?: Record<string, string>;
-  disabledEmployeeIds?: Set<string>;
-  onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
-  onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
-  workAreaName?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"all" | "unassigned">("all");
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setSearch("");
-      }
-    }
-    if (isOpen) document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
-  }, [isOpen]);
-
-  const cellAssignments = assignments.filter(
-    (a) => a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode,
-  );
-  const assignedIds = new Set(cellAssignments.map((a) => a.employee_id));
-  const assignedEmployees = cellAssignments
-    .map((a) => allEmployees.find((e) => e.id === a.employee_id))
-    .filter((e): e is Employee => !!e && !disabledEmployeeIds?.has(e.id));
-  const UNAVAILABLE = new Set(["sick", "vacation", "injured"]);
-  const deptEmployees = workAreaName
-    ? allEmployees.filter((e) => e.departments.length === 0 || e.departments.includes(workAreaName))
-    : allEmployees;
-  const allPickable = deptEmployees.filter((e) => !assignedIds.has(e.id));
-  const unassignedPickable = allPickable.filter((e) =>
-    !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
-  );
-
-  const sortedAllPickable = [...allPickable].sort((a, b) => {
-    if (a.departments.length === 0 && b.departments.length > 0) return 1;
-    if (a.departments.length > 0 && b.departments.length === 0) return -1;
-    return (a.departments[0] ?? "").localeCompare(b.departments[0] ?? "");
-  });
-  const baseList = tab === "unassigned" ? unassignedPickable : sortedAllPickable;
-  const filtered = search.trim()
-    ? baseList.filter((e) => e.full_name.toLowerCase().includes(search.toLowerCase()))
-    : baseList;
-
-  const handleOpen = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 6, left: rect.right - 288 });
-    }
-    setIsOpen((v) => !v);
-    setSearch("");
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => setIsDragOver(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    try {
-      const { employeeId, fromStationId, fromShiftCode, fromModeCode } = JSON.parse(e.dataTransfer.getData("application/json"));
-      if (fromStationId === stationId && fromShiftCode === shiftCode && fromModeCode === modeCode) return;
-      if (assignedIds.has(employeeId)) return;
-      if (fromStationId) onRemove(employeeId, fromStationId, fromShiftCode, fromModeCode);
-      onAssign(employeeId, stationId, shiftCode, modeCode);
-    } catch {}
-  };
-
-  return (
-    <div
-      ref={ref}
-      className="relative h-full min-h-12 rounded-md transition-all"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      style={isDragOver ? { backgroundColor: color + "22", outline: `2px solid ${color}99`, outlineOffset: "2px" } : {}}
-    >
-      <div className="flex items-start gap-2">
-        <div className="flex flex-1 flex-col gap-1.5">
-          {assignedEmployees.length === 0 && !isOpen && (
-            <div
-              className="flex items-center justify-center rounded-md border border-dashed px-3 py-2 text-sm transition-colors"
-              style={{ minHeight: "2.5rem", ...(isDragOver ? { borderColor: color, color } : { borderColor: "#cbd5e1", color: "#94a3b8" }) }}
-            >
-              {isDragOver ? "Drop here" : "No assignment"}
-            </div>
-          )}
-          {assignedEmployees.map((emp) => (
-            <EmployeeCard
-              key={emp.id}
-              employee={emp}
-              stationId={stationId}
-              shiftCode={shiftCode}
-              modeCode={modeCode}
-              onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
-            />
-          ))}
-        </div>
-        <div className="shrink-0">
-          <button
-            ref={btnRef}
-            onClick={handleOpen}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-600"
-          >
-            +
-          </button>
-          {isOpen && (
-            <div
-              className="fixed z-50 w-72 rounded-xl border bg-white shadow-2xl"
-              style={{ top: dropPos.top, left: dropPos.left }}
-            >
-              {/* Search */}
-              <div className="p-2 pb-0">
-                <input
-                  ref={searchRef}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
-                />
-              </div>
-              {/* Tabs */}
-              <div className="flex gap-1 px-2 pt-2">
-                <button
-                  onClick={() => setTab("all")}
-                  className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "all" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
-                >
-                  All ({allPickable.length})
-                </button>
-                <button
-                  onClick={() => setTab("unassigned")}
-                  className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "unassigned" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
-                >
-                  Unassigned ({unassignedPickable.length})
-                </button>
-              </div>
-              {/* List */}
-              <div className="max-h-56 overflow-y-auto p-2">
-                {filtered.length === 0 && (
-                  <p className="px-3 py-3 text-center text-sm text-slate-400">
-                    {search ? "No results" : "No staff available"}
-                  </p>
-                )}
-                {filtered.map((emp) => {
-                  const status = statuses?.[emp.id] ?? "available";
-                  const badge = STATUS_BADGE[status] ?? STATUS_BADGE.available;
-                  const empAssignCount = assignments.filter((a) => a.employee_id === emp.id).length;
-                  return (
-                    <button
-                      key={emp.id}
-                      onClick={() => { onAssign(emp.id, stationId, shiftCode, modeCode); setIsOpen(false); setSearch(""); }}
-                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-slate-50"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-sm font-medium text-slate-800 truncate">{emp.full_name}</span>
-                        {emp.temporary && (
-                          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
-                        )}
-                      </div>
-                      {tab === "unassigned" ? (
-                        <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
-                      ) : (
-                        <div className="ml-2 flex shrink-0 items-center gap-1.5">
-                          {emp.departments.map((d) => (
-                            <span key={d} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{d}</span>
-                          ))}
-                          {empAssignCount > 0 && (
-                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── AddStationModal ─────────────────────────────────────────────────────────
+// ─── AddStationModal (local) ──────────────────────────────────────────────────
 
 function AddStationModal({ existingGroups, onClose, onSave }: {
   existingGroups: string[];
@@ -362,12 +91,13 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
   );
 }
 
-// ─── WorkAreaModal ──────────────────────────────────────────────────────────
+// ─── WorkAreaModal (local) ────────────────────────────────────────────────────
 
-function WorkAreaModal({ initial, onClose, onSave }: {
+function WorkAreaModal({ initial, onClose, onSave, onDelete }: {
   initial?: WorkArea;
   onClose: () => void;
   onSave: (name: string, color: string, modeViews: WorkAreaModeView[]) => void;
+  onDelete?: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [color, setColor] = useState(initial?.color_hex ?? "#334155");
@@ -389,17 +119,24 @@ function WorkAreaModal({ initial, onClose, onSave }: {
       title={initial ? "Edit Department" : "Add Department"}
       onClose={onClose}
       footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-            Cancel
-          </button>
-          <button
-            onClick={() => name.trim() && onSave(name.trim(), color, buildViews())}
-            disabled={!name.trim()}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
-          >
-            {initial ? "Save" : "Add Department"}
-          </button>
+        <div className="flex items-center gap-2">
+          {initial && onDelete && (
+            <button onClick={onDelete} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
+              Delete Department
+            </button>
+          )}
+          <div className="ml-auto flex gap-2">
+            <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              Cancel
+            </button>
+            <button
+              onClick={() => name.trim() && onSave(name.trim(), color, buildViews())}
+              disabled={!name.trim()}
+              className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
+            >
+              {initial ? "Save" : "Add Department"}
+            </button>
+          </div>
         </div>
       }
     >
@@ -515,12 +252,14 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // Group editing state
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
   const [editingGroupText, setEditingGroupText] = useState("");
+  const [groupDeleteWarning, setGroupDeleteWarning] = useState<string | null>(null); // group name with stations blocking delete
 
   // Station drag state
   const [dragStationId, setDragStationId] = useState<string | null>(null);
   const [dragOverStationId, setDragOverStationId] = useState<string | null>(null);
 
   const [workAreaModal, setWorkAreaModal] = useState<"add" | WorkArea | null>(null);
+  const [confirmDeleteWorkArea, setConfirmDeleteWorkArea] = useState<WorkArea | null>(null);
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
   const selectedWorkArea = workAreas.find((wa) => wa.id === selectedWorkAreaId) ?? workAreas[0];
@@ -623,6 +362,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   // ── Group handlers ──
   const handleDeleteGroup = (groupName: string) => {
+    const hasStations = workAreaStations.some((s) => s.group === groupName);
+    if (hasStations) {
+      setGroupDeleteWarning(groupName);
+      return;
+    }
     setStations((prev) => prev.map((s) =>
       s.work_area_id === selectedWorkAreaId &&
       (!hasModes || s.mode_code === selectedMode) &&
@@ -668,9 +412,15 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       const target = sorted.find((s) => s.id === targetStationId);
       if (!dragged || !target) return prev;
       const sameArea = sorted.filter((s) => s.work_area_id === dragged.work_area_id && (!hasModes || s.mode_code === dragged.mode_code));
+      const draggedOriginalIdx = sameArea.findIndex((s) => s.id === dragStationId);
+      const targetOriginalIdx = sameArea.findIndex((s) => s.id === targetStationId);
+      const movingUp = draggedOriginalIdx > targetOriginalIdx;
+      // Block: can't drag protected stations, can't move above a protected station
+      if (dragged.protected) return prev;
+      if (movingUp && target.protected) return prev;
       const withoutDragged = sameArea.filter((s) => s.id !== dragStationId);
       const targetIdx = withoutDragged.findIndex((s) => s.id === targetStationId);
-      withoutDragged.splice(targetIdx + 1, 0, { ...dragged, group: target.group });
+      withoutDragged.splice(movingUp ? targetIdx : targetIdx + 1, 0, { ...dragged, group: target.group });
       withoutDragged.forEach((s, i) => { s.display_order = i + 1; });
       return prev.map((s) => withoutDragged.find((u) => u.id === s.id) ?? s);
     });
@@ -699,6 +449,20 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       setWorkAreas((prev) => prev.map((wa) => wa.id === workAreaModal.id ? { ...wa, name, color_hex: color, mode_views: modeViews.length ? modeViews : undefined } : wa));
       setWorkAreaModal(null);
     }
+  };
+
+  const handleDeleteWorkArea = (wa: WorkArea) => {
+    setWorkAreas((prev) => prev.filter((w) => w.id !== wa.id));
+    setStations((prev) => prev.filter((s) => s.work_area_id !== wa.id));
+    setAssignments((prev) => prev.filter((a) => {
+      const stationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
+      return !stationIds.has(a.station_id);
+    }));
+    setWorkAreaShifts((prev) => { const next = { ...prev }; delete next[wa.id]; return next; });
+    const remaining = workAreas.filter((w) => w.id !== wa.id);
+    if (remaining.length > 0) selectWorkArea(remaining[0].id);
+    setConfirmDeleteWorkArea(null);
+    setWorkAreaModal(null);
   };
 
   const color = selectedWorkArea?.color_hex ?? "#334155";
@@ -874,7 +638,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       draggable={!station.protected && editingStationId !== station.id}
                       onDragStart={() => setDragStationId(station.id)}
                       onDragEnd={() => { setDragStationId(null); setDragOverStationId(null); }}
-                      onDragOver={(e) => { e.preventDefault(); setDragOverStationId(station.id); }}
+                      onDragOver={(e) => { e.preventDefault(); if (dragStationId) setDragOverStationId(station.id); }}
                       onDragLeave={() => setDragOverStationId(null)}
                       onDrop={() => handleStationDrop(station.id)}
                     >
@@ -944,6 +708,35 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         )).map((g) => <option key={g} value={g} />)}
       </datalist>
 
+      {/* Group Delete Warning */}
+      {groupDeleteWarning && (
+        <Modal
+          title="Cannot Delete Group"
+          onClose={() => setGroupDeleteWarning(null)}
+          footer={
+            <div className="flex justify-end">
+              <button onClick={() => setGroupDeleteWarning(null)} className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                Got it
+              </button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <svg className="h-5 w-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/></svg>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800">
+                Group <span className="text-amber-700">"{groupDeleteWarning}"</span> still has stations.
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Remove all stations in this group before deleting it.
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Add Station Modal */}
       {addingStation && (
         <AddStationModal
@@ -957,9 +750,63 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
       {/* Work Area Modal */}
       {workAreaModal && (
-        <WorkAreaModal initial={workAreaModal === "add" ? undefined : workAreaModal}
-          onClose={() => setWorkAreaModal(null)} onSave={handleSaveWorkArea} />
+        <WorkAreaModal
+          initial={workAreaModal === "add" ? undefined : workAreaModal}
+          onClose={() => setWorkAreaModal(null)}
+          onSave={handleSaveWorkArea}
+          onDelete={workAreaModal !== "add" ? () => setConfirmDeleteWorkArea(workAreaModal) : undefined}
+        />
       )}
+
+      {/* Delete Work Area Confirm */}
+      {confirmDeleteWorkArea && (() => {
+        const waStations = stations.filter((s) => s.work_area_id === confirmDeleteWorkArea.id);
+        const assignedEmpIds = new Set(assignments.filter((a) => waStations.some((s) => s.id === a.station_id)).map((a) => a.employee_id));
+        return (
+          <Modal
+            title="Delete Department"
+            onClose={() => setConfirmDeleteWorkArea(null)}
+            footer={
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmDeleteWorkArea(null)} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteWorkArea(confirmDeleteWorkArea)}
+                  className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                  <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/></svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">
+                    Delete <span className="text-red-600">"{confirmDeleteWorkArea.name}"</span>?
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">This cannot be undone.</p>
+                </div>
+              </div>
+              {(waStations.length > 0 || assignedEmpIds.size > 0) && (
+                <div className="rounded-lg border border-red-100 bg-red-50 p-3 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-500">Will also be deleted</p>
+                  {waStations.length > 0 && (
+                    <p className="text-sm text-red-700">• <span className="font-semibold">{waStations.length}</span> station{waStations.length > 1 ? "s" : ""}</p>
+                  )}
+                  {assignedEmpIds.size > 0 && (
+                    <p className="text-sm text-red-700">• <span className="font-semibold">{assignedEmpIds.size}</span> employee assignment{assignedEmpIds.size > 1 ? "s" : ""}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Modal>
+        );
+      })()}
 
       {/* Clear All Confirm */}
       {confirmClear && (

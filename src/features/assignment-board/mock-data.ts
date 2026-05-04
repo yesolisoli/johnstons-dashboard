@@ -476,4 +476,76 @@ export const mockAssignments: StationAssignment[] = [
   { id: "a136", employee_id: "emp_99", station_id: "st_ahb_pack_downstairs", work_date: mockWorkDate, shift_code: "shift_1", mode_code: "after_hog_break" },
   { id: "a137", employee_id: "emp_100", station_id: "st_pack_vac_pac_box", work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
   { id: "a138", employee_id: "emp_100", station_id: "st_ahb_pack_vac_box", work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // Second-dept assignments for dual-department employees
+  // emp_3 Josh Miller → Small Pro
+  { id: "a139", employee_id: "emp_3",  station_id: "st_small_slab_off",         work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_6 Mina → Packaging
+  { id: "a140", employee_id: "emp_6",  station_id: "st_pack_floater",           work_date: mockWorkDate, shift_code: "shift_2", mode_code: "hog_break" },
+  { id: "a141", employee_id: "emp_6",  station_id: "st_ahb_pack_floater",       work_date: mockWorkDate, shift_code: "shift_2", mode_code: "after_hog_break" },
+  // emp_8 Ryan Cooper → Processing Floor
+  { id: "a142", employee_id: "emp_8",  station_id: "st_proc_bone_heads",        work_date: mockWorkDate, shift_code: "shift_2", mode_code: "normal" },
+  // emp_11 Sandra Kowalski → Loading Dock
+  { id: "a143", employee_id: "emp_11", station_id: "st_loading_helper_6",       work_date: mockWorkDate, shift_code: "shift_2", mode_code: "normal" },
+  // emp_14 Carlos Reyes → Small Pro
+  { id: "a144", employee_id: "emp_14", station_id: "st_small_kaiser",           work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
+  // emp_16 Tommy Larsen → Packaging
+  { id: "a145", employee_id: "emp_16", station_id: "st_pack_sungiven",          work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a146", employee_id: "emp_16", station_id: "st_ahb_pack_sungiven",      work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // emp_19 Nina Petrov → Meat Cutting
+  { id: "a147", employee_id: "emp_19", station_id: "st_meat_cr_1",             work_date: mockWorkDate, shift_code: "shift_2", mode_code: "hog_break" },
+  { id: "a148", employee_id: "emp_19", station_id: "st_ahb_meat_cr_1",         work_date: mockWorkDate, shift_code: "shift_2", mode_code: "after_hog_break" },
+  // emp_22 Dmitri Volkov → Processing Floor
+  { id: "a149", employee_id: "emp_22", station_id: "st_proc_rollers_gams",      work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
+  // emp_26 Grace Kim → Loading Dock
+  { id: "a150", employee_id: "emp_26", station_id: "st_loading_helper_5",       work_date: mockWorkDate, shift_code: "shift_2", mode_code: "normal" },
+  // emp_28 Olga Marchetti → Meat Cutting
+  { id: "a151", employee_id: "emp_28", station_id: "st_meat_cr_2",             work_date: mockWorkDate, shift_code: "shift_1", mode_code: "hog_break" },
+  { id: "a152", employee_id: "emp_28", station_id: "st_ahb_meat_cr_2",         work_date: mockWorkDate, shift_code: "shift_1", mode_code: "after_hog_break" },
+  // emp_31 Victor Hernandez → Packaging
+  { id: "a153", employee_id: "emp_31", station_id: "st_pack_vac_pac_bag",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a154", employee_id: "emp_31", station_id: "st_ahb_pack_vac_box",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // emp_33 Patrick Walsh → Small Pro
+  { id: "a155", employee_id: "emp_33", station_id: "st_small_slab_jalapeno",    work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_38 Sean Murphy → Processing Floor
+  { id: "a156", employee_id: "emp_38", station_id: "st_proc_rollers_gams",      work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_40 Andrei Popescu → Loading Dock
+  { id: "a157", employee_id: "emp_40", station_id: "st_loading_helper_1",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_43 Hana Novak → Small Pro
+  { id: "a158", employee_id: "emp_43", station_id: "st_small_slab_nna",         work_date: mockWorkDate, shift_code: "shift_2", mode_code: "normal" },
+  // emp_46 Pierre Dubois → Meat Cutting
+  { id: "a159", employee_id: "emp_46", station_id: "st_meat_cr_proof",          work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a160", employee_id: "emp_46", station_id: "st_ahb_meat_cr_1",         work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // emp_48 Connor O'Sullivan → Processing Floor
+  { id: "a161", employee_id: "emp_48", station_id: "st_proc_blood_setup",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_52 Andre Laurent → Small Pro
+  { id: "a162", employee_id: "emp_52", station_id: "st_small_slab_sugar_free",  work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_55 Bogdan Ionescu → Meat Cutting
+  { id: "a163", employee_id: "emp_55", station_id: "st_meat_cr_2",             work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a164", employee_id: "emp_55", station_id: "st_ahb_meat_wash",          work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // emp_60 Valentina Russo → Packaging
+  { id: "a165", employee_id: "emp_60", station_id: "st_pack_overstock",         work_date: mockWorkDate, shift_code: "shift_2", mode_code: "hog_break" },
+  { id: "a166", employee_id: "emp_60", station_id: "st_ahb_pack_vac_pac",       work_date: mockWorkDate, shift_code: "shift_2", mode_code: "after_hog_break" },
+  // emp_63 Mei-Ling Zhang → Processing Floor
+  { id: "a167", employee_id: "emp_63", station_id: "st_proc_barn_setup",        work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_65 Aoife Brennan → Loading Dock
+  { id: "a168", employee_id: "emp_65", station_id: "st_loading_helper_6",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_71 Hamid Nazari → Packaging
+  { id: "a169", employee_id: "emp_71", station_id: "st_pack_forklift",          work_date: mockWorkDate, shift_code: "shift_1", mode_code: "hog_break" },
+  { id: "a170", employee_id: "emp_71", station_id: "st_ahb_pack_forklift",      work_date: mockWorkDate, shift_code: "shift_1", mode_code: "after_hog_break" },
+  // emp_74 Takeshi Mori → Meat Cutting
+  { id: "a171", employee_id: "emp_74", station_id: "st_meat_proof",             work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a172", employee_id: "emp_74", station_id: "st_ahb_meat_proof",         work_date: mockWorkDate, shift_code: "shift_3", mode_code: "after_hog_break" },
+  // emp_77 Rafael Herrera → Loading Dock
+  { id: "a173", employee_id: "emp_77", station_id: "st_loading_helper_4",       work_date: mockWorkDate, shift_code: "shift_2", mode_code: "normal" },
+  // emp_82 Zanele Mokoena → Small Pro
+  { id: "a174", employee_id: "emp_82", station_id: "st_small_banquet",          work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
+  // emp_85 Raj Sharma → Packaging
+  { id: "a175", employee_id: "emp_85", station_id: "st_pack_vac_pac_bag",       work_date: mockWorkDate, shift_code: "shift_1", mode_code: "hog_break" },
+  { id: "a176", employee_id: "emp_85", station_id: "st_ahb_pack_vac_pac",       work_date: mockWorkDate, shift_code: "shift_1", mode_code: "after_hog_break" },
+  // emp_88 Carmen Flores → Processing Floor
+  { id: "a177", employee_id: "emp_88", station_id: "st_proc_blood_pit",         work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
+  // emp_92 Layla Mahmoud → Loading Dock
+  { id: "a178", employee_id: "emp_92", station_id: "st_loading_helper_5",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
+  // emp_97 Jerome Dupont → Small Pro
+  { id: "a179", employee_id: "emp_97", station_id: "st_small_custom",           work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
 ];

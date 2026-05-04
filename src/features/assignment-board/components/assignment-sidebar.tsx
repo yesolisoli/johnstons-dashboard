@@ -1,54 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Settings } from "lucide-react";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
-import { Modal } from "./modal";
+import { StatCard } from "./stat-card";
+import { StatusSelect, DEFAULT_STATUS_CONFIGS, type StatusConfig, cfgBadge, COLOR_OPTIONS } from "./status-select";
+import { Modal } from "@/components/shared/modal";
+import { MultiFilterSelect } from "./multi-filter-select";
+import { DeptSelect } from "./dept-select";
+import { StationSelect } from "./station-select";
 
 type EmployeeStatus = string;
 
-type StatusConfig = {
-  code: string;
-  label: string;
-  className: string;
-  colorHex?: string;
-  protected?: boolean;
-};
-
-function cfgBadge(cfg: StatusConfig): { cls: string; sty?: React.CSSProperties } {
-  if (cfg.colorHex) {
-    return {
-      cls: "rounded-md px-2.5 py-1 text-xs font-semibold",
-      sty: { backgroundColor: cfg.colorHex + "28", color: cfg.colorHex },
-    };
-  }
-  return { cls: `rounded-md px-2.5 py-1 text-xs font-semibold ${cfg.className}` };
-}
-
-const COLOR_OPTIONS: { label: string; className: string }[] = [
-  { label: "Green",  className: "bg-green-100 text-green-700" },
-  { label: "Blue",   className: "bg-blue-100 text-blue-700" },
-  { label: "Slate",  className: "bg-slate-200 text-slate-500" },
-  { label: "Red",    className: "bg-red-100 text-red-600" },
-  { label: "Yellow", className: "bg-yellow-100 text-yellow-700" },
-  { label: "Orange", className: "bg-orange-100 text-orange-700" },
-  { label: "Purple", className: "bg-purple-100 text-purple-700" },
-  { label: "Gray",   className: "bg-slate-100 text-slate-600" },
-  { label: "Teal",   className: "bg-teal-100 text-teal-700" },
-  { label: "Pink",   className: "bg-pink-100 text-pink-700" },
-];
-
-const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
-  { code: "available",  label: "Available",  className: "bg-emerald-50 text-emerald-600",  protected: true },
-  { code: "assigned",   label: "Assigned",   className: "bg-sky-50 text-sky-600",          protected: true },
-  { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500" },
-  { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500" },
-  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400" },
-  { code: "training",   label: "Training",   className: "bg-violet-50 text-violet-400" },
-  { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400" },
-];
-
-// ─── ManageStatusesModal ──────────────────────────────────────────────────────
+// ─── ManageStatusesModal (local) ──────────────────────────────────────────────
 
 function ManageStatusesModal({
   configs,
@@ -255,7 +219,7 @@ function ManageStatusesModal({
   );
 }
 
-// ─── AssignmentModal ──────────────────────────────────────────────────────────
+// ─── AssignmentModal (local) ──────────────────────────────────────────────────
 
 function AssignmentModal({
   employee, workAreas, stations, assignedStationIds, onSave, onClear, onClose,
@@ -371,289 +335,7 @@ function AssignmentModal({
   );
 }
 
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, color = "text-slate-900", bg = "bg-slate-50", labelColor = "text-slate-500", borderColor = "border-slate-200" }: { label: string; value: string | number; color?: string; bg?: string; labelColor?: string; borderColor?: string }) {
-  return (
-    <div className={`rounded-lg border p-3 ${bg} ${borderColor}`}>
-      <p className={`text-xs font-medium ${labelColor}`}>{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
-    </div>
-  );
-}
-
-// ─── MultiFilterSelect ───────────────────────────────────────────────────────
-
-function MultiFilterSelect({ placeholder, options, selected, onChange }: {
-  placeholder: string;
-  options: { value: string; label: string }[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const toggle = (val: string) =>
-    onChange(selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]);
-
-  const label = selected.length === 0 ? `All ${placeholder}s` : selected.length === 1
-    ? (options.find((o) => o.value === selected[0])?.label ?? selected[0])
-    : `${placeholder} (${selected.length})`;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`flex w-36 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm text-slate-600 hover:border-slate-400 ${selected.length > 0 ? "border-slate-400 bg-slate-50 font-medium" : "border-slate-200"}`}
-      >
-        <span className="flex-1 truncate text-left">{label}</span>
-        {selected.length > 0 && (
-          <span onClick={(e) => { e.stopPropagation(); onChange([]); }}
-            className="ml-0.5 rounded-full text-slate-400 hover:text-slate-600">×</span>
-        )}
-        <svg className="h-3.5 w-3.5 opacity-40" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-70 mt-1 min-w-40 rounded-lg border bg-white shadow-lg">
-          {options.map((opt) => (
-            <button key={opt.value} onClick={() => toggle(opt.value)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50">
-              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected.includes(opt.value) ? "border-slate-700 bg-slate-700 text-white" : "border-slate-300"}`}>
-                {selected.includes(opt.value) && <svg viewBox="0 0 10 8" fill="currentColor" className="h-2.5 w-2.5"><path d="M1 4l3 3 5-6"/></svg>}
-              </span>
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── DeptSelect ──────────────────────────────────────────────────────────────
-
-function DeptSelect({ values, workAreas, onChange }: {
-  values: string[];
-  workAreas: WorkArea[];
-  onChange: (depts: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const toggle = (name: string) => {
-    onChange(values.includes(name) ? values.filter((d) => d !== name) : [...values, name]);
-  };
-
-  const label = values.length === 0 ? "— None —" : values.length === 1 ? values[0] : `${values.length} depts`;
-  const firstWa = workAreas.find((w) => w.name === values[0]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"
-        style={{ color: values.length > 0 ? (firstWa?.color_hex ?? "#475569") : "#94a3b8" }}
-      >
-        <span>{label}</span>
-        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-40 rounded-lg border bg-white shadow-lg">
-          <button
-            onClick={() => { onChange([]); setOpen(false); }}
-            className="w-full px-3 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-50"
-          >
-            — None —
-          </button>
-          {workAreas.map((wa) => (
-            <button
-              key={wa.id}
-              onClick={() => toggle(wa.name)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
-              style={{ color: wa.color_hex ?? "#475569" }}
-            >
-              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
-              {wa.name}
-              {values.includes(wa.name) && <span className="ml-auto text-slate-400">✓</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── StationSelect ────────────────────────────────────────────────────────────
-
-function StationSelect({ employeeId, empDepts, assignments, stations, workAreas, onAssign, onUnassign }: {
-  employeeId: string;
-  empDepts: string[];
-  assignments: StationAssignment[];
-  stations: Station[];
-  workAreas: WorkArea[];
-  onAssign: (stationId: string) => void;
-  onUnassign: (stationId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const deptWas = workAreas.filter((w) => empDepts.includes(w.name));
-  const deptStations = stations.filter((s) => deptWas.some((wa) => wa.id === s.work_area_id));
-  const assignedIds = new Set(
-    assignments.filter((a) => a.employee_id === employeeId).map((a) => a.station_id)
-  );
-  const assignedStations = deptStations.filter((s) => assignedIds.has(s.id));
-  const label = assignedStations.length === 0 ? "— None —" : assignedStations.length === 1 ? assignedStations[0].name : `${assignedStations.length} stations`;
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        disabled={empDepts.length === 0}
-        className="flex w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        style={{ color: assignedStations.length > 0 ? (deptWas[0]?.color_hex ?? "#475569") : "#94a3b8" }}
-      >
-        <span className="truncate">{label}</span>
-        <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-      </button>
-      {open && deptStations.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 max-h-64 min-w-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
-          {deptWas.map((wa, waIdx) => {
-            const waStations = deptStations.filter((s) => s.work_area_id === wa.id);
-            if (waStations.length === 0) return null;
-            return (
-              <div key={wa.id}>
-                {deptWas.length > 1 && (
-                  <div
-                    className={`px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${waIdx > 0 ? "border-t-2 border-slate-300" : ""}`}
-                    style={{ color: wa.color_hex ?? "#475569" }}
-                  >
-                    {wa.name}
-                  </div>
-                )}
-                {waStations.map((s) => {
-                  const assigned = assignedIds.has(s.id);
-                  const waColor = wa.color_hex ?? "#475569";
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => { assigned ? onUnassign(s.id) : onAssign(s.id); }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
-                      style={{ color: assigned ? waColor : "#64748b" }}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: assigned ? waColor : "#cbd5e1" }} />
-                      {s.name}
-                      {assigned && <span className="ml-auto text-slate-300">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── StatusSelect ─────────────────────────────────────────────────────────────
-
-function StatusSelect({ value, configs, onChange }: {
-  value: string;
-  configs: StatusConfig[];
-  onChange: (status: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const options = configs.filter((c) => c.code !== "assigned");
-  const current = options.find((c) => c.code === value) ?? options[0];
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleOpen = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
-    setOpen((v) => !v);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${cfgBadge(current).cls}`}
-        style={cfgBadge(current).sty}
-      >
-        {current.label}
-        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-      </button>
-      {open && (
-        <div
-          className="fixed z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
-          style={{ top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 130) }}
-        >
-          <div className="px-3 py-2 border-b border-slate-100">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
-          </div>
-          <div className="p-1.5 space-y-0.5">
-            {options.map((cfg) => {
-              const active = cfg.code === value;
-              return (
-                <button
-                  key={cfg.code}
-                  onClick={() => { onChange(cfg.code); setOpen(false); }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
-                >
-                  <span className={`shrink-0 ${cfgBadge(cfg).cls}`} style={cfgBadge(cfg).sty}>{cfg.label}</span>
-                  {active && (
-                    <svg className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 8l4 4 6-7" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── RosterManageModal ───────────────────────────────────────────────────────
+// ─── RosterManageModal (local) ────────────────────────────────────────────────
 
 function RosterManageModal({
   employees,
@@ -912,7 +594,7 @@ function RosterManageModal({
                         if (depts.length === 0) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
                         // dept set but no assignment → row floats to top, scroll there
                         if (depts.length > 0 && !assignments.some((a) => a.employee_id === emp.id)) {
-                          setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
+                          scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
                         }
                       }}
                     />
@@ -1127,8 +809,10 @@ export function AssignmentSidebar({
             return (
               <>
                 {visibleWorkAreas.map((wa) => {
+                  const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const deptEmps = activeEmployees.filter((e) =>
-                    e.departments.includes(wa.name) && !assignments.some((a) => a.employee_id === e.id)
+                    e.departments.includes(wa.name) &&
+                    !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id))
                   );
                   if (deptEmps.length === 0) return null;
                   return (
@@ -1236,8 +920,9 @@ export function AssignmentSidebar({
                 )}
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
+                  const waStationIds2 = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const assignedEmps = activeEmployees.filter((e) =>
-                    e.departments.includes(wa.name) && assignments.some((a) => a.employee_id === e.id)
+                    e.departments.includes(wa.name) && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id))
                   );
                   if (assignedEmps.length === 0) return null;
                   return (
