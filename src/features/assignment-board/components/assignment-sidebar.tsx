@@ -60,9 +60,24 @@ function ManageStatusesModal({
       onClose={onClose}
       width="w-[42rem] max-w-[calc(100vw-2rem)]"
       footer={
-        <div className="flex justify-end">
-          <button onClick={onClose} className="rounded-lg bg-indigo-900 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-800">
-            Done
+        <div className="flex items-center gap-2">
+          <label className="relative shrink-0 cursor-pointer" title="Pick color">
+            <span className="block h-8 w-8 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: newColorHex }} />
+            <input type="color" value={newColorHex} onChange={(e) => setNewColorHex(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+          </label>
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); } }}
+            placeholder="New status name..."
+            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+          <button
+            onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); } }}
+            disabled={!newLabel.trim()}
+            className="shrink-0 rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
+          >
+            + Add
           </button>
         </div>
       }
@@ -170,51 +185,6 @@ function ManageStatusesModal({
         ))}
       </div>
 
-      {/* Add new status */}
-      <div className="mt-3 rounded-xl border border-indigo-300 bg-white p-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">Add New Status</p>
-        <div className="flex items-center gap-2">
-          {/* Color picker */}
-          <label className="relative shrink-0 cursor-pointer" title="Pick color">
-            <span
-              className="block h-8 w-8 rounded-full border-2 border-white shadow-md"
-              style={{ backgroundColor: newColorHex }}
-            />
-            <input
-              type="color"
-              value={newColorHex}
-              onChange={(e) => setNewColorHex(e.target.value)}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            />
-          </label>
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); }
-            }}
-            placeholder="Status name..."
-            className="flex-1 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm text-indigo-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
-          <button
-            onClick={() => { if (newLabel.trim()) { onAdd(newLabel.trim(), newColorHex); setNewLabel(""); } }}
-            disabled={!newLabel.trim()}
-            className="shrink-0 rounded-lg border border-indigo-900 bg-indigo-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-800 disabled:opacity-40"
-          >
-            + Add
-          </button>
-        </div>
-        {newLabel.trim() && (
-          <div className="mt-2 flex items-center gap-1.5">
-            <span className="text-xs text-indigo-700">Preview:</span>
-            <span
-              className="rounded-md border border-indigo-300 px-2.5 py-1 text-xs font-semibold text-indigo-900"
-            >
-              {newLabel}
-            </span>
-          </div>
-        )}
-      </div>
     </Modal>
   );
 }
@@ -553,7 +523,7 @@ function RosterManageModal({
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
               return (
-                <tr key={emp.id} className={`border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
+                <tr key={emp.id} className={`group border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
@@ -642,9 +612,9 @@ function RosterManageModal({
                   <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => onRemove(emp.id)}
-                      className="text-slate-300 transition-colors hover:text-red-400"
+                      className="invisible rounded px-1 text-xs text-slate-400 transition-colors group-hover:visible hover:bg-slate-100 hover:text-slate-700"
                     >
-                      ✕
+                      ×
                     </button>
                   </td>
                 </tr>
@@ -802,17 +772,21 @@ export function AssignmentSidebar({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {(() => {
+            const UNAVAILABLE = new Set(["sick", "vacation", "off_shift"]);
+            const isUnavailable = (id: string) => UNAVAILABLE.has(getStatus(id));
             const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
             const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
-            const noDept = !selectedWa ? activeEmployees.filter((e) => e.departments.length === 0) : [];
-            const unassignedEmps = activeEmployees.filter((e) => e.departments.length === 0);
+            const noDept = !selectedWa ? activeEmployees.filter((e) => e.departments.length === 0 && !isUnavailable(e.id)) : [];
+            const unassignedEmps = activeEmployees.filter((e) => e.departments.length === 0 && !isUnavailable(e.id));
+            const unavailableEmps = activeEmployees.filter((e) => isUnavailable(e.id));
             return (
               <>
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const deptEmps = activeEmployees.filter((e) =>
                     e.departments.includes(wa.name) &&
-                    !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id))
+                    !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id)) &&
+                    !isUnavailable(e.id)
                   );
                   if (deptEmps.length === 0) return null;
                   return (
@@ -918,6 +892,37 @@ export function AssignmentSidebar({
                     })}
                   </div>
                 )}
+                {/* Unavailable section */}
+                {unavailableEmps.length > 0 && (
+                  <div>
+                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
+                      <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                      <span className="text-xs font-semibold text-slate-600">Unavailable</span>
+                      <span className="ml-auto text-xs text-slate-400">{unavailableEmps.length}</span>
+                    </div>
+                    {unavailableEmps.map((emp) => (
+                      <div key={emp.id} className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
+                        <p className="min-w-0 truncate text-sm font-medium text-slate-400">{emp.full_name}</p>
+                        {emp.temporary && (
+                          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
+                        )}
+                        <div className="ml-auto shrink-0">
+                          <StatusSelect
+                            value={getStatus(emp.id)}
+                            configs={statusConfigs}
+                            onChange={(val) => {
+                              if (val === "available") {
+                                onUnassignAll(emp.id);
+                              } else {
+                                onStatusChange(emp.id, val);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds2 = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
@@ -953,7 +958,7 @@ export function AssignmentSidebar({
                             {emp.temporary && (
                               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                             )}
-                            <span className="min-w-0 max-w-[45%] truncate text-xs text-slate-400">{empStations.join(", ")}</span>
+                            <span className="ml-auto min-w-0 max-w-[45%] shrink-0 truncate text-right text-xs text-slate-400">{empStations.join(", ")}</span>
                           </div>
                         );
                       })}

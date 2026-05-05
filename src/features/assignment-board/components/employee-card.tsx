@@ -38,7 +38,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
     <div
       draggable
       onDragStart={handleDragStart}
-      className="flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
+      className="group flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
     >
       <div className="flex items-center gap-1.5 min-w-0">
         <p className="font-bold text-slate-600 truncate">{employee.full_name}</p>
@@ -48,7 +48,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
           </span>
         )}
       </div>
-      <button onClick={onRemove} className="shrink-0 text-slate-300 transition-colors hover:text-red-400">
+      <button onClick={onRemove} className="invisible shrink-0 rounded px-1 text-xs text-slate-400 transition-colors group-hover:visible hover:bg-slate-100 hover:text-slate-700">
         ×
       </button>
     </div>

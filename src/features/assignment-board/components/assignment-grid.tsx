@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
 import {
   mockAssignments,
@@ -21,6 +21,129 @@ import type {
   WorkAreaModeView,
 } from "../types";
 import { AssignmentCell } from "./assignment-cell";
+
+// ─── TimePickerInput (local) ──────────────────────────────────────────────────
+
+function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const hourRef = useRef<HTMLDivElement>(null);
+  const minRef = useRef<HTMLDivElement>(null);
+
+  const [selH, selM] = value ? value.split(":") : ["", ""];
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const hIdx = hours.indexOf(selH);
+    const mIdx = minutes.indexOf(selM);
+    if (hIdx >= 0) hourRef.current?.children[hIdx]?.scrollIntoView({ block: "center" });
+    if (mIdx >= 0) minRef.current?.children[mIdx]?.scrollIntoView({ block: "center" });
+  }, [open]);
+
+  const select = (h: string, m: string) => {
+    onChange(`${h}:${m}`);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
+      >
+        {value ? <span className="text-slate-800">{value}</span> : <span className="text-slate-400">--:--</span>}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div ref={hourRef} className="h-48 flex-1 overflow-y-auto border-r border-slate-100 scroll-smooth">
+            {hours.map((h) => (
+              <button key={h} type="button"
+                onClick={() => select(h, selM || "00")}
+                className={`w-full py-2 text-center text-sm font-medium transition-colors ${selH === h ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+              >{h}</button>
+            ))}
+          </div>
+          <div ref={minRef} className="h-48 flex-1 overflow-y-auto scroll-smooth">
+            {minutes.map((m) => (
+              <button key={m} type="button"
+                onClick={() => select(selH || "00", m)}
+                className={`w-full py-2 text-center text-sm font-medium transition-colors ${selM === m ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+              >{m}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AddShiftModal (local) ────────────────────────────────────────────────────
+
+function AddShiftModal({ onClose, onSave }: {
+  onClose: () => void;
+  onSave: (label: string, startTime: string, endTime: string) => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const canSave = label.trim().length > 0;
+
+  return (
+    <Modal
+      title="Add Shift"
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+          <button
+            onClick={() => canSave && onSave(label.trim(), startTime, endTime)}
+            disabled={!canSave}
+            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
+          >
+            Add Shift
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Shift Name</label>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(label.trim(), startTime, endTime)}
+            autoFocus
+            placeholder="e.g. 1st Shift"
+            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Time Range <span className="font-normal normal-case text-slate-400">— optional</span></label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-600">Start</p>
+              <TimePickerInput value={startTime} onChange={setStartTime} />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-600">End</p>
+              <TimePickerInput value={endTime} onChange={setEndTime} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 // ─── AddStationModal (local) ──────────────────────────────────────────────────
 
@@ -50,20 +173,20 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
     >
       <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-400">Station Name</label>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Station Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim())}
             autoFocus
             placeholder="e.g. Saw, Helper #1"
-            className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-300 focus:border-slate-800 focus:bg-white focus:outline-none transition-colors"
+            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
         </div>
         <div>
           <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Group</label>
-            <span className="text-xs text-slate-300">— optional</span>
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Group</label>
+            <span className="text-xs text-slate-400">— optional</span>
           </div>
           {existingGroups.length > 0 && (
             <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -83,7 +206,7 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
             value={group}
             onChange={(e) => setGroup(e.target.value)}
             placeholder={existingGroups.length > 0 ? "Or type a new group name..." : "Type a group name..."}
-            className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-300 focus:border-slate-800 focus:bg-white focus:outline-none transition-colors"
+            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
         </div>
       </div>
@@ -117,6 +240,7 @@ function WorkAreaModal({ initial, onClose, onSave, onDelete }: {
   return (
     <Modal
       title={initial ? "Edit Department" : "Add Department"}
+      width="w-[460px]"
       onClose={onClose}
       footer={
         <div className="flex items-center gap-2">
@@ -290,14 +414,13 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setEditingShift(null);
   };
 
-  const handleAddShift = () => {
-    if (!addingShift || !addingShift.label.trim()) return;
+  const handleAddShift = (label: string, startTime: string, endTime: string) => {
     const next = `shift_${Date.now()}`;
     setWorkAreaShifts((prev) => ({
       ...prev,
       [selectedWorkAreaId]: [
         ...(prev[selectedWorkAreaId] ?? []),
-        { code: next, label: addingShift.label.trim(), time_range: addingShift.startTime && addingShift.endTime ? `${addingShift.startTime}-${addingShift.endTime}` : "" },
+        { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
       ],
     }));
     setAddingShift(null);
@@ -512,11 +635,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
       {/* Table */}
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-white">
-        <table className="w-full border-separate border-spacing-0" style={{ minWidth: "max-content" }}>
+        <table className="w-full border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 160px + 3rem)` }}>
           <thead className="sticky top-0 z-30">
             <tr>
               {/* Station label */}
-              <th className="sticky left-0 z-10 w-48 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200">
+              <th className="sticky left-0 z-10 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200" style={{ width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
                 <div className="flex items-center justify-between gap-2">
                   <span>Station</span>
                   <button onClick={() => setAddingStation(true)} title="Add station"
@@ -528,7 +651,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
               {/* Shift column headers */}
               {currentShifts.map((shift) => (
-                <th key={shift.code} className="group/col min-w-52 px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color }}>
+                <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
                   {editingShift?.code === shift.code ? (
                     <div className="flex items-center gap-1.5" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) handleSaveEditShift(); }}>
                       <input value={editingShift.label} onChange={(e) => setEditingShift((s) => s && { ...s, label: e.target.value })}
@@ -562,26 +685,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
               {/* Add shift th */}
               <th className="whitespace-nowrap px-3 py-3 text-left" style={{ backgroundColor: color }}>
-                {addingShift !== null ? (
-                  <div className="flex items-center gap-1.5" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) handleAddShift(); }}>
-                    <input value={addingShift.label} onChange={(e) => setAddingShift((s) => s && { ...s, label: e.target.value })}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
-                      className="w-24 rounded border border-white/30 bg-white px-2 py-1 text-sm font-normal text-slate-800" placeholder="Name" autoFocus />
-                    <input type="time" value={addingShift.startTime} onChange={(e) => setAddingShift((s) => s && { ...s, startTime: e.target.value })}
-                      className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
-                    <span className="text-white/60 text-xs">–</span>
-                    <input type="time" value={addingShift.endTime} onChange={(e) => setAddingShift((s) => s && { ...s, endTime: e.target.value })}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleAddShift(); if (e.key === "Escape") setAddingShift(null); }}
-                      className="w-16 min-w-0 rounded border border-white/30 bg-white px-1.5 py-1 text-xs font-normal text-slate-800 [&::-webkit-datetime-edit-ampm-field]:hidden [&::-webkit-calendar-picker-indicator]:hidden" />
-                    <button onClick={handleAddShift} className="text-white hover:opacity-70">✓</button>
-                    <button onClick={() => setAddingShift(null)} className="text-white/60 hover:text-white">✕</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setAddingShift({ label: "", startTime: "", endTime: "" })}
-                    className="whitespace-nowrap rounded-md border border-white/30 px-3 py-1 text-sm text-white/80 hover:border-white hover:text-white">
-                    + Shift
-                  </button>
-                )}
+                <button onClick={() => setAddingShift({ label: "", startTime: "", endTime: "" })}
+                  className="flex h-6 w-6 items-center justify-center rounded-md border border-white/30 text-white/80 hover:border-white hover:text-white text-base leading-none">
+                  +
+                </button>
               </th>
             </tr>
           </thead>
@@ -622,7 +729,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                               </span>
                               <button
                                 onClick={() => handleDeleteGroup(station.group!)}
-                                className="hidden rounded px-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-400 group-hover/grp:inline-flex"
+                                className="invisible rounded px-1 text-xs group-hover/grp:visible transition-colors"
+                                style={{ color: color + "80" }}
+                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = color + "22"; (e.currentTarget as HTMLButtonElement).style.color = color; }}
+                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = ""; (e.currentTarget as HTMLButtonElement).style.color = color + "80"; }}
                                 title="Remove group (ungroup stations)"
                               >
                                 ×
@@ -643,7 +753,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       onDrop={() => handleStationDrop(station.id)}
                     >
                 {/* Station name */}
-                <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0" }}>
+                <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0", width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
                   {station.protected ? (
                     <span className="text-sm font-semibold text-slate-800">{station.name}</span>
                   ) : editingStationId === station.id ? (
@@ -673,8 +783,13 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                         title="Double-click to edit">
                         {station.name}
                       </span>
-                      <button onClick={() => handleDeleteStation(station.id)}
-                        className="ml-auto hidden text-slate-500 hover:text-red-400 group-hover:block">×</button>
+                      <button
+                        onClick={() => handleDeleteStation(station.id)}
+                        className="invisible ml-auto rounded px-1 text-xs group-hover:visible transition-colors"
+                        style={{ color: color + "80" }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = color + "22"; (e.currentTarget as HTMLButtonElement).style.color = color; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = ""; (e.currentTarget as HTMLButtonElement).style.color = color + "80"; }}
+                      >×</button>
                     </div>
                   )}
                 </td>
@@ -735,6 +850,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Add Shift Modal */}
+      {addingShift !== null && (
+        <AddShiftModal onClose={() => setAddingShift(null)} onSave={handleAddShift} />
       )}
 
       {/* Add Station Modal */}
