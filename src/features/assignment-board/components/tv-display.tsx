@@ -7,6 +7,10 @@ import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, W
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+function abbrev(dept: string): string {
+  return dept.split(/\s+/).map((w) => w[0].toUpperCase()).join("");
+}
+
 function parseMin(t: string): number {
   const [h, m] = t.trim().split(":").map(Number);
   return h * 60 + m;
@@ -146,6 +150,53 @@ export function TVDisplay({
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
+  // Pre-compute loaned employees per work area
+  // loanedOutByWaId: employees whose home dept is this WA but are assigned to a different WA this shift
+  // loanedInByWaId: employees assigned to this WA but whose home dept is elsewhere
+  const waIdByName = Object.fromEntries(workAreas.map((wa) => [wa.name, wa.id]));
+  const loanedOutByWaId: Record<string, Employee[]> = {};
+  const loanedInByWaId: Record<string, { emp: Employee; homeDept: string }[]> = {};
+
+  for (const wa of workAreas) {
+    loanedOutByWaId[wa.id] = [];
+    loanedInByWaId[wa.id] = [];
+  }
+
+  for (const asgn of shiftAssignments) {
+    const station = stations.find((s) => s.id === asgn.station_id);
+    if (!station) continue;
+    const assignedWaId = station.work_area_id;
+    const emp = activeEmployees.find((e) => e.id === asgn.employee_id);
+    if (!emp) continue;
+    const assignedWa = workAreas.find((wa) => wa.id === assignedWaId);
+    if (!assignedWa) continue;
+    const isLoaned = !emp.departments.includes(assignedWa.name);
+    if (isLoaned) {
+      loanedInByWaId[assignedWaId] = loanedInByWaId[assignedWaId] ?? [];
+      const homeDept = emp.departments[0] ?? "";
+      loanedInByWaId[assignedWaId].push({ emp, homeDept });
+      // Mark as loaned out from their home WA
+      const homeWaId = homeDept ? waIdByName[homeDept] : null;
+      if (homeWaId) {
+        loanedOutByWaId[homeWaId] = loanedOutByWaId[homeWaId] ?? [];
+        if (!loanedOutByWaId[homeWaId].some((e) => e.id === emp.id)) {
+          loanedOutByWaId[homeWaId].push(emp);
+        }
+      }
+    }
+  }
+
+  // Globally active non-normal modes (deduplicated)
+  const uniqueActiveModes = sortedWorkAreas
+    .map((wa) => {
+      const modeCode = getWaActiveMode(wa, nowMin);
+      if (modeCode === "normal") return null;
+      const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
+      return modeView ? { modeCode, label: modeView.label } : null;
+    })
+    .filter((m): m is { modeCode: string; label: string } => m !== null)
+    .filter((m, i, arr) => arr.findIndex((x) => x.modeCode === m.modeCode) === i);
+
   const fmt = (d: Date) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
   const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -212,12 +263,26 @@ export function TVDisplay({
           </div>
         )}
 
-        {/* Current Shift */}
-        <div className="flex flex-1 flex-col items-center justify-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Current Shift</p>
-          <p className="text-3xl font-bold text-white leading-tight tracking-tight">
-            {activeShift?.time_range?.replace("-", "  –  ") ?? "—"}
-          </p>
+        {/* Current Shift + Active Mode */}
+        <div className="flex flex-1 items-center justify-center gap-6">
+          <div className="flex flex-col items-center justify-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Current Shift</p>
+            <p className="text-3xl font-bold text-white leading-tight tracking-tight">
+              {activeShift?.time_range?.replace("-", "  –  ") ?? "—"}
+            </p>
+          </div>
+          {uniqueActiveModes.length > 0 && (
+            <div className="flex items-center gap-2">
+              {uniqueActiveModes.map((m) => (
+                <span
+                  key={m.modeCode}
+                  className="rounded-xl border border-white/20 bg-white/10 px-5 py-2 text-xl font-extrabold uppercase tracking-widest text-white/90"
+                >
+                  {m.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -251,20 +316,28 @@ export function TVDisplay({
             <div key={wa.id} className="flex min-w-[180px] flex-1 flex-col border-r border-slate-200 last:border-r-0">
               {/* Dept header */}
               <div
-                className="shrink-0 flex items-center justify-center gap-2 px-3 py-3"
+                className="shrink-0 flex items-center justify-center gap-2 px-3 py-2"
                 style={{ backgroundColor: wa.color_hex ?? "#1e293b" }}
               >
                 <span className="text-white/80 shrink-0">{DEPT_ICONS[wa.name] ?? <Package size={13} />}</span>
                 <span className="text-sm font-bold uppercase tracking-widest text-white truncate">{wa.name}</span>
-                {(() => {
-                  const modeView = wa.mode_views?.find((mv) => mv.mode_code === activeModeCode);
-                  if (!modeView) return null;
-                  return (
-                    <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
-                      {modeView.label}
-                    </span>
-                  );
-                })()}
+              </div>
+
+              {/* Loaned banner — always rendered to keep column heights equal */}
+              <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-1" style={{ backgroundColor: wa.color_hex ? `${wa.color_hex}99` : "#1e293b" }}>
+                {loanedOutByWaId[wa.id]?.length > 0 && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-white/80">
+                    ↑ {loanedOutByWaId[wa.id].length} Loaned Out
+                  </span>
+                )}
+                {loanedInByWaId[wa.id]?.length > 0 && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300/90">
+                    ↓ {loanedInByWaId[wa.id].length} Support In
+                  </span>
+                )}
+                {!loanedOutByWaId[wa.id]?.length && !loanedInByWaId[wa.id]?.length && (
+                  <span className="text-[10px] text-transparent select-none">·</span>
+                )}
               </div>
 
               {/* Sub-header */}
@@ -285,6 +358,7 @@ export function TVDisplay({
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
                   const isUnavailable = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
+                  const isLoanedIn = emp ? !emp.departments.includes(wa.name) : false;
                   const dotColor = !emp || isUnavailable
                     ? "bg-red-500"
                     : emp.temporary
@@ -307,6 +381,11 @@ export function TVDisplay({
                             {emp.temporary && (
                               <span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[9px] font-bold text-amber-600">
                                 TEMP
+                              </span>
+                            )}
+                            {isLoanedIn && emp.departments[0] && (
+                              <span className="ml-auto shrink-0 rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
+                                {abbrev(emp.departments[0])}
                               </span>
                             )}
                           </>

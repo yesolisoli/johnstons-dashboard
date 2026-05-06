@@ -548,4 +548,13 @@ export const mockAssignments: StationAssignment[] = [
   { id: "a178", employee_id: "emp_92", station_id: "st_loading_helper_5",       work_date: mockWorkDate, shift_code: "shift_3", mode_code: "normal" },
   // emp_97 Jerome Dupont → Small Pro
   { id: "a179", employee_id: "emp_97", station_id: "st_small_custom",           work_date: mockWorkDate, shift_code: "shift_1", mode_code: "normal" },
+
+  // ── Loaned employees (assigned to a dept NOT in their departments list) ──
+  // Processing Floor employees loaned to Meat Cutting for shift_3 hog_break
+  { id: "a_loan_1", employee_id: "emp_79", station_id: "st_meat_saw",        work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a_loan_2", employee_id: "emp_81", station_id: "st_meat_neck_bones", work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a_loan_3", employee_id: "emp_84", station_id: "st_meat_skinner",    work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  // Small Pro employee loaned to Packaging for shift_3 hog_break
+  { id: "a_loan_4", employee_id: "emp_30", station_id: "st_lead",            work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
+  { id: "a_loan_5", employee_id: "emp_27", station_id: "st_pack_box_trim",   work_date: mockWorkDate, shift_code: "shift_3", mode_code: "hog_break" },
 ];

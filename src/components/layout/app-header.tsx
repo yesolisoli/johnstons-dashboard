@@ -58,7 +58,7 @@ export function AppHeader({ userEmail }: AppHeaderProps) {
             TV Display
           </button>
 
-          <div className="rounded-full bg-blue-500 px-3 py-2 text-sm font-semibold text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold text-white">
             {userEmail.slice(0, 2).toUpperCase()}
           </div>
         </div>
