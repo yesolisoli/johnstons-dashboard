@@ -501,6 +501,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const [addingStation, setAddingStation] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
+
   // Group editing state
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
   const [editingGroupText, setEditingGroupText] = useState("");
@@ -736,7 +737,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         </button>
         <button
           onClick={() => setConfirmClear(true)}
-          className="ml-auto rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           Clear All
         </button>
@@ -893,7 +894,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} />
                     </div>
                   </td>
                 ))}
@@ -1040,6 +1041,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           </Modal>
         );
       })()}
+
 
       {/* Clear All Confirm */}
       {confirmClear && (

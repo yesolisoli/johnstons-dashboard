@@ -517,52 +517,15 @@ export const mockAssignments: StationAssignment[] = [
   mkA("a136", "emp_99", "st_ahb_pack_downstairs",   D, "shift_1", "after_hog_break"),
   mkA("a137", "emp_100","st_pack_vac_pac_box",      D, "shift_3", "hog_break"),
   mkA("a138", "emp_100","st_ahb_pack_vac_box",      D, "shift_3", "after_hog_break"),
-  // Cross-dept assignments (loanReason auto-computed from home vs assigned dept)
-  mkA("a139", "emp_3",  "st_small_slab_off",        D, "shift_3", "normal"),    // Josh Miller (wa_meat) → Small Pro
-  mkA("a140", "emp_6",  "st_pack_floater",           D, "shift_2", "hog_break"), // Mina (wa_small) → Packaging
-  mkA("a141", "emp_6",  "st_ahb_pack_floater",       D, "shift_2", "after_hog_break"),
-  mkA("a142", "emp_8",  "st_proc_bone_heads",        D, "shift_2", "normal"),    // Ryan Cooper (wa_loading) → Processing
-  mkA("a143", "emp_11", "st_loading_helper_6",       D, "shift_2", "normal"),    // Sandra Kowalski (wa_processing) → Loading
-  mkA("a144", "emp_14", "st_small_kaiser",           D, "shift_1", "normal"),    // Carlos Reyes (wa_loading) → Small Pro
-  mkA("a145", "emp_16", "st_pack_sungiven",          D, "shift_3", "hog_break"), // Tommy Larsen (wa_meat) → Packaging
-  mkA("a146", "emp_16", "st_ahb_pack_sungiven",      D, "shift_3", "after_hog_break"),
-  mkA("a147", "emp_19", "st_meat_cr_1",              D, "shift_2", "hog_break"), // Nina Petrov (wa_small) → Meat Cutting
-  mkA("a148", "emp_19", "st_ahb_meat_cr_1",          D, "shift_2", "after_hog_break"),
-  mkA("a149", "emp_22", "st_proc_rollers_gams",      D, "shift_1", "normal"),    // Dmitri Volkov (wa_loading) → Processing
-  mkA("a150", "emp_26", "st_loading_helper_5",       D, "shift_2", "normal"),    // Grace Kim (wa_small) → Loading
-  mkA("a151", "emp_28", "st_meat_cr_2",              D, "shift_1", "hog_break"), // Olga Marchetti (wa_small) → Meat Cutting
-  mkA("a152", "emp_28", "st_ahb_meat_cr_2",          D, "shift_1", "after_hog_break"),
-  mkA("a153", "emp_31", "st_pack_vac_pac_bag",       D, "shift_3", "hog_break"), // Victor Hernandez (wa_processing) → Packaging
-  mkA("a154", "emp_31", "st_ahb_pack_vac_box",       D, "shift_3", "after_hog_break"),
-  mkA("a155", "emp_33", "st_small_slab_jalapeno",    D, "shift_3", "normal"),    // Patrick Walsh (wa_processing) → Small Pro
-  mkA("a156", "emp_38", "st_proc_rollers_gams",      D, "shift_3", "normal"),    // Sean Murphy (wa_meat) → Processing
-  mkA("a157", "emp_40", "st_loading_helper_1",       D, "shift_3", "normal"),    // Andrei Popescu (wa_meat) → Loading
-  mkA("a158", "emp_43", "st_small_slab_nna",         D, "shift_2", "normal"),    // Hana Novak (wa_meat) → Small Pro
-  mkA("a159", "emp_46", "st_meat_cr_proof",          D, "shift_3", "hog_break"), // Pierre Dubois (wa_packaging) → Meat Cutting
-  mkA("a160", "emp_46", "st_ahb_meat_cr_1",          D, "shift_3", "after_hog_break"),
-  mkA("a161", "emp_48", "st_proc_blood_setup",       D, "shift_3", "normal"),    // Connor O'Sullivan (wa_packaging) → Processing
-  mkA("a162", "emp_52", "st_small_slab_sugar_free",  D, "shift_3", "normal"),    // Andre Laurent (wa_loading) → Small Pro
-  mkA("a163", "emp_55", "st_meat_cr_2",              D, "shift_3", "hog_break"), // Bogdan Ionescu (wa_loading) → Meat Cutting
-  mkA("a164", "emp_55", "st_ahb_meat_wash",          D, "shift_3", "after_hog_break"),
-  mkA("a165", "emp_60", "st_pack_overstock",         D, "shift_2", "hog_break"), // Valentina Russo (wa_loading) → Packaging
-  mkA("a166", "emp_60", "st_ahb_pack_vac_pac",       D, "shift_2", "after_hog_break"),
-  mkA("a167", "emp_63", "st_proc_barn_setup",        D, "shift_3", "normal"),    // Mei-Ling Zhang (wa_small) → Processing
-  mkA("a168", "emp_65", "st_loading_helper_6",       D, "shift_3", "normal"),    // Aoife Brennan (wa_small) → Loading
-  mkA("a169", "emp_71", "st_pack_forklift",          D, "shift_1", "hog_break"), // Hamid Nazari (wa_small) → Packaging
-  mkA("a170", "emp_71", "st_ahb_pack_forklift",      D, "shift_1", "after_hog_break"),
-  mkA("a171", "emp_74", "st_meat_proof",             D, "shift_3", "hog_break"), // Takeshi Mori (wa_processing) → Meat Cutting
-  mkA("a172", "emp_74", "st_ahb_meat_proof",         D, "shift_3", "after_hog_break"),
-  mkA("a173", "emp_77", "st_loading_helper_4",       D, "shift_2", "normal"),    // Rafael Herrera (wa_processing) → Loading
-  mkA("a174", "emp_82", "st_small_banquet",          D, "shift_1", "normal"),    // Zanele Mokoena (wa_processing) → Small Pro
-  mkA("a175", "emp_85", "st_pack_vac_pac_bag",       D, "shift_1", "hog_break"), // Raj Sharma (wa_meat) → Packaging
-  mkA("a176", "emp_85", "st_ahb_pack_vac_pac",       D, "shift_1", "after_hog_break"),
-  mkA("a177", "emp_88", "st_proc_blood_pit",         D, "shift_1", "normal"),    // Carmen Flores (wa_meat) → Processing
-  mkA("a178", "emp_92", "st_loading_helper_5",       D, "shift_3", "normal"),    // Layla Mahmoud (wa_packaging) → Loading
-  mkA("a179", "emp_97", "st_small_custom",           D, "shift_1", "normal"),    // Jerome Dupont (wa_packaging) → Small Pro
-  // Explicit HOG_BREAK loans (Processing Floor → Meat Cutting, Small Pro → Packaging)
+  // HOG_BREAK loans (Processing Floor → Meat Cutting, Small Pro → Packaging)
   mkA("a_loan_1", "emp_79", "st_meat_saw",        D, "shift_3", "hog_break"),
   mkA("a_loan_2", "emp_81", "st_meat_neck_bones", D, "shift_3", "hog_break"),
   mkA("a_loan_3", "emp_84", "st_meat_skinner",    D, "shift_3", "hog_break"),
   mkA("a_loan_4", "emp_30", "st_lead",            D, "shift_3", "hog_break"),
   mkA("a_loan_5", "emp_27", "st_pack_box_trim",   D, "shift_3", "hog_break"),
+  // SHORT_STAFFED loans (demo variety)
+  mkA("a_loan_6", "emp_85", "st_pack_vac_pac_bag",  D, "shift_1", "hog_break",       "SHORT_STAFFED"), // Raj Sharma (wa_meat) → Packaging
+  mkA("a_loan_7", "emp_85", "st_ahb_pack_vac_pac",  D, "shift_1", "after_hog_break", "SHORT_STAFFED"),
+  mkA("a_loan_8", "emp_92", "st_loading_helper_5",  D, "shift_3", "normal",          "SHORT_STAFFED"), // Layla Mahmoud (wa_packaging) → Loading
+  mkA("a_loan_9", "emp_33", "st_small_slab_jalapeno", D, "shift_3", "normal",        "SHORT_STAFFED"), // Patrick Walsh (wa_processing) → Small Pro
 ];

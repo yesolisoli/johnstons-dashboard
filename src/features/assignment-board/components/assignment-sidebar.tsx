@@ -558,14 +558,17 @@ function RosterManageModal({
                   <td className="px-4 py-2.5 max-w-0">
                     <DeptSelect
                       homeDepartmentId={emp.homeDepartmentId}
+                      qualifiedDepartmentIds={emp.qualifiedDepartmentIds}
                       workAreas={workAreas}
-                      onChange={(waId) => {
-                        onUpdate(emp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: waId ? (emp.qualifiedDepartmentIds.includes(waId) ? emp.qualifiedDepartmentIds : [waId, ...emp.qualifiedDepartmentIds]) : emp.qualifiedDepartmentIds });
+                      onChangeHome={(waId) => {
+                        const q = waId && !emp.qualifiedDepartmentIds.includes(waId) ? [waId, ...emp.qualifiedDepartmentIds] : emp.qualifiedDepartmentIds;
+                        onUpdate(emp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });
                         if (!waId) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
                         if (waId && !assignments.some((a) => a.employee_id === emp.id)) {
                           scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
                         }
                       }}
+                      onChangeQualified={(waIds) => onUpdate(emp.id, { qualifiedDepartmentIds: waIds })}
                     />
                   </td>
                   <td className="px-4 py-2.5">

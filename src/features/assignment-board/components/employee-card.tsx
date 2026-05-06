@@ -4,12 +4,13 @@ import React from "react";
 import type { Employee } from "../types";
 import type { ModeCode, ShiftCode } from "../types";
 
-export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove }: {
+export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove, loanInfo }: {
   employee: Employee;
   stationId: string;
   shiftCode: ShiftCode;
   modeCode: ModeCode;
   onRemove: () => void;
+  loanInfo?: { isLoanedIn: boolean; homeWaName?: string };
 }) {
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -38,19 +39,26 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
     <div
       draggable
       onDragStart={handleDragStart}
-      className="group flex cursor-grab items-center justify-between gap-2 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
+      className="group flex cursor-grab flex-col gap-0.5 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
     >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <p className="font-bold text-slate-600 truncate">{employee.full_name}</p>
-        {employee.temporary && (
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
-            Temp
-          </span>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="font-bold text-slate-600 truncate">{employee.full_name}</p>
+          {employee.temporary && (
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+              Temp
+            </span>
+          )}
+        </div>
+        <button onClick={onRemove} className="invisible shrink-0 rounded px-1 text-xs text-slate-400 transition-colors group-hover:visible hover:bg-slate-100 hover:text-slate-700">
+          ×
+        </button>
       </div>
-      <button onClick={onRemove} className="invisible shrink-0 rounded px-1 text-xs text-slate-400 transition-colors group-hover:visible hover:bg-slate-100 hover:text-slate-700">
-        ×
-      </button>
+      {loanInfo?.isLoanedIn && loanInfo.homeWaName && (
+        <p className="text-[10px] font-medium text-blue-500">
+          ↙ From {loanInfo.homeWaName}
+        </p>
+      )}
     </div>
   );
 }

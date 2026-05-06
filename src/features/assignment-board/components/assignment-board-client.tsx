@@ -49,14 +49,14 @@ export function AssignmentBoardClient() {
   const handleStatusChange = (id: string, status: EmployeeStatus) =>
     setStatuses((prev) => ({ ...prev, [id]: status }));
 
-  const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
+  const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode, loanReasonOverride?: "HOG_BREAK" | "SHORT_STAFFED" | "MANUAL" | null) => {
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
     const station = stations.find((s) => s.id === stationId);
     const assignedDepartmentId = station?.work_area_id ?? "";
     const emp = employees.find((e) => e.id === employeeId);
     const homeDepartmentIdSnapshot = emp?.homeDepartmentId ?? null;
     const isLoan = assignedDepartmentId !== homeDepartmentIdSnapshot;
-    const loanReason = isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null;
+    const loanReason = loanReasonOverride !== undefined ? loanReasonOverride : (isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null);
     setAssignments((prev) => [...prev, {
       id: `a_${Date.now()}`,
       employee_id: employeeId,
