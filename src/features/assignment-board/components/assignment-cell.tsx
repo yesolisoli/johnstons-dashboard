@@ -14,7 +14,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 export function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaName,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -26,7 +26,7 @@ export function AssignmentCell({
   disabledEmployeeIds?: Set<string>;
   onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
-  workAreaName?: string;
+  workAreaId?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -60,8 +60,8 @@ export function AssignmentCell({
     .map((a) => allEmployees.find((e) => e.id === a.employee_id))
     .filter((e): e is Employee => !!e && !disabledEmployeeIds?.has(e.id));
   const UNAVAILABLE = new Set(["sick", "vacation", "injured"]);
-  const deptEmployees = workAreaName
-    ? allEmployees.filter((e) => e.departments.length === 0 || e.departments.includes(workAreaName))
+  const deptEmployees = workAreaId
+    ? allEmployees.filter((e) => !e.homeDepartmentId || e.qualifiedDepartmentIds.includes(workAreaId))
     : allEmployees;
   const allPickable = deptEmployees.filter((e) => !assignedIds.has(e.id));
   const unassignedPickable = allPickable.filter((e) =>
@@ -69,9 +69,9 @@ export function AssignmentCell({
   );
 
   const sortedAllPickable = [...allPickable].sort((a, b) => {
-    if (a.departments.length === 0 && b.departments.length > 0) return 1;
-    if (a.departments.length > 0 && b.departments.length === 0) return -1;
-    return (a.departments[0] ?? "").localeCompare(b.departments[0] ?? "");
+    if (!a.homeDepartmentId && b.homeDepartmentId) return 1;
+    if (a.homeDepartmentId && !b.homeDepartmentId) return -1;
+    return (a.homeDepartmentId ?? "").localeCompare(b.homeDepartmentId ?? "");
   });
   const baseList = tab === "unassigned" ? unassignedPickable : sortedAllPickable;
   const filtered = search.trim()
@@ -202,9 +202,6 @@ export function AssignmentCell({
                         <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
                       ) : (
                         <div className="ml-2 flex shrink-0 items-center gap-1.5">
-                          {emp.departments.map((d) => (
-                            <span key={d} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{d}</span>
-                          ))}
                           {empAssignCount > 0 && (
                             <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
                           )}

@@ -51,16 +51,23 @@ export function AssignmentBoardClient() {
 
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    setAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: currentDate, shift_code: shiftCode, mode_code: modeCode }]);
-    // Sync roster: set dept to the station's work area and ensure status is available
     const station = stations.find((s) => s.id === stationId);
-    const workArea = station ? workAreas.find((wa) => wa.id === station.work_area_id) : null;
-    if (workArea) {
-      setEmployees((prev) => prev.map((e) => e.id === employeeId
-        ? { ...e, departments: e.departments.includes(workArea.name) ? e.departments : [...e.departments, workArea.name] }
-        : e));
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    }
+    const assignedDepartmentId = station?.work_area_id ?? "";
+    const emp = employees.find((e) => e.id === employeeId);
+    const homeDepartmentIdSnapshot = emp?.homeDepartmentId ?? null;
+    const isLoan = assignedDepartmentId !== homeDepartmentIdSnapshot;
+    const loanReason = isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null;
+    setAssignments((prev) => [...prev, {
+      id: `a_${Date.now()}`,
+      employee_id: employeeId,
+      station_id: stationId,
+      work_date: currentDate,
+      shift_code: shiftCode,
+      mode_code: modeCode,
+      assignedDepartmentId,
+      homeDepartmentIdSnapshot,
+      loanReason,
+    }]);
   };
 
   const handleUnassign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -68,56 +75,20 @@ export function AssignmentBoardClient() {
       (a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)
     );
     setAssignments(remaining);
-    if (!remaining.some((a) => a.employee_id === employeeId)) {
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      const removedStation = stations.find((s) => s.id === stationId);
-      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
-      if (removedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === employeeId
-          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
-          : e));
-      }
-    }
   };
 
   const handleUnassignAll = (employeeId: string) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
     setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, departments: [] } : e));
   };
 
   const handleUnassignFromStation = (employeeId: string, stationId: string) => {
-    const remaining = assignments.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId));
-    setAssignments(remaining);
-    if (!remaining.some((a) => a.employee_id === employeeId)) {
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      const removedStation = stations.find((s) => s.id === stationId);
-      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
-      if (removedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === employeeId
-          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
-          : e));
-      }
-    }
+    setAssignments((prev) => prev.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId)));
   };
 
   const handleClearWorkArea = (workAreaId: string) => {
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    const removed = assignments.filter((a) => stationIds.has(a.station_id));
-    const remaining = assignments.filter((a) => !stationIds.has(a.station_id));
-    setAssignments(remaining);
-    const clearedWa = workAreas.find((wa) => wa.id === workAreaId);
-    const affectedEmpIds = new Set(removed.map((a) => a.employee_id));
-    affectedEmpIds.forEach((empId) => {
-      if (!remaining.some((a) => a.employee_id === empId)) {
-        setStatuses((prev) => ({ ...prev, [empId]: "available" }));
-      }
-      if (clearedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === empId
-          ? { ...e, departments: e.departments.filter((d) => d !== clearedWa.name) }
-          : e));
-      }
-    });
+    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
   };
 
   const handleQuickAssign = (employeeId: string, stationId: string) => {

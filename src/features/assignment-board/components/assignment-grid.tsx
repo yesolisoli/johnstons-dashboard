@@ -571,7 +571,12 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (onAssignProp) { onAssignProp(employeeId, stationId, shiftCode, modeCode); return; }
     if (localAssignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode }]);
+    const station = mockStations.find((s) => s.id === stationId);
+    const emp = mockEmployees.find((e) => e.id === employeeId);
+    const assignedDepartmentId = station?.work_area_id ?? "";
+    const homeDepartmentIdSnapshot = emp?.homeDepartmentId ?? null;
+    const isLoan = assignedDepartmentId !== homeDepartmentIdSnapshot;
+    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode, assignedDepartmentId, homeDepartmentIdSnapshot, loanReason: isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null }]);
   };
 
   const handleRemove = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -888,7 +893,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaName={selectedWorkArea.name} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} />
                     </div>
                   </td>
                 ))}

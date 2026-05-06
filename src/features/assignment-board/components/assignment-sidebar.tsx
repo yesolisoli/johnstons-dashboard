@@ -198,7 +198,7 @@ function AssignmentModal({
   workAreas: WorkArea[];
   stations: Station[];
   assignedStationIds: Set<string>;
-  onSave: (deptName: string, toAdd: string[], toRemove: string[]) => void;
+  onSave: (waId: string, toAdd: string[], toRemove: string[]) => void;
   onClear: () => void;
   onClose: () => void;
 }) {
@@ -207,7 +207,7 @@ function AssignmentModal({
       const firstStation = stations.find((s) => assignedStationIds.has(s.id));
       if (firstStation) return firstStation.work_area_id;
     }
-    return workAreas.find((wa) => wa.name === employee.departments[0])?.id ?? null;
+    return employee.homeDepartmentId ?? null;
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(assignedStationIds));
 
@@ -226,7 +226,7 @@ function AssignmentModal({
     if (!selectedWa) return;
     const toAdd = waStations.filter((s) => selectedIds.has(s.id) && !assignedStationIds.has(s.id)).map((s) => s.id);
     const toRemove = waStations.filter((s) => !selectedIds.has(s.id) && assignedStationIds.has(s.id)).map((s) => s.id);
-    onSave(selectedWa.name, toAdd, toRemove);
+    onSave(selectedWa.id, toAdd, toRemove);
   };
 
   return (
@@ -245,7 +245,7 @@ function AssignmentModal({
               Save
             </button>
           </div>
-          {employee.departments[0] && (
+          {employee.homeDepartmentId && (
             <button onClick={() => { onClear(); onClose(); }} className="w-full rounded-md border border-red-200 py-2 text-sm font-medium text-red-500 hover:bg-red-50 hover:border-red-300 transition-colors">
               Clear Department
             </button>
@@ -363,20 +363,20 @@ function RosterManageModal({
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
   const getDisplayStatus = (emp: Employee): EmployeeStatus => {
     const s = getStatus(emp.id);
-    if (s === "available" && emp.departments.length > 0) return "assigned";
+    if (s === "available" && emp.homeDepartmentId !== null) return "assigned";
     return s;
   };
 
   const active = employees.filter((e) => e.active);
 
   const hasNoStation = (emp: Employee) =>
-    emp.departments.length > 0 && !assignments.some((a) => a.employee_id === emp.id);
+    emp.homeDepartmentId !== null && !assignments.some((a) => a.employee_id === emp.id);
 
   const filtered = active
     .filter((e) => {
       if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
       if (filterStatus.length > 0 && !filterStatus.includes(statuses[e.id] ?? "available")) return false;
-      if (filterDept.length > 0 && !filterDept.some((d) => e.departments.includes(d))) return false;
+      if (filterDept.length > 0 && !filterDept.includes(e.homeDepartmentId ?? "") && !e.qualifiedDepartmentIds.some((id) => filterDept.includes(id))) return false;
       return true;
     })
     .sort((a, b) => {
@@ -388,8 +388,8 @@ function RosterManageModal({
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "code") cmp = (a.employee_code ?? "").localeCompare(b.employee_code ?? "");
       else if (sortKey === "dept") {
-        const aOrder = workAreas.find((w) => a.departments.includes(w.name))?.display_order ?? 999;
-        const bOrder = workAreas.find((w) => b.departments.includes(w.name))?.display_order ?? 999;
+        const aOrder = workAreas.find((w) => w.id === a.homeDepartmentId)?.display_order ?? 999;
+        const bOrder = workAreas.find((w) => w.id === b.homeDepartmentId)?.display_order ?? 999;
         cmp = aOrder - bOrder;
       }
       else if (sortKey === "status") cmp = getDisplayStatus(a).localeCompare(getDisplayStatus(b));
@@ -406,7 +406,7 @@ function RosterManageModal({
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
     const newId = `emp_${Date.now()}`;
-    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), departments: [], active: true, ...(newTemporary ? { temporary: true } : {}) });
+    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), homeDepartmentId: null, qualifiedDepartmentIds: [], active: true, ...(newTemporary ? { temporary: true } : {}) });
     onStatusChange(newId, "available");
     setNewName("");
     setNewTemporary(false);
@@ -466,7 +466,7 @@ function RosterManageModal({
         />
         <MultiFilterSelect
           placeholder="Dept"
-          options={workAreas.map((wa) => ({ value: wa.name, label: wa.name }))}
+          options={workAreas.map((wa) => ({ value: wa.id, label: wa.name }))}
           selected={filterDept}
           onChange={setFilterDept}
         />
@@ -557,13 +557,12 @@ function RosterManageModal({
                   <td className="px-4 py-2.5 text-xs text-slate-400"><span className="block truncate">{emp.employee_code ?? "—"}</span></td>
                   <td className="px-4 py-2.5 max-w-0">
                     <DeptSelect
-                      values={emp.departments}
+                      homeDepartmentId={emp.homeDepartmentId}
                       workAreas={workAreas}
-                      onChange={(depts) => {
-                        onUpdate(emp.id, { departments: depts });
-                        if (depts.length === 0) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
-                        // dept set but no assignment → row floats to top, scroll there
-                        if (depts.length > 0 && !assignments.some((a) => a.employee_id === emp.id)) {
+                      onChange={(waId) => {
+                        onUpdate(emp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: waId ? (emp.qualifiedDepartmentIds.includes(waId) ? emp.qualifiedDepartmentIds : [waId, ...emp.qualifiedDepartmentIds]) : emp.qualifiedDepartmentIds });
+                        if (!waId) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
+                        if (waId && !assignments.some((a) => a.employee_id === emp.id)) {
                           scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
                         }
                       }}
@@ -572,7 +571,7 @@ function RosterManageModal({
                   <td className="px-4 py-2.5">
                     <StationSelect
                       employeeId={emp.id}
-                      empDepts={emp.departments}
+                      qualifiedDepartmentIds={emp.qualifiedDepartmentIds}
                       assignments={assignments}
                       stations={stations}
                       workAreas={workAreas}
@@ -703,10 +702,10 @@ export function AssignmentSidebar({
   const totalStaff = activeEmployees.length;
 
   const assignedCount = activeEmployees.filter(
-    (e) => e.departments.length > 0 && getStatus(e.id) === "available",
+    (e) => e.homeDepartmentId !== null && getStatus(e.id) === "available",
   ).length;
 
-  const notAssignedCount = activeEmployees.filter((e) => e.departments.length === 0).length;
+  const notAssignedCount = activeEmployees.filter((e) => e.homeDepartmentId === null).length;
 
   const efficiency = totalStaff > 0 ? ((assignedCount / totalStaff) * 100).toFixed(1) : "0.0";
 
@@ -776,15 +775,15 @@ export function AssignmentSidebar({
             const isUnavailable = (id: string) => UNAVAILABLE.has(getStatus(id));
             const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
             const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
-            const noDept = !selectedWa ? activeEmployees.filter((e) => e.departments.length === 0 && !isUnavailable(e.id)) : [];
-            const unassignedEmps = activeEmployees.filter((e) => e.departments.length === 0 && !isUnavailable(e.id));
+            const noDept = !selectedWa ? activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id)) : [];
+            const unassignedEmps = activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id));
             const unavailableEmps = activeEmployees.filter((e) => isUnavailable(e.id));
             return (
               <>
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const deptEmps = activeEmployees.filter((e) =>
-                    e.departments.includes(wa.name) &&
+                    e.homeDepartmentId === wa.id &&
                     !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id)) &&
                     !isUnavailable(e.id)
                   );
@@ -927,7 +926,7 @@ export function AssignmentSidebar({
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds2 = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const assignedEmps = activeEmployees.filter((e) =>
-                    e.departments.includes(wa.name) && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id))
+                    e.homeDepartmentId === wa.id && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id))
                   );
                   if (assignedEmps.length === 0) return null;
                   return (
@@ -1031,14 +1030,15 @@ export function AssignmentSidebar({
           workAreas={workAreas}
           stations={stations}
           assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id).map((a) => a.station_id))}
-          onSave={(deptName: string, toAdd: string[], toRemove: string[]) => {
-            onUpdate(assignModalEmp.id, { departments: assignModalEmp.departments.includes(deptName) ? assignModalEmp.departments : [...assignModalEmp.departments, deptName] });
+          onSave={(waId: string, toAdd: string[], toRemove: string[]) => {
+            const q = assignModalEmp.qualifiedDepartmentIds.includes(waId) ? assignModalEmp.qualifiedDepartmentIds : [waId, ...assignModalEmp.qualifiedDepartmentIds];
+            onUpdate(assignModalEmp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });
             toAdd.forEach((sid) => onAssignToStation(assignModalEmp.id, sid));
             toRemove.forEach((sid) => onUnassignFromStation(assignModalEmp.id, sid));
             setAssignModalEmp(null);
           }}
           onClear={() => {
-            onUpdate(assignModalEmp.id, { departments: [] });
+            onUpdate(assignModalEmp.id, { homeDepartmentId: null });
             onUnassignAll(assignModalEmp.id);
           }}
           onClose={() => setAssignModalEmp(null)}

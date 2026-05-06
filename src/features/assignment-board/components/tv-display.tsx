@@ -150,12 +150,9 @@ export function TVDisplay({
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
-  // Pre-compute loaned employees per work area
-  // loanedOutByWaId: employees whose home dept is this WA but are assigned to a different WA this shift
-  // loanedInByWaId: employees assigned to this WA but whose home dept is elsewhere
-  const waIdByName = Object.fromEntries(workAreas.map((wa) => [wa.name, wa.id]));
+  // Pre-compute loaned employees per work area using assignedDepartmentId vs homeDepartmentIdSnapshot
   const loanedOutByWaId: Record<string, Employee[]> = {};
-  const loanedInByWaId: Record<string, { emp: Employee; homeDept: string }[]> = {};
+  const loanedInByWaId: Record<string, { emp: Employee; homeWaId: string | null }[]> = {};
 
   for (const wa of workAreas) {
     loanedOutByWaId[wa.id] = [];
@@ -163,26 +160,17 @@ export function TVDisplay({
   }
 
   for (const asgn of shiftAssignments) {
-    const station = stations.find((s) => s.id === asgn.station_id);
-    if (!station) continue;
-    const assignedWaId = station.work_area_id;
+    if (!asgn.assignedDepartmentId || asgn.assignedDepartmentId === asgn.homeDepartmentIdSnapshot) continue;
     const emp = activeEmployees.find((e) => e.id === asgn.employee_id);
     if (!emp) continue;
-    const assignedWa = workAreas.find((wa) => wa.id === assignedWaId);
-    if (!assignedWa) continue;
-    const isLoaned = !emp.departments.includes(assignedWa.name);
-    if (isLoaned) {
-      loanedInByWaId[assignedWaId] = loanedInByWaId[assignedWaId] ?? [];
-      const homeDept = emp.departments[0] ?? "";
-      loanedInByWaId[assignedWaId].push({ emp, homeDept });
-      // Mark as loaned out from their home WA
-      const homeWaId = homeDept ? waIdByName[homeDept] : null;
-      if (homeWaId) {
-        loanedOutByWaId[homeWaId] = loanedOutByWaId[homeWaId] ?? [];
-        if (!loanedOutByWaId[homeWaId].some((e) => e.id === emp.id)) {
-          loanedOutByWaId[homeWaId].push(emp);
-        }
-      }
+    const assignedWaId = asgn.assignedDepartmentId;
+    const homeWaId = asgn.homeDepartmentIdSnapshot;
+    if (!loanedInByWaId[assignedWaId]) continue;
+    if (!loanedInByWaId[assignedWaId].some((x) => x.emp.id === emp.id)) {
+      loanedInByWaId[assignedWaId].push({ emp, homeWaId });
+    }
+    if (homeWaId && loanedOutByWaId[homeWaId] && !loanedOutByWaId[homeWaId].some((e) => e.id === emp.id)) {
+      loanedOutByWaId[homeWaId].push(emp);
     }
   }
 
@@ -358,7 +346,7 @@ export function TVDisplay({
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
                   const isUnavailable = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
-                  const isLoanedIn = emp ? !emp.departments.includes(wa.name) : false;
+                  const isLoanedIn = asgn ? asgn.assignedDepartmentId !== asgn.homeDepartmentIdSnapshot : false;
                   const dotColor = !emp || isUnavailable
                     ? "bg-red-500"
                     : emp.temporary
@@ -383,9 +371,9 @@ export function TVDisplay({
                                 TEMP
                               </span>
                             )}
-                            {isLoanedIn && emp.departments[0] && (
+                            {isLoanedIn && asgn?.homeDepartmentIdSnapshot && (
                               <span className="ml-auto shrink-0 rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
-                                {abbrev(emp.departments[0])}
+                                {abbrev(workAreas.find((w) => w.id === asgn.homeDepartmentIdSnapshot)?.name ?? asgn.homeDepartmentIdSnapshot)}
                               </span>
                             )}
                           </>

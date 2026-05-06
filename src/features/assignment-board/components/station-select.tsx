@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Station, StationAssignment, WorkArea } from "../types";
 
-export function StationSelect({ employeeId, empDepts, assignments, stations, workAreas, onAssign, onUnassign }: {
+export function StationSelect({ employeeId, qualifiedDepartmentIds, assignments, stations, workAreas, onAssign, onUnassign }: {
   employeeId: string;
-  empDepts: string[];
+  qualifiedDepartmentIds: string[];
   assignments: StationAssignment[];
   stations: Station[];
   workAreas: WorkArea[];
@@ -23,7 +23,7 @@ export function StationSelect({ employeeId, empDepts, assignments, stations, wor
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const deptWas = workAreas.filter((w) => empDepts.includes(w.name));
+  const deptWas = workAreas.filter((w) => qualifiedDepartmentIds.includes(w.id));
   const deptStations = stations.filter((s) => deptWas.some((wa) => wa.id === s.work_area_id));
   const assignedIds = new Set(
     assignments.filter((a) => a.employee_id === employeeId).map((a) => a.station_id)
@@ -34,7 +34,7 @@ export function StationSelect({ employeeId, empDepts, assignments, stations, wor
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        disabled={empDepts.length === 0}
+        disabled={qualifiedDepartmentIds.length === 0}
         className="flex w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
         style={{ color: assignedStations.length > 0 ? (deptWas[0]?.color_hex ?? "#475569") : "#94a3b8" }}
       >
