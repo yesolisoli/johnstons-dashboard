@@ -36,7 +36,7 @@ function getWaActiveMode(wa: WorkArea, nowMin: number): string {
       return mv.mode_code;
     }
   }
-  return wa.mode_views[0]?.mode_code ?? "normal";
+  return "normal";
 }
 
 function getNextShift(shifts: ShiftInfo[], current: ShiftInfo | null): ShiftInfo | null {
@@ -182,7 +182,7 @@ export function TVDisplay({
       const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
       return modeView ? { modeCode, label: modeView.label } : null;
     })
-    .filter((m): m is { modeCode: string; label: string } => m !== null)
+    .filter((m): m is { modeCode: string; label: string } => m !== null && m.modeCode !== "after_hog_break")
     .filter((m, i, arr) => arr.findIndex((x) => x.modeCode === m.modeCode) === i);
 
   const fmt = (d: Date) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });

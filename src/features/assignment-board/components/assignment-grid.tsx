@@ -719,7 +719,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   return (
     <div className="flex h-full min-w-0 flex-col gap-4">
       {/* Work Area Tabs */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
         {sortedWorkAreas.map((wa) => (
           <button key={wa.id} onClick={() => selectWorkArea(wa.id)} onDoubleClick={() => setWorkAreaModal(wa)} title="Double-click to edit"
             className="cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all"
@@ -731,6 +732,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           className="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-500 hover:border-slate-400 hover:text-slate-700">
           + Add Dept
         </button>
+        </div>
         <button
           onClick={() => setConfirmClear(true)}
           className="rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"

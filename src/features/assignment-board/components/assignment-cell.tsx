@@ -44,6 +44,7 @@ export function AssignmentCell({
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "unassigned">("all");
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const [listMaxHeight, setListMaxHeight] = useState(280);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -78,16 +79,16 @@ export function AssignmentCell({
     ? allEmployees.filter((e) => !e.homeDepartmentId || e.qualifiedDepartmentIds.includes(workAreaId))
     : allEmployees;
   const allPickable = deptEmployees.filter((e) => !assignedIds.has(e.id));
+  // "All" tab: only employees with a home dept (no unassigned), sorted loan→dept
+  const assignedDeptPickable = allPickable
+    .filter((e) => !!e.homeDepartmentId)
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  // "Unassigned" tab: no dept assigned, or unavailable
   const unassignedPickable = allPickable.filter((e) =>
-    !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
+    !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
   );
 
-  const sortedAllPickable = [...allPickable].sort((a, b) => {
-    if (!a.homeDepartmentId && b.homeDepartmentId) return 1;
-    if (a.homeDepartmentId && !b.homeDepartmentId) return -1;
-    return (a.homeDepartmentId ?? "").localeCompare(b.homeDepartmentId ?? "");
-  });
-  const baseList = tab === "unassigned" ? unassignedPickable : sortedAllPickable;
+  const baseList = tab === "unassigned" ? unassignedPickable : assignedDeptPickable;
   const filtered = search.trim()
     ? baseList.filter((e) => e.full_name.toLowerCase().includes(search.toLowerCase()))
     : baseList;
@@ -110,7 +111,15 @@ export function AssignmentCell({
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 6, left: rect.right - 288 });
+      const dropdownWidth = 288;
+      const spaceBelow = window.innerHeight - rect.bottom - 6;
+      const spaceAbove = rect.top - 6;
+      const left = Math.max(4, Math.min(rect.right - dropdownWidth, window.innerWidth - dropdownWidth - 4));
+      const bottomGap = 20;
+      const openBelow = spaceBelow >= 320 || spaceBelow >= spaceAbove;
+      const top = openBelow ? rect.bottom + 6 : rect.top - Math.min(spaceAbove - bottomGap, 420) - 6;
+      setDropPos({ top, left });
+      setListMaxHeight(openBelow ? Math.min(spaceBelow - 120, 420) : Math.min(spaceAbove - bottomGap - 90, 420));
     }
     setIsOpen((v) => !v);
     setSearch("");
@@ -254,7 +263,7 @@ export function AssignmentCell({
                     onClick={() => setTab("all")}
                     className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "all" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                   >
-                    All ({allPickable.length})
+                    {workAreas?.find((w) => w.id === workAreaId)?.name ?? "All"} ({allPickable.length})
                   </button>
                   <button
                     onClick={() => setTab("unassigned")}
@@ -264,7 +273,7 @@ export function AssignmentCell({
                   </button>
                 </div>
                 {/* List */}
-                <div className="max-h-56 overflow-y-auto p-2">
+                <div className="overflow-y-auto p-2" style={{ maxHeight: listMaxHeight }}>
                   {filtered.length === 0 && (
                     <p className="px-3 py-3 text-center text-sm text-slate-400">
                       {search ? "No results" : "No staff available"}
@@ -286,19 +295,19 @@ export function AssignmentCell({
                           {emp.temporary && (
                             <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
                           )}
+                        </div>
+                        <div className="ml-2 flex shrink-0 items-center gap-1.5">
                           {crossDept && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">Loan</span>
+                            <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">Loan</span>
+                          )}
+                          {tab === "unassigned" ? (
+                            <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                          ) : (
+                            empAssignCount > 0 && (
+                              <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
+                            )
                           )}
                         </div>
-                        {tab === "unassigned" ? (
-                          <span className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
-                        ) : (
-                          <div className="ml-2 flex shrink-0 items-center gap-1.5">
-                            {empAssignCount > 0 && (
-                              <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
-                            )}
-                          </div>
-                        )}
                       </button>
                     );
                   })}

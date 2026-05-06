@@ -444,8 +444,16 @@ function RosterManageModal({
 
   const active = employees.filter((e) => e.active);
 
-  const hasNoStation = (emp: Employee) =>
-    emp.homeDepartmentId !== null && !assignments.some((a) => a.employee_id === emp.id);
+  const hasNoStation = (emp: Employee) => {
+    const effectiveDepts = emp.activeDepartmentIds?.length
+      ? emp.activeDepartmentIds
+      : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
+    if (effectiveDepts.length === 0) return false;
+    return effectiveDepts.some((deptId) => {
+      const deptStationIds = new Set(stations.filter((s) => s.work_area_id === deptId).map((s) => s.id));
+      return !assignments.some((a) => a.employee_id === emp.id && deptStationIds.has(a.station_id));
+    });
+  };
 
   const filtered = active
     .filter((e) => {
@@ -599,12 +607,9 @@ function RosterManageModal({
             )}
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
-              const derivedActiveDeptIds = [...new Set(
-                assignments.filter((a) => a.employee_id === emp.id).map((a) => a.activeDepartmentId).filter(Boolean)
-              )];
-              const effectiveActiveDeptIds = (emp.activeDepartmentIds != null && emp.activeDepartmentIds.length > 0)
+              const effectiveActiveDeptIds = emp.activeDepartmentIds != null && emp.activeDepartmentIds.length > 0
                 ? emp.activeDepartmentIds
-                : derivedActiveDeptIds;
+                : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
               return (
                 <tr key={emp.id} className={`group border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">
