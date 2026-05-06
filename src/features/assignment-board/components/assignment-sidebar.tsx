@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Settings } from "lucide-react";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
@@ -11,6 +11,81 @@ import { DeptSelect } from "./dept-select";
 import { StationSelect } from "./station-select";
 
 type EmployeeStatus = string;
+
+// ─── ActiveDeptSelect (local) ─────────────────────────────────────────────────
+
+function ActiveDeptSelect({ activeDepartmentIds, workAreas, onChange }: {
+  activeDepartmentIds: string[];
+  workAreas: WorkArea[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (id: string) => {
+    onChange(activeDepartmentIds.includes(id)
+      ? activeDepartmentIds.filter((x) => x !== id)
+      : [...activeDepartmentIds, id]);
+  };
+
+  const firstWa = workAreas.find((w) => w.id === activeDepartmentIds[0]);
+  const label = activeDepartmentIds.length === 0
+    ? "— None —"
+    : activeDepartmentIds.length === 1
+    ? (firstWa?.name ?? activeDepartmentIds[0])
+    : `${activeDepartmentIds.length} dept`;
+  const textColor = activeDepartmentIds.length > 0 ? (firstWa?.color_hex ?? "#475569") : "#94a3b8";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"
+        style={{ color: textColor }}
+      >
+        <span className="truncate">{label}</span>
+        <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-44 overflow-hidden rounded-lg border bg-white shadow-lg">
+          {workAreas.map((wa) => {
+            const selected = activeDepartmentIds.includes(wa.id);
+            const waColor = wa.color_hex ?? "#475569";
+            return (
+              <button
+                key={wa.id}
+                onClick={() => toggle(wa.id)}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs hover:bg-slate-50"
+              >
+                <span
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors"
+                  style={selected
+                    ? { backgroundColor: waColor, borderColor: waColor }
+                    : { backgroundColor: "#fff", borderColor: "#cbd5e1" }}
+                >
+                  {selected && (
+                    <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M2 5l2.5 2.5L8 3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </span>
+                <span className="font-medium" style={{ color: selected ? waColor : "#475569" }}>{wa.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── ManageStatusesModal (local) ──────────────────────────────────────────────
 
@@ -421,7 +496,7 @@ function RosterManageModal({
     <Modal
       title="Manage Roster"
       onClose={onClose}
-      width="w-[1200px]"
+      width="w-[calc(100vw-4rem)] max-w-[1300px]"
       footer={
         <div className="flex items-center gap-2">
           <input
@@ -479,6 +554,7 @@ function RosterManageModal({
             <col className="w-52" />
             <col className="w-24" />
             <col className="w-32" />
+            <col className="w-28" />
             <col className="w-36" />
             <col className="w-16" />
             <col className="w-16" />
@@ -490,11 +566,12 @@ function RosterManageModal({
               {(["name", "code", "dept"] as const).map((col) => (
                 <th key={col} className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
                   <button onClick={() => handleSort(col)} className="flex items-center hover:text-white">
-                    {col === "name" ? "Name" : col === "code" ? "Code" : "Department"}
+                    {col === "name" ? "Name" : col === "code" ? "Code" : "Home Dept"}
                     <SortIcon col={col} />
                   </button>
                 </th>
               ))}
+              <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Active Dept</th>
               <th className="border-b border-slate-700 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">Station</th>
               <th className="border-b border-slate-700 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
                 <button onClick={() => handleSort("gender")} className="flex items-center hover:text-white">
@@ -517,11 +594,17 @@ function RosterManageModal({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-sm text-slate-400">No employees found</td>
+                <td colSpan={9} className="py-10 text-center text-sm text-slate-400">No employees found</td>
               </tr>
             )}
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
+              const derivedActiveDeptIds = [...new Set(
+                assignments.filter((a) => a.employee_id === emp.id).map((a) => a.activeDepartmentId).filter(Boolean)
+              )];
+              const effectiveActiveDeptIds = (emp.activeDepartmentIds != null && emp.activeDepartmentIds.length > 0)
+                ? emp.activeDepartmentIds
+                : derivedActiveDeptIds;
               return (
                 <tr key={emp.id} className={`group border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">
@@ -572,9 +655,16 @@ function RosterManageModal({
                     />
                   </td>
                   <td className="px-4 py-2.5">
+                    <ActiveDeptSelect
+                      activeDepartmentIds={effectiveActiveDeptIds}
+                      workAreas={workAreas}
+                      onChange={(ids) => onUpdate(emp.id, { activeDepartmentIds: ids })}
+                    />
+                  </td>
+                  <td className="px-4 py-2.5">
                     <StationSelect
                       employeeId={emp.id}
-                      qualifiedDepartmentIds={emp.qualifiedDepartmentIds}
+                      qualifiedDepartmentIds={effectiveActiveDeptIds}
                       assignments={assignments}
                       stations={stations}
                       workAreas={workAreas}
@@ -785,11 +875,11 @@ export function AssignmentSidebar({
               <>
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
-                  const deptEmps = activeEmployees.filter((e) =>
-                    e.homeDepartmentId === wa.id &&
-                    !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id)) &&
-                    !isUnavailable(e.id)
-                  );
+                  const deptEmps = activeEmployees.filter((e) => {
+                    const inThisDept = e.homeDepartmentId === wa.id || e.activeDepartmentIds?.includes(wa.id);
+                    if (!inThisDept || isUnavailable(e.id)) return false;
+                    return !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id));
+                  });
                   if (deptEmps.length === 0) return null;
                   return (
                     <div key={wa.id}>
@@ -928,9 +1018,10 @@ export function AssignmentSidebar({
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
                   const waStationIds2 = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
-                  const assignedEmps = activeEmployees.filter((e) =>
-                    e.homeDepartmentId === wa.id && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id))
-                  );
+                  const assignedEmps = activeEmployees.filter((e) => {
+                    const inThisDept = e.homeDepartmentId === wa.id || e.activeDepartmentIds?.includes(wa.id);
+                    return inThisDept && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id));
+                  });
                   if (assignedEmps.length === 0) return null;
                   return (
                     <div key={`assigned-${wa.id}`}>

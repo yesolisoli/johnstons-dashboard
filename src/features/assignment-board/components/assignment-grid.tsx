@@ -573,11 +573,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     if (onAssignProp) { onAssignProp(employeeId, stationId, shiftCode, modeCode); return; }
     if (localAssignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
     const station = mockStations.find((s) => s.id === stationId);
-    const emp = mockEmployees.find((e) => e.id === employeeId);
-    const assignedDepartmentId = station?.work_area_id ?? "";
-    const homeDepartmentIdSnapshot = emp?.homeDepartmentId ?? null;
-    const isLoan = assignedDepartmentId !== homeDepartmentIdSnapshot;
-    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode, assignedDepartmentId, homeDepartmentIdSnapshot, loanReason: isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null }]);
+    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode, activeDepartmentId: station?.work_area_id ?? "" }]);
   };
 
   const handleRemove = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -780,23 +776,46 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
               </th>
 
               {/* Shift column headers */}
-              {currentShifts.map((shift) => (
-                <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
-                  <div className="flex items-center gap-2">
-                    <span className="cursor-pointer hover:opacity-80"
-                      onClick={() => {
-                        const [start, end] = (shift.time_range ?? "").split("-");
-                        setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
-                      }}
-                      title="Click to edit">
-                      {shift.label}
-                      {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
-                    </span>
-                    <button onClick={() => handleDeleteShift(shift.code)}
-                      className="ml-auto hidden text-white/50 hover:text-white group-hover/col:block">×</button>
-                  </div>
-                </th>
-              ))}
+              {currentShifts.map((shift) => {
+                const shiftAssignments = assignments.filter((a) => a.shift_code === shift.code);
+                const loanedIn = shiftAssignments.filter((a) =>
+                  a.activeDepartmentId === selectedWorkAreaId &&
+                  employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
+                ).length;
+                const loanedOut = shiftAssignments.filter((a) =>
+                  a.activeDepartmentId !== selectedWorkAreaId &&
+                  employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
+                ).length;
+                return (
+                  <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="cursor-pointer hover:opacity-80"
+                          onClick={() => {
+                            const [start, end] = (shift.time_range ?? "").split("-");
+                            setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
+                          }}
+                          title="Click to edit">
+                          {shift.label}
+                          {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
+                        </span>
+                        {loanedIn > 0 && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100">
+                            ↓ {loanedIn} in
+                          </span>
+                        )}
+                        {loanedOut > 0 && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100">
+                            ↑ {loanedOut} out
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => handleDeleteShift(shift.code)}
+                        className="ml-auto hidden text-white/50 hover:text-white group-hover/col:block">×</button>
+                    </div>
+                  </th>
+                );
+              })}
 
               {/* Add shift th */}
               <th className="whitespace-nowrap px-3 py-3 text-left" style={{ backgroundColor: color }}>

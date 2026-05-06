@@ -150,7 +150,7 @@ export function TVDisplay({
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
-  // Pre-compute loaned employees per work area using assignedDepartmentId vs homeDepartmentIdSnapshot
+  // Pre-compute loaned employees per work area: isLoaned = activeDepartmentId !== employee.homeDepartmentId
   const loanedOutByWaId: Record<string, Employee[]> = {};
   const loanedInByWaId: Record<string, { emp: Employee; homeWaId: string | null }[]> = {};
 
@@ -160,14 +160,14 @@ export function TVDisplay({
   }
 
   for (const asgn of shiftAssignments) {
-    if (!asgn.assignedDepartmentId || asgn.assignedDepartmentId === asgn.homeDepartmentIdSnapshot) continue;
     const emp = activeEmployees.find((e) => e.id === asgn.employee_id);
     if (!emp) continue;
-    const assignedWaId = asgn.assignedDepartmentId;
-    const homeWaId = asgn.homeDepartmentIdSnapshot;
-    if (!loanedInByWaId[assignedWaId]) continue;
-    if (!loanedInByWaId[assignedWaId].some((x) => x.emp.id === emp.id)) {
-      loanedInByWaId[assignedWaId].push({ emp, homeWaId });
+    const homeWaId = emp.homeDepartmentId;
+    if (!asgn.activeDepartmentId || asgn.activeDepartmentId === homeWaId) continue;
+    const activeWaId = asgn.activeDepartmentId;
+    if (!loanedInByWaId[activeWaId]) continue;
+    if (!loanedInByWaId[activeWaId].some((x) => x.emp.id === emp.id)) {
+      loanedInByWaId[activeWaId].push({ emp, homeWaId });
     }
     if (homeWaId && loanedOutByWaId[homeWaId] && !loanedOutByWaId[homeWaId].some((e) => e.id === emp.id)) {
       loanedOutByWaId[homeWaId].push(emp);
@@ -346,7 +346,7 @@ export function TVDisplay({
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
                   const isUnavailable = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
-                  const isLoanedIn = asgn ? asgn.assignedDepartmentId !== asgn.homeDepartmentIdSnapshot : false;
+                  const isLoanedIn = asgn && emp ? asgn.activeDepartmentId !== emp.homeDepartmentId : false;
                   const dotColor = !emp || isUnavailable
                     ? "bg-red-500"
                     : emp.temporary
@@ -371,9 +371,9 @@ export function TVDisplay({
                                 TEMP
                               </span>
                             )}
-                            {isLoanedIn && asgn?.homeDepartmentIdSnapshot && (
+                            {isLoanedIn && emp?.homeDepartmentId && (
                               <span className="ml-auto shrink-0 rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
-                                {abbrev(workAreas.find((w) => w.id === asgn.homeDepartmentIdSnapshot)?.name ?? asgn.homeDepartmentIdSnapshot)}
+                                {abbrev(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
                               </span>
                             )}
                           </>

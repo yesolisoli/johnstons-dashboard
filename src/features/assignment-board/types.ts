@@ -10,8 +10,6 @@ export type ModeCode =
 
 export type EmployeeStatus = string;
 
-export type LoanReason = null | "HOG_BREAK" | "SHORT_STAFFED" | "MANUAL";
-
 export type ShiftInfo = {
   code: ShiftCode;
   label: string;
@@ -32,6 +30,8 @@ export type Employee = {
   homeDepartmentId: string | null;
   /** All work area ids this employee is qualified for (includes homeDepartmentId) */
   qualifiedDepartmentIds: string[];
+  /** Manually designated active departments for today (e.g. loan destinations) */
+  activeDepartmentIds?: string[];
   active: boolean;
   gender?: "M" | "F";
   level?: 1 | 2 | 3;
@@ -74,12 +74,8 @@ export type StationAssignment = {
   work_date: string;
   shift_code: ShiftCode;
   mode_code: ModeCode;
-  /** Work area id where the employee is actually working */
-  assignedDepartmentId: string;
-  /** Snapshot of employee.homeDepartmentId at time of assignment */
-  homeDepartmentIdSnapshot: string | null;
-  /** Non-null means this is a cross-department loan */
-  loanReason: LoanReason;
+  /** Work area id where the employee is currently active */
+  activeDepartmentId: string;
 };
 
 export type AssignmentBoardFilters = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Employee, LoanReason, ModeCode, ShiftCode, StationAssignment, WorkArea } from "../types";
+import type { Employee, ModeCode, ShiftCode, StationAssignment, WorkArea } from "../types";
 import { EmployeeCard } from "./employee-card";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -13,13 +13,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   off_shift:  { label: "Off Shift",  className: "bg-slate-100 text-slate-500" },
 };
 
-const LOAN_REASON_OPTIONS: { value: LoanReason; label: string }[] = [
-  { value: "HOG_BREAK",    label: "Hog Break" },
-  { value: "SHORT_STAFFED", label: "Short Staffed" },
-  { value: "MANUAL",       label: "Other" },
-];
-
-type PendingLoan = {
+type PendingMove = {
   employeeId: string;
   fromStationId?: string;
   fromShiftCode?: string;
@@ -27,7 +21,6 @@ type PendingLoan = {
   empName: string;
   fromDeptName: string;
   toDeptName: string;
-  defaultReason: LoanReason;
 };
 
 export function AssignmentCell({
@@ -41,7 +34,7 @@ export function AssignmentCell({
   allEmployees: Employee[];
   statuses?: Record<string, string>;
   disabledEmployeeIds?: Set<string>;
-  onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode, loanReason?: LoanReason) => void;
+  onAssign: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   workAreaId?: string;
   workAreas?: WorkArea[];
@@ -51,8 +44,7 @@ export function AssignmentCell({
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "unassigned">("all");
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
-  const [pendingLoan, setPendingLoan] = useState<PendingLoan | null>(null);
-  const [loanReasonDraft, setLoanReasonDraft] = useState<LoanReason>("MANUAL");
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -100,13 +92,11 @@ export function AssignmentCell({
     ? baseList.filter((e) => e.full_name.toLowerCase().includes(search.toLowerCase()))
     : baseList;
 
-  const isLoan = (emp: Employee) =>
+  // isLoaned = activeDepartmentId !== homeDepartmentId (derived)
+  const isCrossDept = (emp: Employee) =>
     !!workAreaId && !!emp.homeDepartmentId && emp.homeDepartmentId !== workAreaId;
 
-  const defaultLoanReason = (): LoanReason =>
-    modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL";
-
-  const openLoanModal = (
+  const openMoveModal = (
     emp: Employee,
     fromStationId?: string,
     fromShiftCode?: string,
@@ -114,9 +104,7 @@ export function AssignmentCell({
   ) => {
     const fromDeptName = workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId ?? "Unknown";
     const toDeptName = workAreas?.find((w) => w.id === workAreaId)?.name ?? workAreaId ?? "Unknown";
-    const defaultReason = defaultLoanReason();
-    setLoanReasonDraft(defaultReason);
-    setPendingLoan({ employeeId: emp.id, fromStationId, fromShiftCode, fromModeCode, empName: emp.full_name, fromDeptName, toDeptName, defaultReason });
+    setPendingMove({ employeeId: emp.id, fromStationId, fromShiftCode, fromModeCode, empName: emp.full_name, fromDeptName, toDeptName });
   };
 
   const handleOpen = () => {
@@ -131,8 +119,8 @@ export function AssignmentCell({
   const handleClickAssign = (emp: Employee) => {
     setIsOpen(false);
     setSearch("");
-    if (isLoan(emp)) {
-      openLoanModal(emp);
+    if (isCrossDept(emp)) {
+      openMoveModal(emp);
     } else {
       onAssign(emp.id, stationId, shiftCode, modeCode);
     }
@@ -155,8 +143,8 @@ export function AssignmentCell({
       if (assignedIds.has(employeeId)) return;
       const emp = allEmployees.find((e) => e.id === employeeId);
       if (!emp) return;
-      if (isLoan(emp)) {
-        openLoanModal(emp, fromStationId, fromShiftCode, fromModeCode);
+      if (isCrossDept(emp)) {
+        openMoveModal(emp, fromStationId, fromShiftCode, fromModeCode);
       } else {
         if (fromStationId) onRemove(employeeId, fromStationId, fromShiftCode, fromModeCode);
         onAssign(employeeId, stationId, shiftCode, modeCode);
@@ -164,57 +152,39 @@ export function AssignmentCell({
     } catch {}
   };
 
-  const confirmLoan = () => {
-    if (!pendingLoan) return;
-    if (pendingLoan.fromStationId) onRemove(pendingLoan.employeeId, pendingLoan.fromStationId, pendingLoan.fromShiftCode as ShiftCode, pendingLoan.fromModeCode as ModeCode);
-    onAssign(pendingLoan.employeeId, stationId, shiftCode, modeCode, loanReasonDraft);
-    setPendingLoan(null);
+  const confirmMove = () => {
+    if (!pendingMove) return;
+    if (pendingMove.fromStationId) onRemove(pendingMove.employeeId, pendingMove.fromStationId, pendingMove.fromShiftCode as ShiftCode, pendingMove.fromModeCode as ModeCode);
+    onAssign(pendingMove.employeeId, stationId, shiftCode, modeCode);
+    setPendingMove(null);
   };
 
   return (
     <>
-      {/* Loan Confirm Modal */}
-      {pendingLoan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPendingLoan(null)}>
+      {/* Cross-dept Move Confirm Modal */}
+      {pendingMove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPendingMove(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-1 text-base font-bold text-slate-800">Temporary Loan</h2>
-            <p className="mb-5 text-sm text-slate-500">
-              <span className="font-semibold text-slate-700">{pendingLoan.empName}</span>
+            <h2 className="mb-1 text-base font-bold text-slate-800">Move to Another Department</h2>
+            <p className="mb-6 text-sm text-slate-500">
+              <span className="font-semibold text-slate-700">{pendingMove.empName}</span>
               <span className="mx-2 text-slate-400">·</span>
-              <span className="font-medium text-slate-600">{pendingLoan.fromDeptName}</span>
+              <span className="font-medium text-slate-600">{pendingMove.fromDeptName}</span>
               <span className="mx-1 text-slate-400">→</span>
-              <span className="font-medium text-slate-600">{pendingLoan.toDeptName}</span>
+              <span className="font-medium text-slate-600">{pendingMove.toDeptName}</span>
             </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Reason</label>
-                <div className="flex gap-2">
-                  {LOAN_REASON_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setLoanReasonDraft(opt.value)}
-                      className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${loanReasonDraft === opt.value ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 hover:border-slate-400"}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 flex gap-2">
+            <div className="flex gap-2">
               <button
-                onClick={() => setPendingLoan(null)}
+                onClick={() => setPendingMove(null)}
                 className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmLoan}
+                onClick={confirmMove}
                 className="flex-1 rounded-lg bg-slate-800 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
               >
-                Confirm Loan
+                Confirm
               </button>
             </div>
           </div>
@@ -240,8 +210,8 @@ export function AssignmentCell({
               </div>
             )}
             {assignedWithInfo.map(({ asgn, emp }) => {
-              const loanedIn = asgn.assignedDepartmentId !== asgn.homeDepartmentIdSnapshot;
-              const homeWaName = loanedIn ? (workAreas?.find((w) => w.id === asgn.homeDepartmentIdSnapshot)?.name) : undefined;
+              const isLoaned = asgn.activeDepartmentId !== emp.homeDepartmentId;
+              const homeWaName = isLoaned ? workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name : undefined;
               return (
                 <EmployeeCard
                   key={emp.id}
@@ -250,7 +220,7 @@ export function AssignmentCell({
                   shiftCode={shiftCode}
                   modeCode={modeCode}
                   onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
-                  loanInfo={{ isLoanedIn: loanedIn, homeWaName }}
+                  loanInfo={{ isLoanedIn: isLoaned, homeWaName }}
                 />
               );
             })}
@@ -304,7 +274,7 @@ export function AssignmentCell({
                     const status = statuses?.[emp.id] ?? "available";
                     const badge = STATUS_BADGE[status] ?? STATUS_BADGE.available;
                     const empAssignCount = assignments.filter((a) => a.employee_id === emp.id).length;
-                    const loanFlag = isLoan(emp);
+                    const crossDept = isCrossDept(emp);
                     return (
                       <button
                         key={emp.id}
@@ -316,7 +286,7 @@ export function AssignmentCell({
                           {emp.temporary && (
                             <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Temp</span>
                           )}
-                          {loanFlag && (
+                          {crossDept && (
                             <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">Loan</span>
                           )}
                         </div>

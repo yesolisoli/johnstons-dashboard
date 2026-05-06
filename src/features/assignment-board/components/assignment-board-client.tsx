@@ -17,16 +17,10 @@ export function AssignmentBoardClient() {
       .forEach((s) => { map[s.employee_id] = s.status; });
     return map;
   });
-  const [currentDate, setCurrentDate] = useState(mockWorkDate);
-  const [assignmentsByDate, setAssignmentsByDate] = useState<Record<string, StationAssignment[]>>({ [mockWorkDate]: mockAssignments });
+  const [assignments, setAssignmentsState] = useState<StationAssignment[]>(mockAssignments);
 
-  const assignments = assignmentsByDate[currentDate] ?? [];
   const setAssignments = (updater: StationAssignment[] | ((prev: StationAssignment[]) => StationAssignment[])) => {
-    setAssignmentsByDate((prev) => {
-      const current = prev[currentDate] ?? [];
-      const next = typeof updater === "function" ? updater(current) : updater;
-      return { ...prev, [currentDate]: next };
-    });
+    setAssignmentsState((prev) => typeof updater === "function" ? updater(prev) : updater);
   };
   const [stations, setStations] = useState<Station[]>(mockStations);
   const [workAreas, setWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
@@ -49,24 +43,17 @@ export function AssignmentBoardClient() {
   const handleStatusChange = (id: string, status: EmployeeStatus) =>
     setStatuses((prev) => ({ ...prev, [id]: status }));
 
-  const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode, loanReasonOverride?: "HOG_BREAK" | "SHORT_STAFFED" | "MANUAL" | null) => {
+  const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
     const station = stations.find((s) => s.id === stationId);
-    const assignedDepartmentId = station?.work_area_id ?? "";
-    const emp = employees.find((e) => e.id === employeeId);
-    const homeDepartmentIdSnapshot = emp?.homeDepartmentId ?? null;
-    const isLoan = assignedDepartmentId !== homeDepartmentIdSnapshot;
-    const loanReason = loanReasonOverride !== undefined ? loanReasonOverride : (isLoan ? (modeCode === "hog_break" ? "HOG_BREAK" : "MANUAL") : null);
     setAssignments((prev) => [...prev, {
       id: `a_${Date.now()}`,
       employee_id: employeeId,
       station_id: stationId,
-      work_date: currentDate,
+      work_date: mockWorkDate,
       shift_code: shiftCode,
       mode_code: modeCode,
-      assignedDepartmentId,
-      homeDepartmentIdSnapshot,
-      loanReason,
+      activeDepartmentId: station?.work_area_id ?? "",
     }]);
   };
 
@@ -102,9 +89,6 @@ export function AssignmentBoardClient() {
   const [announcement, setAnnouncement] = useState("Please clean your work area and report any equipment issues.");
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementDraft, setAnnouncementDraft] = useState(announcement);
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [dateDraft, setDateDraft] = useState(currentDate);
-
   useEffect(() => {
     const handler = () => setShowTV(true);
     window.addEventListener("tv-open", handler);
@@ -119,15 +103,6 @@ export function AssignmentBoardClient() {
     window.addEventListener("announcement-edit", handler);
     return () => window.removeEventListener("announcement-edit", handler);
   }, [announcement]);
-
-  useEffect(() => {
-    const handler = () => {
-      setDateDraft(currentDate);
-      setShowDateModal(true);
-    };
-    window.addEventListener("date-picker-open", handler);
-    return () => window.removeEventListener("date-picker-open", handler);
-  }, [currentDate]);
 
   return (
     <>
@@ -144,34 +119,7 @@ export function AssignmentBoardClient() {
         onClose={() => setShowTV(false)}
       />
     )}
-    {showDateModal && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDateModal(false)}>
-        <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <h2 className="mb-4 text-base font-bold text-slate-800">Select Date</h2>
-          <input
-            autoFocus
-            type="date"
-            value={dateDraft}
-            onChange={(e) => setDateDraft(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-          />
-          <div className="mt-4 flex justify-end gap-2">
-            <button onClick={() => setShowDateModal(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-            <button
-              onClick={() => {
-                setCurrentDate(dateDraft);
-                window.dispatchEvent(new CustomEvent("date-changed", { detail: dateDraft }));
-                setShowDateModal(false);
-              }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Go
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {showAnnouncementModal && (
+{showAnnouncementModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowAnnouncementModal(false)}>
         <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
           <h2 className="mb-4 text-base font-bold text-slate-800">Edit Announcement</h2>
