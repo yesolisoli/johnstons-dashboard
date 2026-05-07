@@ -17,16 +17,10 @@ export function AssignmentBoardClient() {
       .forEach((s) => { map[s.employee_id] = s.status; });
     return map;
   });
-  const [currentDate, setCurrentDate] = useState(mockWorkDate);
-  const [assignmentsByDate, setAssignmentsByDate] = useState<Record<string, StationAssignment[]>>({ [mockWorkDate]: mockAssignments });
+  const [assignments, setAssignmentsState] = useState<StationAssignment[]>(mockAssignments);
 
-  const assignments = assignmentsByDate[currentDate] ?? [];
   const setAssignments = (updater: StationAssignment[] | ((prev: StationAssignment[]) => StationAssignment[])) => {
-    setAssignmentsByDate((prev) => {
-      const current = prev[currentDate] ?? [];
-      const next = typeof updater === "function" ? updater(current) : updater;
-      return { ...prev, [currentDate]: next };
-    });
+    setAssignmentsState((prev) => typeof updater === "function" ? updater(prev) : updater);
   };
   const [stations, setStations] = useState<Station[]>(mockStations);
   const [workAreas, setWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
@@ -51,16 +45,16 @@ export function AssignmentBoardClient() {
 
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    setAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: currentDate, shift_code: shiftCode, mode_code: modeCode }]);
-    // Sync roster: set dept to the station's work area and ensure status is available
     const station = stations.find((s) => s.id === stationId);
-    const workArea = station ? workAreas.find((wa) => wa.id === station.work_area_id) : null;
-    if (workArea) {
-      setEmployees((prev) => prev.map((e) => e.id === employeeId
-        ? { ...e, departments: e.departments.includes(workArea.name) ? e.departments : [...e.departments, workArea.name] }
-        : e));
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    }
+    setAssignments((prev) => [...prev, {
+      id: `a_${Date.now()}`,
+      employee_id: employeeId,
+      station_id: stationId,
+      work_date: mockWorkDate,
+      shift_code: shiftCode,
+      mode_code: modeCode,
+      activeDepartmentId: station?.work_area_id ?? "",
+    }]);
   };
 
   const handleUnassign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -68,56 +62,20 @@ export function AssignmentBoardClient() {
       (a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)
     );
     setAssignments(remaining);
-    if (!remaining.some((a) => a.employee_id === employeeId)) {
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      const removedStation = stations.find((s) => s.id === stationId);
-      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
-      if (removedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === employeeId
-          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
-          : e));
-      }
-    }
   };
 
   const handleUnassignAll = (employeeId: string) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
     setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, departments: [] } : e));
   };
 
   const handleUnassignFromStation = (employeeId: string, stationId: string) => {
-    const remaining = assignments.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId));
-    setAssignments(remaining);
-    if (!remaining.some((a) => a.employee_id === employeeId)) {
-      setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-      const removedStation = stations.find((s) => s.id === stationId);
-      const removedWa = removedStation ? workAreas.find((wa) => wa.id === removedStation.work_area_id) : null;
-      if (removedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === employeeId
-          ? { ...e, departments: e.departments.filter((d) => d !== removedWa.name) }
-          : e));
-      }
-    }
+    setAssignments((prev) => prev.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId)));
   };
 
   const handleClearWorkArea = (workAreaId: string) => {
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    const removed = assignments.filter((a) => stationIds.has(a.station_id));
-    const remaining = assignments.filter((a) => !stationIds.has(a.station_id));
-    setAssignments(remaining);
-    const clearedWa = workAreas.find((wa) => wa.id === workAreaId);
-    const affectedEmpIds = new Set(removed.map((a) => a.employee_id));
-    affectedEmpIds.forEach((empId) => {
-      if (!remaining.some((a) => a.employee_id === empId)) {
-        setStatuses((prev) => ({ ...prev, [empId]: "available" }));
-      }
-      if (clearedWa) {
-        setEmployees((prev) => prev.map((e) => e.id === empId
-          ? { ...e, departments: e.departments.filter((d) => d !== clearedWa.name) }
-          : e));
-      }
-    });
+    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
   };
 
   const handleQuickAssign = (employeeId: string, stationId: string) => {
@@ -131,9 +89,6 @@ export function AssignmentBoardClient() {
   const [announcement, setAnnouncement] = useState("Please clean your work area and report any equipment issues.");
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementDraft, setAnnouncementDraft] = useState(announcement);
-  const [showDateModal, setShowDateModal] = useState(false);
-  const [dateDraft, setDateDraft] = useState(currentDate);
-
   useEffect(() => {
     const handler = () => setShowTV(true);
     window.addEventListener("tv-open", handler);
@@ -148,15 +103,6 @@ export function AssignmentBoardClient() {
     window.addEventListener("announcement-edit", handler);
     return () => window.removeEventListener("announcement-edit", handler);
   }, [announcement]);
-
-  useEffect(() => {
-    const handler = () => {
-      setDateDraft(currentDate);
-      setShowDateModal(true);
-    };
-    window.addEventListener("date-picker-open", handler);
-    return () => window.removeEventListener("date-picker-open", handler);
-  }, [currentDate]);
 
   return (
     <>
@@ -173,34 +119,7 @@ export function AssignmentBoardClient() {
         onClose={() => setShowTV(false)}
       />
     )}
-    {showDateModal && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDateModal(false)}>
-        <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <h2 className="mb-4 text-base font-bold text-slate-800">Select Date</h2>
-          <input
-            autoFocus
-            type="date"
-            value={dateDraft}
-            onChange={(e) => setDateDraft(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-          />
-          <div className="mt-4 flex justify-end gap-2">
-            <button onClick={() => setShowDateModal(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-            <button
-              onClick={() => {
-                setCurrentDate(dateDraft);
-                window.dispatchEvent(new CustomEvent("date-changed", { detail: dateDraft }));
-                setShowDateModal(false);
-              }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Go
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {showAnnouncementModal && (
+{showAnnouncementModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowAnnouncementModal(false)}>
         <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
           <h2 className="mb-4 text-base font-bold text-slate-800">Edit Announcement</h2>

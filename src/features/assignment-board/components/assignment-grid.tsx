@@ -501,6 +501,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const [addingStation, setAddingStation] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
+
   // Group editing state
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
   const [editingGroupText, setEditingGroupText] = useState("");
@@ -571,7 +572,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (onAssignProp) { onAssignProp(employeeId, stationId, shiftCode, modeCode); return; }
     if (localAssignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode }]);
+    const station = mockStations.find((s) => s.id === stationId);
+    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode, activeDepartmentId: station?.work_area_id ?? "" }]);
   };
 
   const handleRemove = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -717,7 +719,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   return (
     <div className="flex h-full min-w-0 flex-col gap-4">
       {/* Work Area Tabs */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
         {sortedWorkAreas.map((wa) => (
           <button key={wa.id} onClick={() => selectWorkArea(wa.id)} onDoubleClick={() => setWorkAreaModal(wa)} title="Double-click to edit"
             className="cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all"
@@ -729,9 +732,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           className="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-500 hover:border-slate-400 hover:text-slate-700">
           + Add Dept
         </button>
+        </div>
         <button
           onClick={() => setConfirmClear(true)}
-          className="ml-auto rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           Clear All
         </button>
@@ -774,23 +778,56 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
               </th>
 
               {/* Shift column headers */}
-              {currentShifts.map((shift) => (
-                <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
-                  <div className="flex items-center gap-2">
-                    <span className="cursor-pointer hover:opacity-80"
-                      onClick={() => {
-                        const [start, end] = (shift.time_range ?? "").split("-");
-                        setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
-                      }}
-                      title="Click to edit">
-                      {shift.label}
-                      {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
-                    </span>
-                    <button onClick={() => handleDeleteShift(shift.code)}
-                      className="ml-auto hidden text-white/50 hover:text-white group-hover/col:block">×</button>
-                  </div>
-                </th>
-              ))}
+              {currentShifts.map((shift) => {
+                const shiftAssignments = assignments.filter(
+                  (a) => a.shift_code === shift.code && (!hasModes || a.mode_code === selectedMode)
+                );
+                const loanedIn = new Set(
+                  shiftAssignments
+                    .filter((a) =>
+                      a.activeDepartmentId === selectedWorkAreaId &&
+                      employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
+                    )
+                    .map((a) => a.employee_id)
+                ).size;
+                const loanedOut = new Set(
+                  shiftAssignments
+                    .filter((a) =>
+                      a.activeDepartmentId !== selectedWorkAreaId &&
+                      employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
+                    )
+                    .map((a) => a.employee_id)
+                ).size;
+                return (
+                  <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="cursor-pointer hover:opacity-80"
+                          onClick={() => {
+                            const [start, end] = (shift.time_range ?? "").split("-");
+                            setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
+                          }}
+                          title="Click to edit">
+                          {shift.label}
+                          {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
+                        </span>
+                        {loanedIn > 0 && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100">
+                            ↓ {loanedIn} in
+                          </span>
+                        )}
+                        {loanedOut > 0 && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100">
+                            ↑ {loanedOut} out
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => handleDeleteShift(shift.code)}
+                        className="ml-auto hidden text-white/50 hover:text-white group-hover/col:block">×</button>
+                    </div>
+                  </th>
+                );
+              })}
 
               {/* Add shift th */}
               <th className="whitespace-nowrap px-3 py-3 text-left" style={{ backgroundColor: color }}>
@@ -888,7 +925,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaName={selectedWorkArea.name} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} />
                     </div>
                   </td>
                 ))}
@@ -1035,6 +1072,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           </Modal>
         );
       })()}
+
 
       {/* Clear All Confirm */}
       {confirmClear && (
