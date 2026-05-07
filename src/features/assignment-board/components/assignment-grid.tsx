@@ -779,7 +779,9 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
               {/* Shift column headers */}
               {currentShifts.map((shift) => {
-                const shiftAssignments = assignments.filter((a) => a.shift_code === shift.code);
+                const shiftAssignments = assignments.filter(
+                  (a) => a.shift_code === shift.code && (!hasModes || a.mode_code === selectedMode)
+                );
                 const loanedIn = new Set(
                   shiftAssignments
                     .filter((a) =>
