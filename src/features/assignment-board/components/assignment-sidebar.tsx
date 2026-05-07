@@ -445,7 +445,7 @@ function RosterManageModal({
   const active = employees.filter((e) => e.active);
 
   const hasNoStation = (emp: Employee) => {
-    const effectiveDepts = emp.activeDepartmentIds?.length
+    const effectiveDepts = emp.activeDepartmentIds != null
       ? emp.activeDepartmentIds
       : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
     if (effectiveDepts.length === 0) return false;
@@ -607,7 +607,7 @@ function RosterManageModal({
             )}
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
-              const effectiveActiveDeptIds = emp.activeDepartmentIds != null && emp.activeDepartmentIds.length > 0
+              const effectiveActiveDeptIds = emp.activeDepartmentIds != null
                 ? emp.activeDepartmentIds
                 : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
               return (
@@ -850,11 +850,11 @@ export function AssignmentSidebar({
         </div>
       </div>
 
-      {/* Station Pending */}
+      {/* Employee Roaster */}
       <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-700 bg-white">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-            Station Pending
+            Available Employees
             <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
               {totalStaff}
             </span>

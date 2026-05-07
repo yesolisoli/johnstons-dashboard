@@ -84,9 +84,11 @@ export function AssignmentCell({
     .filter((e) => !!e.homeDepartmentId)
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
   // "Unassigned" tab: no dept assigned, or unavailable
-  const unassignedPickable = allPickable.filter((e) =>
-    !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
-  );
+  const unassignedPickable = allPickable
+    .filter((e) =>
+      !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
+    )
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   const baseList = tab === "unassigned" ? unassignedPickable : assignedDeptPickable;
   const filtered = search.trim()
@@ -96,6 +98,9 @@ export function AssignmentCell({
   // isLoaned = activeDepartmentId !== homeDepartmentId (derived)
   const isCrossDept = (emp: Employee) =>
     !!workAreaId && !!emp.homeDepartmentId && emp.homeDepartmentId !== workAreaId;
+
+  const abbrevWa = (name: string) =>
+    name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   const openMoveModal = (
     emp: Employee,
@@ -298,7 +303,9 @@ export function AssignmentCell({
                         </div>
                         <div className="ml-2 flex shrink-0 items-center gap-1.5">
                           {crossDept && (
-                            <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">Loan</span>
+                            <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                              {abbrevWa(workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
+                            </span>
                           )}
                           {tab === "unassigned" ? (
                             <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>

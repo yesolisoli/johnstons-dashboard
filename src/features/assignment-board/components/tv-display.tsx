@@ -165,6 +165,9 @@ export function TVDisplay({
     const homeWaId = emp.homeDepartmentId;
     if (!asgn.activeDepartmentId || asgn.activeDepartmentId === homeWaId) continue;
     const activeWaId = asgn.activeDepartmentId;
+    const activeWa = workAreas.find((wa) => wa.id === activeWaId);
+    const currentModeForWa = activeWa ? getWaActiveMode(activeWa, nowMin) : "normal";
+    if (asgn.mode_code !== currentModeForWa) continue;
     if (!loanedInByWaId[activeWaId]) continue;
     if (!loanedInByWaId[activeWaId].some((x) => x.emp.id === emp.id)) {
       loanedInByWaId[activeWaId].push({ emp, homeWaId });

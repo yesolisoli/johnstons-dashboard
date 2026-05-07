@@ -780,14 +780,22 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
               {/* Shift column headers */}
               {currentShifts.map((shift) => {
                 const shiftAssignments = assignments.filter((a) => a.shift_code === shift.code);
-                const loanedIn = shiftAssignments.filter((a) =>
-                  a.activeDepartmentId === selectedWorkAreaId &&
-                  employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
-                ).length;
-                const loanedOut = shiftAssignments.filter((a) =>
-                  a.activeDepartmentId !== selectedWorkAreaId &&
-                  employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
-                ).length;
+                const loanedIn = new Set(
+                  shiftAssignments
+                    .filter((a) =>
+                      a.activeDepartmentId === selectedWorkAreaId &&
+                      employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
+                    )
+                    .map((a) => a.employee_id)
+                ).size;
+                const loanedOut = new Set(
+                  shiftAssignments
+                    .filter((a) =>
+                      a.activeDepartmentId !== selectedWorkAreaId &&
+                      employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
+                    )
+                    .map((a) => a.employee_id)
+                ).size;
                 return (
                   <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
                     <div className="flex items-center gap-2">
