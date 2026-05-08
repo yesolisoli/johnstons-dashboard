@@ -18,7 +18,7 @@ const modules = [
     icon: LayoutGrid,
     accent: "text-blue-700",
     iconColor: "text-blue-600",
-    cardClassName: "bg-blue-100/70 ring-blue-200/80",
+    cardClassName: "bg-blue-100/60 ring-blue-200/80",
     wide: false,
   },
   {
@@ -28,7 +28,7 @@ const modules = [
     icon: Beef,
     accent: "text-emerald-700",
     iconColor: "text-emerald-600",
-    cardClassName: "bg-emerald-100/70 ring-emerald-200/80",
+    cardClassName: "bg-emerald-100/60 ring-emerald-200/80",
     wide: false,
   },
   {
@@ -38,7 +38,7 @@ const modules = [
     icon: Calculator,
     accent: "text-violet-700",
     iconColor: "text-violet-600",
-    cardClassName: "bg-violet-100/70 ring-violet-200/80",
+    cardClassName: "bg-violet-100/60 ring-violet-200/80",
     wide: false,
   },
   {
@@ -48,7 +48,7 @@ const modules = [
     icon: Package,
     accent: "text-amber-700",
     iconColor: "text-amber-600",
-    cardClassName: "bg-amber-100/70 ring-amber-200/80",
+    cardClassName: "bg-amber-100/60 ring-amber-200/80",
     wide: false,
   },
   {
@@ -58,7 +58,7 @@ const modules = [
     icon: CalendarRange,
     accent: "text-red-600",
     iconColor: "text-red-500",
-    cardClassName: "bg-red-100/70 ring-red-200/80",
+    cardClassName: "bg-red-100/60 ring-red-200/80",
     wide: true,
   },
   {
@@ -68,7 +68,7 @@ const modules = [
     icon: Settings,
     accent: "text-sky-700",
     iconColor: "text-sky-600",
-    cardClassName: "bg-sky-100/70 ring-sky-200/80",
+    cardClassName: "bg-sky-100/60 ring-sky-200/80",
     wide: true,
   },
 ];
@@ -81,7 +81,7 @@ export default function DashboardHomePage() {
         description="Select a module to get started."
       />
 
-      <section className="min-h-0 flex-1 bg-slate-50 px-7 pt-8 pb-5 lg:px-10 lg:pt-8 lg:pb-6 xl:px-12">
+      <section className="min-h-0 flex-1 bg-slate-50 px-[3.25rem] pt-8 pb-5 lg:px-[3.75rem] lg:pt-8 lg:pb-6 xl:px-[4.25rem]">
         <div className="mx-auto flex h-full min-h-0 max-w-[1660px] overflow-visible bg-slate-50">
           <div className="grid h-full min-h-0 w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2 xl:gap-5">
             {modules.map((module) => {
@@ -104,13 +104,13 @@ export default function DashboardHomePage() {
                       <Icon className={module.iconColor} size={32} strokeWidth={2} />
                     </div>
 
-                    <div className="mt-4 max-w-[15rem]">
+                    <div className="mt-10 max-w-[15rem]">
                       <h2
-                        className={`text-[1.4rem] leading-none font-black tracking-tight ${module.accent} lg:text-[1.6rem]`}
+                        className={`text-[1.2rem] leading-none font-black tracking-tight ${module.accent} lg:text-[1.4rem]`}
                       >
                         {module.title}
                       </h2>
-                      <p className="mt-3 text-[0.95rem] leading-7 text-slate-700 lg:text-[1rem] lg:leading-7">
+                      <p className="mt-4 text-[0.9rem] leading-6 text-slate-700 lg:text-[0.95rem] lg:leading-7">
                         {module.description}
                       </p>
                     </div>
