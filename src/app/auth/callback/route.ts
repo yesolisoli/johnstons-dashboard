@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const origin = url.origin;
 
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/assignment-board";
+  const next = searchParams.get("next") || "/";
   const error = searchParams.get("error");
   const errorCode = searchParams.get("error_code");
 
