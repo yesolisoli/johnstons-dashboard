@@ -209,10 +209,11 @@ function EditShiftModal({ initial, onClose, onSave }: {
 function AddStationModal({ existingGroups, onClose, onSave }: {
   existingGroups: string[];
   onClose: () => void;
-  onSave: (name: string, group: string) => void;
+  onSave: (name: string, group: string, genderRestriction?: "M" | "F") => void;
 }) {
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
+  const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(undefined);
   const canSave = name.trim().length > 0;
 
   return (
@@ -221,7 +222,7 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
         <div className="flex items-center justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
-            onClick={() => canSave && onSave(name.trim(), group.trim())}
+            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction)}
             disabled={!canSave}
             className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
           >
@@ -236,7 +237,7 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim())}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction)}
             autoFocus
             placeholder="e.g. Saw, Helper #1"
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
@@ -268,6 +269,24 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
         </div>
+        <div>
+          <div className="mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Gender Restriction</label>
+            <span className="text-xs text-slate-400">— optional</span>
+          </div>
+          <div className="flex gap-2">
+            {([undefined, "M", "F"] as const).map((val) => (
+              <button
+                key={val ?? "none"}
+                type="button"
+                onClick={() => setGenderRestriction(val)}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${genderRestriction === val ? val === "M" ? "bg-sky-500 text-white border-sky-500" : val === "F" ? "bg-rose-400 text-white border-rose-400" : "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}
+              >
+                {val === undefined ? "None" : val === "M" ? "Male Only" : "Female Only"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </Modal>
   );
@@ -276,13 +295,14 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
 // ─── EditStationModal (local) ─────────────────────────────────────────────────
 
 function EditStationModal({ initial, existingGroups, onClose, onSave }: {
-  initial: { name: string; group: string };
+  initial: { name: string; group: string; genderRestriction?: "M" | "F" };
   existingGroups: string[];
   onClose: () => void;
-  onSave: (name: string, group: string) => void;
+  onSave: (name: string, group: string, genderRestriction?: "M" | "F") => void;
 }) {
   const [name, setName] = useState(initial.name);
   const [group, setGroup] = useState(initial.group);
+  const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(initial.genderRestriction);
   const canSave = name.trim().length > 0;
 
   return (
@@ -291,7 +311,7 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
         <div className="flex items-center justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
-            onClick={() => canSave && onSave(name.trim(), group.trim())}
+            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction)}
             disabled={!canSave}
             className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
           >
@@ -306,7 +326,7 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim())}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction)}
             autoFocus
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
@@ -332,6 +352,24 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
             placeholder={existingGroups.length > 0 ? "Or type a new group name..." : "Type a group name..."}
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
+        </div>
+        <div>
+          <div className="mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Gender Restriction</label>
+            <span className="text-xs text-slate-400">— optional</span>
+          </div>
+          <div className="flex gap-2">
+            {([undefined, "M", "F"] as const).map((val) => (
+              <button
+                key={val ?? "none"}
+                type="button"
+                onClick={() => setGenderRestriction(val)}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${genderRestriction === val ? val === "M" ? "bg-sky-500 text-white border-sky-500" : val === "F" ? "bg-rose-400 text-white border-rose-400" : "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}
+              >
+                {val === undefined ? "None" : val === "M" ? "Male Only" : "Female Only"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </Modal>
@@ -582,14 +620,14 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   };
 
   // ── Station handlers ──
-  const handleSaveStation = (stationId: string, name: string, group: string) => {
+  const handleSaveStation = (stationId: string, name: string, group: string, genderRestriction?: "M" | "F") => {
     if (!name.trim()) return;
     const newGroup = group.trim() || undefined;
     setStations((prev) => {
       const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
       const target = sorted.find((s) => s.id === stationId);
       if (!target || target.group === newGroup) {
-        return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup } : s);
+        return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup, gender_restriction: genderRestriction } : s);
       }
       const sameArea = sorted.filter((s) => s.work_area_id === target.work_area_id && (!hasModes || s.mode_code === target.mode_code));
       const groupStations = newGroup ? sameArea.filter((s) => s.id !== stationId && s.group === newGroup) : [];
@@ -602,7 +640,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       const withoutTarget = sameArea.filter((s) => s.id !== stationId);
       const updated = withoutTarget.map((s) => ({ ...s }));
       const insertIdx = updated.findIndex((s) => s.display_order === insertAfterOrder);
-      updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup });
+      updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup, gender_restriction: genderRestriction });
       updated.forEach((s, i) => { s.display_order = i + 1; });
       return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
     });
@@ -625,7 +663,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     ));
   };
 
-  const handleAddStation = (name: string, group: string) => {
+  const handleAddStation = (name: string, group: string, genderRestriction?: "M" | "F") => {
     setStations((prev) => [...prev, {
       id: `st_${Date.now()}`,
       work_area_id: selectedWorkAreaId,
@@ -634,6 +672,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       display_order: workAreaStations.length + 1,
       ...(hasModes ? { mode_code: selectedMode } : {}),
       ...(group ? { group } : {}),
+      ...(genderRestriction ? { gender_restriction: genderRestriction } : {}),
     }]);
     setAddingStation(false);
   };
@@ -901,14 +940,28 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 {/* Station name */}
                 <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0", width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
                   {station.protected ? (
-                    <span className="text-sm font-semibold text-slate-800">{station.name}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-semibold text-slate-800">{station.name}</span>
+                      {station.gender_restriction && (
+                        <span className={`self-start rounded px-1.5 py-0.5 text-[10px] font-bold ${station.gender_restriction === "M" ? "bg-sky-100 text-sky-600" : "bg-rose-100 text-rose-500"}`}>
+                          {station.gender_restriction === "M" ? "M only" : "F only"}
+                        </span>
+                      )}
+                    </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="cursor-pointer text-sm italic text-slate-600 hover:text-slate-900"
-                        onDoubleClick={() => setEditingStationId(station.id)}
-                        title="Double-click to edit">
-                        {station.name}
-                      </span>
+                    <div className="flex items-start gap-2">
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="cursor-pointer text-sm italic text-slate-600 hover:text-slate-900"
+                          onDoubleClick={() => setEditingStationId(station.id)}
+                          title="Double-click to edit">
+                          {station.name}
+                        </span>
+                        {station.gender_restriction && (
+                          <span className={`self-start rounded px-1.5 py-0.5 text-[10px] font-bold ${station.gender_restriction === "M" ? "bg-sky-100 text-sky-600" : "bg-rose-100 text-rose-500"}`}>
+                            {station.gender_restriction === "M" ? "M only" : "F only"}
+                          </span>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleDeleteStation(station.id)}
                         className="invisible ml-auto rounded px-1 text-xs group-hover:visible transition-colors"
@@ -925,7 +978,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} genderRestriction={station.gender_restriction} />
                     </div>
                   </td>
                 ))}
@@ -994,10 +1047,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         if (!s) return null;
         return (
           <EditStationModal
-            initial={{ name: s.name, group: s.group ?? "" }}
+            initial={{ name: s.name, group: s.group ?? "", genderRestriction: s.gender_restriction }}
             existingGroups={Array.from(new Set(workAreaStations.filter((st) => st.group).map((st) => st.group as string)))}
             onClose={() => setEditingStationId(null)}
-            onSave={(name, group) => handleSaveStation(editingStationId, name, group)}
+            onSave={(name, group, genderRestriction) => handleSaveStation(editingStationId, name, group, genderRestriction)}
           />
         );
       })()}

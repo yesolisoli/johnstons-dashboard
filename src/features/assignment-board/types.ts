@@ -55,6 +55,7 @@ export type Station = {
   mode_code?: ModeCode;
   protected?: boolean;
   group?: string;
+  gender_restriction?: "M" | "F";
 };
 
 export type EmployeeDailyStatus = {

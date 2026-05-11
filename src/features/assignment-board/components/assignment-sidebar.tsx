@@ -455,6 +455,17 @@ function RosterManageModal({
     });
   };
 
+  const getGenderViolations = (emp: Employee) =>
+    assignments
+      .filter((a) => a.employee_id === emp.id)
+      .flatMap((a) => {
+        const station = stations.find((s) => s.id === a.station_id);
+        if (station?.gender_restriction && emp.gender && emp.gender !== station.gender_restriction) {
+          return [{ stationName: station.name, required: station.gender_restriction }];
+        }
+        return [];
+      });
+
   const filtered = active
     .filter((e) => {
       if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
@@ -607,6 +618,7 @@ function RosterManageModal({
             )}
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
+              const genderViolations = getGenderViolations(emp);
               const effectiveActiveDeptIds = emp.activeDepartmentIds != null
                 ? emp.activeDepartmentIds
                 : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
@@ -676,6 +688,15 @@ function RosterManageModal({
                       onAssign={(stationId) => onAssignToStation(emp.id, stationId)}
                       onUnassign={(stationId) => onUnassignFromStation(emp.id, stationId)}
                     />
+                    {genderViolations.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {genderViolations.map((v, i) => (
+                          <span key={i} className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-600">
+                            ⚠ {v.stationName} ({v.required === "M" ? "Male" : "Female"} only)
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   {/* Gender */}
                   <td className="px-3 py-2.5">

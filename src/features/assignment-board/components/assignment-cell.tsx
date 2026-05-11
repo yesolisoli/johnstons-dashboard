@@ -24,7 +24,7 @@ type PendingMove = {
 };
 
 export function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, genderRestriction,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -38,6 +38,7 @@ export function AssignmentCell({
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   workAreaId?: string;
   workAreas?: WorkArea[];
+  genderRestriction?: "M" | "F";
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -226,16 +227,25 @@ export function AssignmentCell({
             {assignedWithInfo.map(({ asgn, emp }) => {
               const isLoaned = asgn.activeDepartmentId !== emp.homeDepartmentId;
               const homeWaName = isLoaned ? workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name : undefined;
+              const genderViolation = genderRestriction && emp.gender && emp.gender !== genderRestriction;
               return (
-                <EmployeeCard
-                  key={emp.id}
-                  employee={emp}
-                  stationId={stationId}
-                  shiftCode={shiftCode}
-                  modeCode={modeCode}
-                  onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
-                  loanInfo={{ isLoanedIn: isLoaned, homeWaName }}
-                />
+                <div key={emp.id}>
+                  <div className={genderViolation ? "rounded-md ring-2 ring-red-400" : undefined}>
+                    <EmployeeCard
+                      employee={emp}
+                      stationId={stationId}
+                      shiftCode={shiftCode}
+                      modeCode={modeCode}
+                      onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
+                      loanInfo={{ isLoanedIn: isLoaned, homeWaName }}
+                    />
+                  </div>
+                  {genderViolation && (
+                    <p className="mt-0.5 px-1 text-[10px] font-semibold text-red-500">
+                      {genderRestriction === "M" ? "Male only" : "Female only"} — gender mismatch
+                    </p>
+                  )}
+                </div>
               );
             })}
           </div>
