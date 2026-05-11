@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { Modal } from "@/components/shared/modal";
 import {
   mockAssignments,
-  mockEmployees,
   mockShifts,
   mockStations,
   mockWorkAreas,
@@ -21,580 +20,9 @@ import type {
   WorkAreaModeView,
 } from "../types";
 import { AssignmentCell } from "./assignment-cell";
-
-// ─── TimePickerInput (local) ──────────────────────────────────────────────────
-
-function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const hourRef = useRef<HTMLDivElement>(null);
-  const minRef = useRef<HTMLDivElement>(null);
-
-  const [selH, selM] = value ? value.split(":") : ["", ""];
-  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const hIdx = hours.indexOf(selH);
-    const mIdx = minutes.indexOf(selM);
-    if (hIdx >= 0) hourRef.current?.children[hIdx]?.scrollIntoView({ block: "center" });
-    if (mIdx >= 0) minRef.current?.children[mIdx]?.scrollIntoView({ block: "center" });
-  }, [open]);
-
-  const select = (h: string, m: string) => {
-    onChange(`${h}:${m}`);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
-      >
-        {value ? <span className="text-slate-800">{value}</span> : <span className="text-slate-400">--:--</span>}
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          <div ref={hourRef} className="h-48 flex-1 overflow-y-auto border-r border-slate-100 scroll-smooth">
-            {hours.map((h) => (
-              <button key={h} type="button"
-                onClick={() => select(h, selM || "00")}
-                className={`w-full py-2 text-center text-sm font-medium transition-colors ${selH === h ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
-              >{h}</button>
-            ))}
-          </div>
-          <div ref={minRef} className="h-48 flex-1 overflow-y-auto scroll-smooth">
-            {minutes.map((m) => (
-              <button key={m} type="button"
-                onClick={() => select(selH || "00", m)}
-                className={`w-full py-2 text-center text-sm font-medium transition-colors ${selM === m ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
-              >{m}</button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── AddShiftModal (local) ────────────────────────────────────────────────────
-
-function AddShiftModal({ onClose, onSave }: {
-  onClose: () => void;
-  onSave: (label: string, startTime: string, endTime: string) => void;
-}) {
-  const [label, setLabel] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const canSave = label.trim().length > 0;
-
-  return (
-    <Modal
-      title="Add Shift"
-      onClose={onClose}
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
-          <button
-            onClick={() => canSave && onSave(label.trim(), startTime, endTime)}
-            disabled={!canSave}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
-          >
-            Add Shift
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Shift Name</label>
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(label.trim(), startTime, endTime)}
-            autoFocus
-            placeholder="e.g. 1st Shift"
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Time Range <span className="font-normal normal-case text-slate-400">— optional</span></label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="mb-1 text-xs font-medium text-slate-600">Start</p>
-              <TimePickerInput value={startTime} onChange={setStartTime} />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-slate-600">End</p>
-              <TimePickerInput value={endTime} onChange={setEndTime} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── EditShiftModal (local) ───────────────────────────────────────────────────
-
-function EditShiftModal({ initial, onClose, onSave }: {
-  initial: { code: ShiftCode; label: string; startTime: string; endTime: string };
-  onClose: () => void;
-  onSave: (label: string, startTime: string, endTime: string) => void;
-}) {
-  const [label, setLabel] = useState(initial.label);
-  const [startTime, setStartTime] = useState(initial.startTime);
-  const [endTime, setEndTime] = useState(initial.endTime);
-  const canSave = label.trim().length > 0;
-
-  return (
-    <Modal
-      title="Edit Shift"
-      onClose={onClose}
-      footer={
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
-          <button
-            onClick={() => canSave && onSave(label.trim(), startTime, endTime)}
-            disabled={!canSave}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
-          >
-            Save
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Shift Name</label>
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(label.trim(), startTime, endTime)}
-            autoFocus
-            placeholder="e.g. 1st Shift"
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Time Range <span className="font-normal normal-case text-slate-400">— optional</span></label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="mb-1 text-xs font-medium text-slate-600">Start</p>
-              <TimePickerInput value={startTime} onChange={setStartTime} />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-slate-600">End</p>
-              <TimePickerInput value={endTime} onChange={setEndTime} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── EmployeeSelect (local) ───────────────────────────────────────────────────
-
-function EmployeeSelect({ employees, value, onChange }: {
-  employees: Employee[];
-  value: string | undefined;
-  onChange: (id: string | undefined) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const selected = employees.find((e) => e.id === value);
-  const filtered = employees.filter((e) =>
-    e.full_name.toLowerCase().includes(query.toLowerCase()) ||
-    (e.employee_code ?? "").toLowerCase().includes(query.toLowerCase())
-  ).slice(0, 50);
-
-  const handleSelect = (id: string | undefined) => {
-    onChange(id);
-    setQuery("");
-    setOpen(false);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setQuery(""); }}
-        className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
-      >
-        {selected
-          ? <span className="text-slate-800">{selected.full_name}{selected.employee_code ? <span className="ml-1.5 text-xs text-slate-400">#{selected.employee_code}</span> : null}</span>
-          : <span className="text-slate-400">None</span>
-        }
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          <div className="p-2 border-b border-slate-100">
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or code..."
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none"
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => handleSelect(undefined)}
-              className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${!value ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-50"}`}
-            >
-              None
-            </button>
-            {filtered.map((emp) => (
-              <button
-                key={emp.id}
-                type="button"
-                onClick={() => handleSelect(emp.id)}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${value === emp.id ? "bg-slate-800 text-white" : "text-slate-700 hover:bg-slate-50"}`}
-              >
-                {emp.full_name}
-                {emp.employee_code && (
-                  <span className={`ml-1.5 text-xs ${value === emp.id ? "text-slate-300" : "text-slate-400"}`}>#{emp.employee_code}</span>
-                )}
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <p className="px-4 py-3 text-sm text-slate-400">No employees found</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── AddStationModal (local) ──────────────────────────────────────────────────
-
-function AddStationModal({ employees, existingGroups, onClose, onSave }: {
-  employees: Employee[];
-  existingGroups: string[];
-  onClose: () => void;
-  onSave: (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => void;
-}) {
-  const [name, setName] = useState("");
-  const [group, setGroup] = useState("");
-  const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(undefined);
-  const [defaultEmployeeId, setDefaultEmployeeId] = useState<string | undefined>(undefined);
-  const canSave = name.trim().length > 0;
-
-  return (
-    <Modal onClose={onClose} title="New Station"
-      footer={
-        <div className="flex items-center justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
-          <button
-            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
-            disabled={!canSave}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
-          >
-            Add Station
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-5">
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Station Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
-            autoFocus
-            placeholder="e.g. Saw, Helper #1"
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Group</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          {existingGroups.length > 0 && (
-            <div className="mb-2.5 flex flex-wrap gap-1.5">
-              {existingGroups.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGroup(group === g ? "" : g)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${group === g ? "bg-slate-800 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          )}
-          <input
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder={existingGroups.length > 0 ? "Or type a new group name..." : "Type a group name..."}
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Gender Restriction</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          <div className="flex gap-2">
-            {([undefined, "M", "F"] as const).map((val) => (
-              <button
-                key={val ?? "none"}
-                type="button"
-                onClick={() => setGenderRestriction(val)}
-                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${genderRestriction === val ? val === "M" ? "bg-sky-500 text-white border-sky-500" : val === "F" ? "bg-rose-400 text-white border-rose-400" : "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}
-              >
-                {val === undefined ? "None" : val === "M" ? "Male Only" : "Female Only"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Default Employee</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          <EmployeeSelect employees={employees} value={defaultEmployeeId} onChange={setDefaultEmployeeId} />
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── EditStationModal (local) ─────────────────────────────────────────────────
-
-function EditStationModal({ employees, initial, existingGroups, onClose, onSave }: {
-  employees: Employee[];
-  initial: { name: string; group: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string };
-  existingGroups: string[];
-  onClose: () => void;
-  onSave: (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => void;
-}) {
-  const [name, setName] = useState(initial.name);
-  const [group, setGroup] = useState(initial.group);
-  const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(initial.genderRestriction);
-  const [defaultEmployeeId, setDefaultEmployeeId] = useState<string | undefined>(initial.defaultEmployeeId);
-  const canSave = name.trim().length > 0;
-
-  return (
-    <Modal onClose={onClose} title="Edit Station"
-      footer={
-        <div className="flex items-center justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
-          <button
-            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
-            disabled={!canSave}
-            className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
-          >
-            Save
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-5">
-        <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-slate-600">Station Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
-            autoFocus
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Group</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          {existingGroups.length > 0 && (
-            <div className="mb-2.5 flex flex-wrap gap-1.5">
-              {existingGroups.map((g) => (
-                <button key={g} type="button" onClick={() => setGroup(group === g ? "" : g)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${group === g ? "bg-slate-800 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
-                  {g}
-                </button>
-              ))}
-            </div>
-          )}
-          <input
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder={existingGroups.length > 0 ? "Or type a new group name..." : "Type a group name..."}
-            className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
-          />
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Gender Restriction</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          <div className="flex gap-2">
-            {([undefined, "M", "F"] as const).map((val) => (
-              <button
-                key={val ?? "none"}
-                type="button"
-                onClick={() => setGenderRestriction(val)}
-                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all border ${genderRestriction === val ? val === "M" ? "bg-sky-500 text-white border-sky-500" : val === "F" ? "bg-rose-400 text-white border-rose-400" : "bg-slate-800 text-white border-slate-800" : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"}`}
-              >
-                {val === undefined ? "None" : val === "M" ? "Male Only" : "Female Only"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Default Employee</label>
-            <span className="text-xs text-slate-400">— optional</span>
-          </div>
-          <EmployeeSelect employees={employees} value={defaultEmployeeId} onChange={setDefaultEmployeeId} />
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── WorkAreaModal (local) ────────────────────────────────────────────────────
-
-function WorkAreaModal({ initial, onClose, onSave, onDelete }: {
-  initial?: WorkArea;
-  onClose: () => void;
-  onSave: (name: string, color: string, modeViews: WorkAreaModeView[]) => void;
-  onDelete?: () => void;
-}) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [color, setColor] = useState(initial?.color_hex ?? "#334155");
-  const [hasModes, setHasModes] = useState(!!(initial?.mode_views?.length));
-  const [modeLabels, setModeLabels] = useState<[string, string]>([
-    initial?.mode_views?.[0]?.label ?? "Hog Break",
-    initial?.mode_views?.[1]?.label ?? "After Hog Break",
-  ]);
-  const [modeTimeRanges, setModeTimeRanges] = useState<[string, string]>([
-    initial?.mode_views?.[0]?.time_range ?? "",
-    initial?.mode_views?.[1]?.time_range ?? "",
-  ]);
-  const modeCodes: ModeCode[] = ["hog_break", "after_hog_break"];
-  const buildViews = (): WorkAreaModeView[] =>
-    hasModes ? modeCodes.map((mc, i) => ({ mode_code: mc, label: modeLabels[i], time_range: modeTimeRanges[i] || undefined })) : [];
-
-  return (
-    <Modal
-      title={initial ? "Edit Department" : "Add Department"}
-      width="w-[460px]"
-      onClose={onClose}
-      footer={
-        <div className="flex items-center gap-2">
-          {initial && onDelete && (
-            <button onClick={onDelete} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors">
-              Delete Department
-            </button>
-          )}
-          <div className="ml-auto flex gap-2">
-            <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-              Cancel
-            </button>
-            <button
-              onClick={() => name.trim() && onSave(name.trim(), color, buildViews())}
-              disabled={!name.trim()}
-              className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40"
-            >
-              {initial ? "Save" : "Add Department"}
-            </button>
-          </div>
-        </div>
-      }
-    >
-      <div className="space-y-5">
-        {/* Name */}
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoFocus
-            placeholder="e.g. Shipping"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-          />
-        </div>
-
-        {/* Color */}
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Color</label>
-          <div className="flex items-center gap-3">
-            <label className="relative cursor-pointer">
-              <span className="block h-9 w-9 rounded-lg border-2 border-white shadow-md" style={{ backgroundColor: color }} />
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-            </label>
-            <span className="rounded-md bg-slate-50 px-2.5 py-1 font-mono text-sm text-slate-500">{color}</span>
-          </div>
-        </div>
-
-        {/* Mode views toggle */}
-        <div className="rounded-xl border border-slate-200 p-4">
-          <label className="flex cursor-pointer items-center gap-3">
-            <div className={`relative h-5 w-9 rounded-full transition-colors ${hasModes ? "bg-slate-800" : "bg-slate-200"}`}
-              onClick={() => setHasModes((v) => !v)}>
-              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${hasModes ? "translate-x-4" : "translate-x-0.5"}`} />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Has mode views</span>
-            <span className="text-xs text-slate-400">(e.g. Hog Break / After Hog Break)</span>
-          </label>
-
-          {hasModes && (
-            <div className="mt-4 space-y-3">
-              {([0, 1] as const).map((i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-14 shrink-0 text-xs font-medium text-slate-400">Mode {i + 1}</span>
-                  <input
-                    value={modeLabels[i]}
-                    onChange={(e) => setModeLabels((prev) => { const n = [...prev] as [string, string]; n[i] = e.target.value; return n; })}
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder={`Mode ${i + 1} label`}
-                  />
-                  <input
-                    value={modeTimeRanges[i]}
-                    onChange={(e) => setModeTimeRanges((prev) => { const n = [...prev] as [string, string]; n[i] = e.target.value; return n; })}
-                    className="w-32 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="05:00–09:00"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── AssignmentGrid ───────────────────────────────────────────────────────────
-
+import { ShiftModal } from "./modals/shift-modal";
+import { StationModal } from "./modals/station-modal";
+import { WorkAreaModal } from "./modals/work-area-modal";
 
 export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
@@ -611,7 +39,6 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setLocalStations(next);
     onStationsChange?.(next);
   };
-  // Shifts per work area
   const [localWorkAreaShifts, setLocalWorkAreaShifts] = useState<Record<string, ShiftInfo[]>>(() =>
     Object.fromEntries(mockWorkAreas.map((wa) => [wa.id, [...mockShifts]])),
   );
@@ -627,28 +54,23 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     const next = typeof updater === "function" ? updater(assignments) : updater;
     setLocalAssignments(next);
   };
-  const employees = (employeesProp ?? mockEmployees).filter((e) => e.active);
+  const employees = (employeesProp ?? []).filter((e) => e.active);
 
   const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
   const selectedWorkAreaId = selectedWorkAreaIdProp ?? localSelectedWorkAreaId;
   const [selectedMode, setSelectedMode] = useState<ModeCode>("normal");
 
-  // Shift editing state
   const [editingShift, setEditingShift] = useState<{ code: ShiftCode; label: string; startTime: string; endTime: string } | null>(null);
   const [addingShift, setAddingShift] = useState<{ label: string; startTime: string; endTime: string } | null>(null);
 
-  // Station editing state
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const [addingStation, setAddingStation] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
-
-  // Group editing state
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
   const [editingGroupText, setEditingGroupText] = useState("");
-  const [groupDeleteWarning, setGroupDeleteWarning] = useState<string | null>(null); // group name with stations blocking delete
+  const [groupDeleteWarning, setGroupDeleteWarning] = useState<string | null>(null);
 
-  // Station drag state
   const [dragStationId, setDragStationId] = useState<string | null>(null);
   const [dragOverStationId, setDragOverStationId] = useState<string | null>(null);
 
@@ -684,7 +106,6 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setEditingShift(null);
   };
 
-  // Returns true if a slot already has any assignment — used to skip default auto-assign after a manual override.
   const slotHasAssignment = (stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) =>
     assignments.some((a) => a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode);
 
@@ -837,7 +258,6 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       const draggedOriginalIdx = sameArea.findIndex((s) => s.id === dragStationId);
       const targetOriginalIdx = sameArea.findIndex((s) => s.id === targetStationId);
       const movingUp = draggedOriginalIdx > targetOriginalIdx;
-      // Block: can't drag protected stations, can't move above a protected station
       if (dragged.protected) return prev;
       if (movingUp && target.protected) return prev;
       const withoutDragged = sameArea.filter((s) => s.id !== dragStationId);
@@ -1167,12 +587,12 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
       {/* Add Shift Modal */}
       {addingShift !== null && (
-        <AddShiftModal onClose={() => setAddingShift(null)} onSave={handleAddShift} />
+        <ShiftModal onClose={() => setAddingShift(null)} onSave={handleAddShift} />
       )}
 
       {/* Edit Shift Modal */}
       {editingShift !== null && (
-        <EditShiftModal initial={editingShift} onClose={() => setEditingShift(null)} onSave={handleSaveEditShift} />
+        <ShiftModal initial={editingShift} onClose={() => setEditingShift(null)} onSave={handleSaveEditShift} />
       )}
 
       {/* Edit Station Modal */}
@@ -1180,19 +600,19 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         const s = stations.find((s) => s.id === editingStationId);
         if (!s) return null;
         return (
-          <EditStationModal
+          <StationModal
             employees={employees}
             initial={{ name: s.name, group: s.group ?? "", genderRestriction: s.gender_restriction, defaultEmployeeId: s.defaultEmployeeId }}
             existingGroups={Array.from(new Set(workAreaStations.filter((st) => st.group).map((st) => st.group as string)))}
             onClose={() => setEditingStationId(null)}
-            onSave={(name, group, genderRestriction, defaultEmployeeId) => handleSaveStation(editingStationId, name, group, genderRestriction, defaultEmployeeId)}
+            onSave={(name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => handleSaveStation(editingStationId, name, group, genderRestriction, defaultEmployeeId)}
           />
         );
       })()}
 
       {/* Add Station Modal */}
       {addingStation && (
-        <AddStationModal
+        <StationModal
           employees={employees}
           existingGroups={Array.from(new Set(
             workAreaStations.filter((s) => s.group).map((s) => s.group as string)
@@ -1261,7 +681,6 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           </Modal>
         );
       })()}
-
 
       {/* Clear All Confirm */}
       {confirmClear && (

@@ -4,46 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function abbrev(dept: string): string {
-  return dept.split(/\s+/).map((w) => w[0].toUpperCase()).join("");
-}
-
-function parseMin(t: string): number {
-  const [h, m] = t.trim().split(":").map(Number);
-  return h * 60 + m;
-}
-
-function getActiveShift(shifts: ShiftInfo[], now: Date): ShiftInfo | null {
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return (
-    shifts.find((s) => {
-      if (!s.time_range.includes("-")) return false;
-      const [a, b] = s.time_range.split("-");
-      return nowMin >= parseMin(a) && nowMin <= parseMin(b);
-    }) ?? null
-  );
-}
-
-function getWaActiveMode(wa: WorkArea, nowMin: number): string {
-  if (!wa.mode_views || wa.mode_views.length === 0) return "normal";
-  for (const mv of wa.mode_views) {
-    if (!mv.time_range) continue;
-    const parts = mv.time_range.split("-").map((s) => s.trim());
-    if (parts.length === 2 && nowMin >= parseMin(parts[0]) && nowMin <= parseMin(parts[1])) {
-      return mv.mode_code;
-    }
-  }
-  return "normal";
-}
-
-function getNextShift(shifts: ShiftInfo[], current: ShiftInfo | null): ShiftInfo | null {
-  if (!current) return shifts[0] ?? null;
-  const idx = shifts.findIndex((s) => s.code === current.code);
-  return shifts[idx + 1] ?? null;
-}
+import { abbrevDept, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
 
 const DEPT_ICONS: Record<string, React.ReactNode> = {
   "Loading Dock": <Truck size={13} />,
@@ -54,8 +15,6 @@ const DEPT_ICONS: Record<string, React.ReactNode> = {
 };
 
 const UNAVAILABLE = new Set(["sick", "vacation", "off_shift"]);
-
-// ── sub-components ────────────────────────────────────────────────────────────
 
 function AutoScrollRows({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -83,8 +42,6 @@ function AutoScrollRows({ children, style }: { children: React.ReactNode; style?
     </div>
   );
 }
-
-// ── TVDisplay ─────────────────────────────────────────────────────────────────
 
 export function TVDisplay({
   employees,
@@ -143,14 +100,9 @@ export function TVDisplay({
   const shiftAssignments = activeShift
     ? assignments.filter((a) => a.shift_code === activeShift.code)
     : [];
-  const assignedEmpIds = new Set(shiftAssignments.map((a) => a.employee_id));
-  const totalStaff = activeEmployees.length;
-  const assignedCount = activeEmployees.filter((e) => assignedEmpIds.has(e.id)).length;
-  const efficiency = totalStaff > 0 ? ((assignedCount / totalStaff) * 100).toFixed(1) : "0.0";
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
-  // Pre-compute loaned employees per work area: isLoaned = activeDepartmentId !== employee.homeDepartmentId
   const loanedOutByWaId: Record<string, Employee[]> = {};
   const loanedInByWaId: Record<string, { emp: Employee; homeWaId: string | null }[]> = {};
 
@@ -177,7 +129,6 @@ export function TVDisplay({
     }
   }
 
-  // Globally active non-normal modes (deduplicated)
   const uniqueActiveModes = sortedWorkAreas
     .map((wa) => {
       const modeCode = getWaActiveMode(wa, nowMin);
@@ -195,7 +146,6 @@ export function TVDisplay({
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950">
       {/* ── Header ── */}
       <div className="flex shrink-0 items-center gap-4 bg-slate-900 px-6 py-3 border-b border-white/10">
-        {/* Date + Time */}
         <div className="flex items-center gap-5 shrink-0">
           <span className="flex items-center gap-2 text-sm text-slate-300">
             <svg className="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -211,7 +161,6 @@ export function TVDisplay({
           </span>
         </div>
 
-        {/* Live / Preview toggle */}
         <div className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-1">
           <button
             onClick={() => setPreviewMode(false)}
@@ -227,7 +176,6 @@ export function TVDisplay({
           </button>
         </div>
 
-        {/* Preview controls */}
         {previewMode && (
           <div className="flex shrink-0 items-center gap-2">
             <input
@@ -254,7 +202,6 @@ export function TVDisplay({
           </div>
         )}
 
-        {/* Current Shift + Active Mode */}
         <div className="flex flex-1 items-center justify-center gap-6">
           <div className="flex flex-col items-center justify-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Current Shift</p>
@@ -276,7 +223,6 @@ export function TVDisplay({
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={onClose}
@@ -305,7 +251,6 @@ export function TVDisplay({
 
           return [(
             <div key={wa.id} className="flex min-w-[180px] flex-1 flex-col border-r border-slate-200 last:border-r-0">
-              {/* Dept header */}
               <div
                 className="shrink-0 flex items-center justify-center gap-2 px-3 py-2"
                 style={{ backgroundColor: wa.color_hex ?? "#1e293b" }}
@@ -314,7 +259,6 @@ export function TVDisplay({
                 <span className="text-sm font-bold uppercase tracking-widest text-white truncate">{wa.name}</span>
               </div>
 
-              {/* Loaned banner — always rendered to keep column heights equal */}
               <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-1" style={{ backgroundColor: wa.color_hex ? `${wa.color_hex}99` : "#1e293b" }}>
                 {loanedOutByWaId[wa.id]?.length > 0 && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-white/80">
@@ -331,7 +275,6 @@ export function TVDisplay({
                 )}
               </div>
 
-              {/* Sub-header */}
               <div className="flex shrink-0 border-b border-slate-300">
                 <div className="w-[45%] shrink-0 px-3 py-1.5 bg-slate-300">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Station</span>
@@ -341,16 +284,15 @@ export function TVDisplay({
                 </div>
               </div>
 
-              {/* Rows */}
               <AutoScrollRows style={{ background: `linear-gradient(to right, #f8fafc 45%, white 45%)` }}>
                 {waStations.map((station) => {
                   const asgn = shiftAssignments.find(
                     (a) => a.station_id === station.id && a.mode_code === activeModeCode
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
-                  const isUnavailable = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
+                  const isUnavailableEmp = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
                   const isLoanedIn = asgn && emp ? asgn.activeDepartmentId !== emp.homeDepartmentId : false;
-                  const dotColor = !emp || isUnavailable
+                  const dotColor = !emp || isUnavailableEmp
                     ? "bg-red-500"
                     : emp.temporary
                     ? "bg-amber-400"
@@ -361,12 +303,12 @@ export function TVDisplay({
                       key={station.id}
                       className="flex items-stretch border-b border-slate-100 last:border-b-0"
                     >
-                      <div className="flex w-[45%] shrink-0 items-center px-3 py-2" style={{ backgroundColor: "transparent" }}>
+                      <div className="flex w-[45%] shrink-0 items-center px-3 py-2">
                         <span className="truncate text-xs text-slate-500">{station.name}</span>
                       </div>
                       <span className="flex min-w-0 flex-1 items-center gap-1.5 bg-white px-3 py-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                        {emp && !isUnavailable ? (
+                        {emp && !isUnavailableEmp ? (
                           <>
                             <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
                             {emp.temporary && (
@@ -376,7 +318,7 @@ export function TVDisplay({
                             )}
                             {isLoanedIn && emp?.homeDepartmentId && (
                               <span className="ml-auto shrink-0 rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
-                                {abbrev(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
+                                {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
                               </span>
                             )}
                           </>

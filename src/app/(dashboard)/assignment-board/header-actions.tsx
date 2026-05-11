@@ -1,29 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Megaphone, Monitor } from "lucide-react";
 
-function formatDate(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export function AssignmentBoardHeaderActions() {
-  const [displayDate, setDisplayDate] = useState("2026-04-16");
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      setDisplayDate((e as CustomEvent<string>).detail);
-    };
-
-    window.addEventListener("date-changed", handler);
-    return () => window.removeEventListener("date-changed", handler);
-  }, []);
-
   return (
     <>
       <button
