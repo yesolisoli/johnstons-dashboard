@@ -56,6 +56,7 @@ export type Station = {
   protected?: boolean;
   group?: string;
   gender_restriction?: "M" | "F";
+  defaultEmployeeId?: string;
 };
 
 export type EmployeeDailyStatus = {

@@ -204,16 +204,103 @@ function EditShiftModal({ initial, onClose, onSave }: {
   );
 }
 
+// ─── EmployeeSelect (local) ───────────────────────────────────────────────────
+
+function EmployeeSelect({ employees, value, onChange }: {
+  employees: Employee[];
+  value: string | undefined;
+  onChange: (id: string | undefined) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = employees.find((e) => e.id === value);
+  const filtered = employees.filter((e) =>
+    e.full_name.toLowerCase().includes(query.toLowerCase()) ||
+    (e.employee_code ?? "").toLowerCase().includes(query.toLowerCase())
+  ).slice(0, 50);
+
+  const handleSelect = (id: string | undefined) => {
+    onChange(id);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen((v) => !v); setQuery(""); }}
+        className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
+      >
+        {selected
+          ? <span className="text-slate-800">{selected.full_name}{selected.employee_code ? <span className="ml-1.5 text-xs text-slate-400">#{selected.employee_code}</span> : null}</span>
+          : <span className="text-slate-400">None</span>
+        }
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div className="p-2 border-b border-slate-100">
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name or code..."
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => handleSelect(undefined)}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${!value ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-50"}`}
+            >
+              None
+            </button>
+            {filtered.map((emp) => (
+              <button
+                key={emp.id}
+                type="button"
+                onClick={() => handleSelect(emp.id)}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${value === emp.id ? "bg-slate-800 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+              >
+                {emp.full_name}
+                {emp.employee_code && (
+                  <span className={`ml-1.5 text-xs ${value === emp.id ? "text-slate-300" : "text-slate-400"}`}>#{emp.employee_code}</span>
+                )}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="px-4 py-3 text-sm text-slate-400">No employees found</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── AddStationModal (local) ──────────────────────────────────────────────────
 
-function AddStationModal({ existingGroups, onClose, onSave }: {
+function AddStationModal({ employees, existingGroups, onClose, onSave }: {
+  employees: Employee[];
   existingGroups: string[];
   onClose: () => void;
-  onSave: (name: string, group: string, genderRestriction?: "M" | "F") => void;
+  onSave: (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => void;
 }) {
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
   const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(undefined);
+  const [defaultEmployeeId, setDefaultEmployeeId] = useState<string | undefined>(undefined);
   const canSave = name.trim().length > 0;
 
   return (
@@ -222,7 +309,7 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
         <div className="flex items-center justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
-            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction)}
+            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
             disabled={!canSave}
             className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
           >
@@ -237,7 +324,7 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction)}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
             autoFocus
             placeholder="e.g. Saw, Helper #1"
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
@@ -287,6 +374,13 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
             ))}
           </div>
         </div>
+        <div>
+          <div className="mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Default Employee</label>
+            <span className="text-xs text-slate-400">— optional</span>
+          </div>
+          <EmployeeSelect employees={employees} value={defaultEmployeeId} onChange={setDefaultEmployeeId} />
+        </div>
       </div>
     </Modal>
   );
@@ -294,15 +388,17 @@ function AddStationModal({ existingGroups, onClose, onSave }: {
 
 // ─── EditStationModal (local) ─────────────────────────────────────────────────
 
-function EditStationModal({ initial, existingGroups, onClose, onSave }: {
-  initial: { name: string; group: string; genderRestriction?: "M" | "F" };
+function EditStationModal({ employees, initial, existingGroups, onClose, onSave }: {
+  employees: Employee[];
+  initial: { name: string; group: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string };
   existingGroups: string[];
   onClose: () => void;
-  onSave: (name: string, group: string, genderRestriction?: "M" | "F") => void;
+  onSave: (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => void;
 }) {
   const [name, setName] = useState(initial.name);
   const [group, setGroup] = useState(initial.group);
   const [genderRestriction, setGenderRestriction] = useState<"M" | "F" | undefined>(initial.genderRestriction);
+  const [defaultEmployeeId, setDefaultEmployeeId] = useState<string | undefined>(initial.defaultEmployeeId);
   const canSave = name.trim().length > 0;
 
   return (
@@ -311,7 +407,7 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
         <div className="flex items-center justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
-            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction)}
+            onClick={() => canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
             disabled={!canSave}
             className="rounded-lg bg-slate-800 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-30 transition-colors"
           >
@@ -326,7 +422,7 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction)}
+            onKeyDown={(e) => e.key === "Enter" && canSave && onSave(name.trim(), group.trim(), genderRestriction, defaultEmployeeId)}
             autoFocus
             className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
@@ -370,6 +466,13 @@ function EditStationModal({ initial, existingGroups, onClose, onSave }: {
               </button>
             ))}
           </div>
+        </div>
+        <div>
+          <div className="mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-600">Default Employee</label>
+            <span className="text-xs text-slate-400">— optional</span>
+          </div>
+          <EmployeeSelect employees={employees} value={defaultEmployeeId} onChange={setDefaultEmployeeId} />
         </div>
       </div>
     </Modal>
@@ -581,6 +684,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setEditingShift(null);
   };
 
+  // Returns true if a slot already has any assignment — used to skip default auto-assign after a manual override.
+  const slotHasAssignment = (stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) =>
+    assignments.some((a) => a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode);
+
   const handleAddShift = (label: string, startTime: string, endTime: string) => {
     const next = `shift_${Date.now()}`;
     setWorkAreaShifts((prev) => ({
@@ -590,6 +697,14 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
       ],
     }));
+    stations
+      .filter((s) => s.work_area_id === selectedWorkAreaId && s.defaultEmployeeId)
+      .forEach((s) => {
+        const mode = s.mode_code ?? "normal";
+        if (!slotHasAssignment(s.id, next, mode)) {
+          handleAssign(s.defaultEmployeeId!, s.id, next, mode);
+        }
+      });
     setAddingShift(null);
   };
 
@@ -620,14 +735,15 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   };
 
   // ── Station handlers ──
-  const handleSaveStation = (stationId: string, name: string, group: string, genderRestriction?: "M" | "F") => {
+  const handleSaveStation = (stationId: string, name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => {
     if (!name.trim()) return;
     const newGroup = group.trim() || undefined;
+    const station = stations.find((s) => s.id === stationId);
     setStations((prev) => {
       const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
       const target = sorted.find((s) => s.id === stationId);
       if (!target || target.group === newGroup) {
-        return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup, gender_restriction: genderRestriction } : s);
+        return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined } : s);
       }
       const sameArea = sorted.filter((s) => s.work_area_id === target.work_area_id && (!hasModes || s.mode_code === target.mode_code));
       const groupStations = newGroup ? sameArea.filter((s) => s.id !== stationId && s.group === newGroup) : [];
@@ -640,10 +756,18 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       const withoutTarget = sameArea.filter((s) => s.id !== stationId);
       const updated = withoutTarget.map((s) => ({ ...s }));
       const insertIdx = updated.findIndex((s) => s.display_order === insertAfterOrder);
-      updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup, gender_restriction: genderRestriction });
+      updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined });
       updated.forEach((s, i) => { s.display_order = i + 1; });
       return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
     });
+    if (defaultEmployeeId && station) {
+      const modeCode: ModeCode = station.mode_code ?? "normal";
+      (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
+        if (!slotHasAssignment(stationId, shift.code, modeCode)) {
+          handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
+        }
+      });
+    }
     setEditingStationId(null);
   };
 
@@ -663,9 +787,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     ));
   };
 
-  const handleAddStation = (name: string, group: string, genderRestriction?: "M" | "F") => {
+  const handleAddStation = (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => {
+    const stationId = `st_${Date.now()}`;
+    const modeCode: ModeCode = hasModes ? selectedMode : "normal";
     setStations((prev) => [...prev, {
-      id: `st_${Date.now()}`,
+      id: stationId,
       work_area_id: selectedWorkAreaId,
       name,
       required_headcount: 1,
@@ -673,7 +799,15 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       ...(hasModes ? { mode_code: selectedMode } : {}),
       ...(group ? { group } : {}),
       ...(genderRestriction ? { gender_restriction: genderRestriction } : {}),
+      ...(defaultEmployeeId ? { defaultEmployeeId } : {}),
     }]);
+    if (defaultEmployeeId) {
+      currentShifts.forEach((shift) => {
+        if (!slotHasAssignment(stationId, shift.code, modeCode)) {
+          handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
+        }
+      });
+    }
     setAddingStation(false);
   };
 
@@ -1047,10 +1181,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         if (!s) return null;
         return (
           <EditStationModal
-            initial={{ name: s.name, group: s.group ?? "", genderRestriction: s.gender_restriction }}
+            employees={employees}
+            initial={{ name: s.name, group: s.group ?? "", genderRestriction: s.gender_restriction, defaultEmployeeId: s.defaultEmployeeId }}
             existingGroups={Array.from(new Set(workAreaStations.filter((st) => st.group).map((st) => st.group as string)))}
             onClose={() => setEditingStationId(null)}
-            onSave={(name, group, genderRestriction) => handleSaveStation(editingStationId, name, group, genderRestriction)}
+            onSave={(name, group, genderRestriction, defaultEmployeeId) => handleSaveStation(editingStationId, name, group, genderRestriction, defaultEmployeeId)}
           />
         );
       })()}
@@ -1058,6 +1193,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {/* Add Station Modal */}
       {addingStation && (
         <AddStationModal
+          employees={employees}
           existingGroups={Array.from(new Set(
             workAreaStations.filter((s) => s.group).map((s) => s.group as string)
           ))}
