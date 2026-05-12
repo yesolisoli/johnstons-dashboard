@@ -14,7 +14,6 @@ export function AssignmentBoardClient() {
     handleDeleteStatusConfig,
     handleAddStatusConfig,
     handleReorderStatusConfig,
-    currentWorkDate,
     announcement,
     handleAnnouncementChange,
     employees,
@@ -50,6 +49,7 @@ export function AssignmentBoardClient() {
     handleUnassignFromStation,
     handleClearWorkArea,
     handleQuickAssign,
+    getEmployeeEffectiveDepartmentIds,
   } = useAssignmentBoardData();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -130,6 +130,7 @@ export function AssignmentBoardClient() {
             onAssignToStation={handleQuickAssign}
             onUnassignAll={handleUnassignAll}
             onUnassignFromStation={handleUnassignFromStation}
+            getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
           />
         </div>
 
@@ -184,7 +185,6 @@ export function AssignmentBoardClient() {
             workAreaShifts={workAreaShifts}
             onWorkAreaShiftsChange={handleWorkAreaShiftsChange}
             onWorkAreasChange={handleWorkAreasChange}
-            workDate={currentWorkDate}
             defaultShifts={defaultShiftTemplate}
           />
         </div>

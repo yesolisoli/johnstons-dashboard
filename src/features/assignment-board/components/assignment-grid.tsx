@@ -8,7 +8,6 @@ import {
   mockShifts,
   mockStations,
   mockWorkAreas,
-  mockWorkDate,
 } from "../mock-data";
 import type {
   Employee,
@@ -25,7 +24,7 @@ import { ShiftModal } from "./modals/shift-modal";
 import { StationModal } from "./modals/station-modal";
 import { WorkAreaModal } from "./modals/work-area-modal";
 
-export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, workDate, defaultShifts: defaultShiftsProp }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; workDate?: string; defaultShifts?: ShiftInfo[] } = {}) {
+export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, defaultShifts: defaultShiftsProp }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; defaultShifts?: ShiftInfo[] } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
@@ -49,12 +48,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setLocalWorkAreaShifts(next);
     onWorkAreaShiftsChange?.(next);
   };
-  const [localAssignments, setLocalAssignments] = useState<StationAssignment[]>(mockAssignments);
+  const [localAssignments] = useState<StationAssignment[]>(mockAssignments);
   const assignments = assignmentsProp ?? localAssignments;
-  const setAssignments = (updater: StationAssignment[] | ((prev: StationAssignment[]) => StationAssignment[])) => {
-    const next = typeof updater === "function" ? updater(assignments) : updater;
-    setLocalAssignments(next);
-  };
   const employees = (employeesProp ?? []).filter((e) => e.active);
 
   const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
@@ -150,7 +145,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       if (onUnassignProp) {
         assignments.filter((a) => stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
       } else {
-        setAssignments((prev) => prev.filter((a) => !(stationIdSet.has(a.station_id) && a.shift_code === code)));
+        console.warn("[AssignmentGrid] onUnassign handler missing — shift assignment cleanup not saved");
       }
     }
   };
@@ -158,14 +153,12 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // ── Assignment handlers ──
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (onAssignProp) { onAssignProp(employeeId, stationId, shiftCode, modeCode); return; }
-    if (localAssignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    const station = stations.find((s) => s.id === stationId);
-    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: workDate ?? mockWorkDate, shift_code: shiftCode, mode_code: modeCode, activeDepartmentId: station?.work_area_id ?? "" }]);
+    console.warn("[AssignmentGrid] onAssign handler missing — assignment not saved");
   };
 
   const handleRemove = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (onUnassignProp) { onUnassignProp(employeeId, stationId, shiftCode, modeCode); return; }
-    setLocalAssignments((prev) => prev.filter((a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)));
+    console.warn("[AssignmentGrid] onUnassign handler missing — removal not saved");
   };
 
   // ── Station handlers ──
@@ -303,7 +296,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       if (onUnassignProp) {
         assignments.filter((a) => a.station_id === stationId).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
       } else {
-        setAssignments((prev) => prev.filter((a) => a.station_id !== stationId));
+        console.warn("[AssignmentGrid] onUnassign handler missing — station assignment cleanup not saved");
       }
     }
   };
@@ -339,10 +332,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     } else {
       setWorkAreas((prev) => prev.filter((w) => w.id !== wa.id));
       setStations((prev) => prev.filter((s) => s.work_area_id !== wa.id));
-      setAssignments((prev) => prev.filter((a) => {
-        const stationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
-        return !stationIds.has(a.station_id);
-      }));
+      console.warn("[AssignmentGrid] onUnassign handler missing — work area assignment cleanup not saved");
       setWorkAreaShifts((prev) => { const next = { ...prev }; delete next[wa.id]; return next; });
     }
     if (remaining.length > 0) selectWorkArea(remaining[0].id);
@@ -439,11 +429,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
                         <span className="cursor-pointer hover:opacity-80"
-                          onClick={() => {
+                          onDoubleClick={() => {
                             const [start, end] = (shift.time_range ?? "").split("-");
                             setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
                           }}
-                          title="Click to edit">
+                          title="Double-click to edit">
                           {shift.label}
                           {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
                         </span>

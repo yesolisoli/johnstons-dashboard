@@ -75,19 +75,21 @@ export function AssignmentCell({
     .map((a) => ({ asgn: a, emp: allEmployees.find((e) => e.id === a.employee_id) }))
     .filter((x): x is { asgn: StationAssignment; emp: Employee } => !!x.emp && !disabledEmployeeIds?.has(x.emp.id));
 
-  const deptEmployees = workAreaId
-    ? allEmployees.filter((e) => !e.homeDepartmentId || e.qualifiedDepartmentIds.includes(workAreaId))
-    : allEmployees;
-  const allPickable = deptEmployees.filter((e) => !assignedIds.has(e.id));
-  // "All" tab: only employees with a home dept (no unassigned), sorted loan→dept
+  const isEligible = (e: Employee): boolean => {
+    if (!workAreaId) return true;
+    if (e.homeDepartmentId === workAreaId) return true;
+    if (e.qualifiedDepartmentIds.includes(workAreaId)) return true;
+    return assignments.some((a) => a.employee_id === e.id && a.activeDepartmentId === workAreaId);
+  };
+
+  const eligibleEmployees = workAreaId ? allEmployees.filter(isEligible) : allEmployees;
+  const allPickable = eligibleEmployees.filter((e) => !assignedIds.has(e.id) && !disabledEmployeeIds?.has(e.id));
+  // Department tab: all eligible employees not already in this cell
   const assignedDeptPickable = allPickable
-    .filter((e) => !!e.homeDepartmentId)
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
-  // "Unassigned" tab: no dept assigned, or unavailable
+  // Unassigned tab: eligible employees with zero assignments anywhere
   const unassignedPickable = allPickable
-    .filter((e) =>
-      !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || (disabledEmployeeIds?.has(e.id) ?? false)
-    )
+    .filter((e) => !assignments.some((a) => a.employee_id === e.id))
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   const baseList = tab === "unassigned" ? unassignedPickable : assignedDeptPickable;
@@ -155,6 +157,7 @@ export function AssignmentCell({
       const { employeeId, fromStationId, fromShiftCode, fromModeCode } = JSON.parse(e.dataTransfer.getData("application/json"));
       if (fromStationId === stationId && fromShiftCode === shiftCode && fromModeCode === modeCode) return;
       if (assignedIds.has(employeeId)) return;
+      if (disabledEmployeeIds?.has(employeeId)) return;
       const emp = allEmployees.find((e) => e.id === employeeId);
       if (!emp) return;
       if (isCrossDept(emp)) {
@@ -168,6 +171,7 @@ export function AssignmentCell({
 
   const confirmMove = () => {
     if (!pendingMove) return;
+    if (disabledEmployeeIds?.has(pendingMove.employeeId)) { setPendingMove(null); return; }
     if (pendingMove.fromStationId) onRemove(pendingMove.employeeId, pendingMove.fromStationId, pendingMove.fromShiftCode as ShiftCode, pendingMove.fromModeCode as ModeCode);
     onAssign(pendingMove.employeeId, stationId, shiftCode, modeCode);
     setPendingMove(null);
@@ -277,7 +281,7 @@ export function AssignmentCell({
                     onClick={() => setTab("all")}
                     className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === "all" ? "bg-slate-800 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                   >
-                    {workAreas?.find((w) => w.id === workAreaId)?.name ?? "All"} ({allPickable.length})
+                    {workAreas?.find((w) => w.id === workAreaId)?.name ?? "All"} ({assignedDeptPickable.length})
                   </button>
                   <button
                     onClick={() => setTab("unassigned")}

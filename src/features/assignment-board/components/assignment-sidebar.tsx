@@ -31,6 +31,7 @@ export function AssignmentSidebar({
   onAssignToStation,
   onUnassignAll,
   onUnassignFromStation,
+  getEmployeeEffectiveDepartmentIds,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
@@ -50,6 +51,7 @@ export function AssignmentSidebar({
   onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignAll: (empId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
+  getEmployeeEffectiveDepartmentIds: (emp: import("../types").Employee) => string[];
 }) {
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,13 +64,18 @@ export function AssignmentSidebar({
   const activeEmployees = employees.filter((e) => e.active);
   const totalStaff = activeEmployees.length;
 
+  const unavailableCodes = getUnavailableStatusCodes(statusConfigs);
+  const isUnavailableStat = (id: string) => unavailableCodes.has(getStatus(id));
+
+  const unavailableCount = activeEmployees.filter((e) => isUnavailableStat(e.id)).length;
   const assignedCount = activeEmployees.filter(
-    (e) => e.homeDepartmentId !== null && getStatus(e.id) === "available",
+    (e) => !isUnavailableStat(e.id) && assignments.some((a) => a.employee_id === e.id),
   ).length;
-
-  const notAssignedCount = activeEmployees.filter((e) => e.homeDepartmentId === null).length;
-
-  const efficiency = totalStaff > 0 ? ((assignedCount / totalStaff) * 100).toFixed(1) : "0.0";
+  const unassignedCount = activeEmployees.filter(
+    (e) => !isUnavailableStat(e.id) && !assignments.some((a) => a.employee_id === e.id),
+  ).length;
+  const availableWorkforce = totalStaff - unavailableCount;
+  const efficiency = availableWorkforce > 0 ? ((assignedCount / availableWorkforce) * 100).toFixed(1) : "0.0";
 
   const handleSaveName = (id: string) => {
     if (editingName.trim()) onUpdate(id, { full_name: editingName.trim() });
@@ -90,10 +97,10 @@ export function AssignmentSidebar({
           </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <StatCard label="Total Staff" value={totalStaff} bg="bg-white" labelColor="text-slate-400" color="text-slate-800" borderColor="border-slate-200" />
-          <StatCard label="Assigned" value={assignedCount} color="text-slate-800" bg="bg-white" labelColor="text-slate-400" borderColor="border-slate-200" />
-          <StatCard label="Unassigned" value={notAssignedCount} color="text-white" bg="bg-slate-700" labelColor="text-slate-400" borderColor="border-slate-600" />
-          <StatCard label="Efficiency" value={`${efficiency}%`} bg="bg-slate-800" labelColor="text-slate-400" color="text-white" borderColor="border-slate-700" />
+          <StatCard label="Total Staff" value={totalStaff} bg="bg-[#FFFFFF]" labelColor="text-slate-400" color="text-[#334155]" borderColor="border-[#E2E8F0]" />
+          <StatCard label="Unassigned" value={unassignedCount} bg="bg-[#F1F5F9]" labelColor="text-[#2563EB]" color="text-[#2563EB]" borderColor="border-[#CBD5E1]" />
+          <StatCard label="Unavailable" value={unavailableCount} bg="bg-[#FFF7ED]" labelColor="text-[#EA580C]" color="text-[#EA580C]" borderColor="border-[#FED7AA]" />
+          <StatCard label="Efficiency" value={`${efficiency}%`} bg="bg-[#0F172A]" labelColor="text-slate-400" color="text-[#FFFFFF]" borderColor="border-[#0F172A]" />
         </div>
       </div>
 
@@ -121,23 +128,31 @@ export function AssignmentSidebar({
             const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
             const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
             const noDept = !selectedWa ? activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id)) : [];
-            const unassignedEmps = activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id));
-            const unavailableEmps = activeEmployees.filter((e) => isUnavailable(e.id));
+            const unassignedEmps = !selectedWa ? activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id)) : [];
+            const unavailableEmps = activeEmployees.filter((e) => {
+              if (!isUnavailable(e.id)) return false;
+              if (!selectedWa) return true;
+              return e.homeDepartmentId === selectedWa.id || e.qualifiedDepartmentIds.includes(selectedWa.id);
+            });
+            const abbrevWa = (name: string) =>
+              name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
             return (
               <>
-                {workAreas.map((wa) => {
-                  const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
+                {visibleWorkAreas.map((wa) => {
                   const deptEmps = activeEmployees.filter((e) => {
-                    if (e.homeDepartmentId !== wa.id || isUnavailable(e.id)) return false;
-                    return !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id));
+                    if (isUnavailable(e.id)) return false;
+                    if (assignments.some((a) => a.employee_id === e.id)) return false;
+                    if (selectedWa) {
+                      return e.homeDepartmentId === wa.id || e.qualifiedDepartmentIds.includes(wa.id);
+                    }
+                    return e.homeDepartmentId === wa.id;
                   });
                   if (deptEmps.length === 0) return null;
                   return (
                     <div key={wa.id}>
                       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#ef4444" }} />
+                        <span className="h-2 w-2 rounded-full shrink-0 bg-red-500" />
                         <span className="text-xs font-semibold text-slate-600">No Station</span>
-                        <span className="text-xs text-slate-400">· {wa.name}</span>
                         <span className="ml-auto text-xs text-slate-400">{deptEmps.length}</span>
                       </div>
                       {deptEmps.map((emp) => {
@@ -184,7 +199,12 @@ export function AssignmentSidebar({
                             {emp.temporary && (
                               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                             )}
-                            <div className="ml-auto shrink-0">
+                            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                              {emp.homeDepartmentId !== wa.id && emp.homeDepartmentId && (
+                                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                                  {abbrevWa(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
+                                </span>
+                              )}
                               <StatusSelect
                                 value={getStatus(emp.id)}
                                 configs={statusConfigs}
@@ -269,11 +289,9 @@ export function AssignmentSidebar({
                 )}
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
-                  const waStationIds2 = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
-                  const assignedEmps = activeEmployees.filter((e) => {
-                    const inThisDept = e.homeDepartmentId === wa.id || e.activeDepartmentIds?.includes(wa.id);
-                    return inThisDept && assignments.some((a) => a.employee_id === e.id && waStationIds2.has(a.station_id));
-                  });
+                  const assignedEmps = activeEmployees.filter((e) =>
+                    assignments.some((a) => a.employee_id === e.id && a.activeDepartmentId === wa.id)
+                  );
                   if (assignedEmps.length === 0) return null;
                   return (
                     <div key={`assigned-${wa.id}`}>
@@ -406,6 +424,7 @@ export function AssignmentSidebar({
           onUnassignAll={onUnassignAll}
           onAssignToStation={onAssignToStation}
           onUnassignFromStation={onUnassignFromStation}
+          getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
           onClose={() => setShowRosterManage(false)}
         />
       )}
