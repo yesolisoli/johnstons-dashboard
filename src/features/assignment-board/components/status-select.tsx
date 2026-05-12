@@ -8,7 +8,13 @@ export type StatusConfig = {
   className: string;
   colorHex?: string;
   protected?: boolean;
+  /** When true, employee is excluded from assignment eligibility */
+  unavailable?: boolean;
 };
+
+export function getUnavailableStatusCodes(configs: StatusConfig[]): Set<string> {
+  return new Set(configs.filter((c) => c.unavailable).map((c) => c.code));
+}
 
 export function cfgBadge(cfg: StatusConfig): { cls: string; sty?: React.CSSProperties } {
   if (cfg.colorHex) {
@@ -36,11 +42,11 @@ export const COLOR_OPTIONS: { label: string; className: string }[] = [
 export const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
   { code: "available",  label: "Available",  className: "bg-emerald-50 text-emerald-600",  protected: true },
   { code: "assigned",   label: "Assigned",   className: "bg-sky-50 text-sky-600",          protected: true },
-  { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500" },
-  { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500" },
-  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400" },
+  { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500",        unavailable: true },
+  { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500",      unavailable: true },
+  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400",    unavailable: true },
   { code: "training",   label: "Training",   className: "bg-violet-50 text-violet-400" },
-  { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400" },
+  { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400",     unavailable: true },
 ];
 
 export function StatusSelect({ value, configs, onChange }: {

@@ -9,6 +9,14 @@ import { TVDisplay } from "./tv-display";
 
 export function AssignmentBoardClient() {
   const {
+    statusConfigs,
+    handleUpdateStatusConfig,
+    handleDeleteStatusConfig,
+    handleAddStatusConfig,
+    handleReorderStatusConfig,
+    currentWorkDate,
+    announcement,
+    handleAnnouncementChange,
     employees,
     statuses,
     assignments,
@@ -17,6 +25,17 @@ export function AssignmentBoardClient() {
     workAreaShifts,
     selectedWorkAreaId,
     disabledIds,
+    defaultShiftTemplate,
+    handleDeleteShift,
+    handleUpdateShift,
+    handleAddShift,
+    handleDeleteWorkArea,
+    handleUpdateWorkArea,
+    handleAddWorkArea,
+    handleReorderStation,
+    handleDeleteStation,
+    handleUpdateStation,
+    handleAddStation,
     handleStationsChange,
     handleWorkAreasChange,
     handleWorkAreaShiftsChange,
@@ -35,7 +54,6 @@ export function AssignmentBoardClient() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showTV, setShowTV] = useState(false);
-  const [announcement, setAnnouncement] = useState("Please clean your work area and report any equipment issues.");
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementDraft, setAnnouncementDraft] = useState(announcement);
 
@@ -84,7 +102,7 @@ export function AssignmentBoardClient() {
             />
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowAnnouncementModal(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button onClick={() => { setAnnouncement(announcementDraft); setShowAnnouncementModal(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button>
+              <button onClick={() => { handleAnnouncementChange(announcementDraft); setShowAnnouncementModal(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button>
             </div>
           </div>
         </div>
@@ -100,6 +118,11 @@ export function AssignmentBoardClient() {
             stations={stations}
             workAreas={workAreas}
             selectedWorkAreaId={selectedWorkAreaId}
+            statusConfigs={statusConfigs}
+            onUpdateStatusConfig={handleUpdateStatusConfig}
+            onDeleteStatusConfig={handleDeleteStatusConfig}
+            onAddStatusConfig={handleAddStatusConfig}
+            onReorderStatusConfig={handleReorderStatusConfig}
             onAdd={handleAdd}
             onRemove={handleRemoveEmployee}
             onUpdate={handleUpdate}
@@ -147,10 +170,22 @@ export function AssignmentBoardClient() {
             onAssign={handleAssign}
             onUnassign={handleUnassign}
             onClearWorkArea={handleClearWorkArea}
+            onDeleteShift={handleDeleteShift}
+            onUpdateShift={handleUpdateShift}
+            onAddShift={handleAddShift}
+            onDeleteWorkArea={handleDeleteWorkArea}
+            onUpdateWorkArea={handleUpdateWorkArea}
+            onAddWorkArea={handleAddWorkArea}
+            onReorderStation={handleReorderStation}
+            onDeleteStation={handleDeleteStation}
+            onUpdateStation={handleUpdateStation}
+            onAddStation={handleAddStation}
             onStationsChange={handleStationsChange}
             workAreaShifts={workAreaShifts}
             onWorkAreaShiftsChange={handleWorkAreaShiftsChange}
             onWorkAreasChange={handleWorkAreasChange}
+            workDate={currentWorkDate}
+            defaultShifts={defaultShiftTemplate}
           />
         </div>
       </div>

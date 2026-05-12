@@ -75,7 +75,6 @@ export function AssignmentCell({
     .map((a) => ({ asgn: a, emp: allEmployees.find((e) => e.id === a.employee_id) }))
     .filter((x): x is { asgn: StationAssignment; emp: Employee } => !!x.emp && !disabledEmployeeIds?.has(x.emp.id));
 
-  const UNAVAILABLE = new Set(["sick", "vacation", "injured"]);
   const deptEmployees = workAreaId
     ? allEmployees.filter((e) => !e.homeDepartmentId || e.qualifiedDepartmentIds.includes(workAreaId))
     : allEmployees;
@@ -87,7 +86,7 @@ export function AssignmentCell({
   // "Unassigned" tab: no dept assigned, or unavailable
   const unassignedPickable = allPickable
     .filter((e) =>
-      !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || UNAVAILABLE.has(statuses?.[e.id] ?? "available")
+      !e.homeDepartmentId || !assignments.some((a) => a.employee_id === e.id) || (disabledEmployeeIds?.has(e.id) ?? false)
     )
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 

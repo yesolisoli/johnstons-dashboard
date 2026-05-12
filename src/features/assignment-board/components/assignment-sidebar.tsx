@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Settings } from "lucide-react";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
-import { StatusSelect } from "./status-select";
-import { useStatusConfigs } from "../hooks/use-status-configs";
+import { StatusSelect, getUnavailableStatusCodes } from "./status-select";
+import type { StatusConfig } from "./status-select";
 import { ManageStatusesModal } from "./modals/manage-statuses-modal";
 import { AssignmentModal } from "./modals/assignment-modal";
 import { RosterManageModal } from "./modals/roster-manage-modal";
@@ -19,6 +19,11 @@ export function AssignmentSidebar({
   stations,
   workAreas,
   selectedWorkAreaId,
+  statusConfigs,
+  onUpdateStatusConfig,
+  onDeleteStatusConfig,
+  onAddStatusConfig,
+  onReorderStatusConfig,
   onAdd,
   onRemove,
   onUpdate,
@@ -33,6 +38,11 @@ export function AssignmentSidebar({
   stations: Station[];
   workAreas: WorkArea[];
   selectedWorkAreaId?: string;
+  statusConfigs: StatusConfig[];
+  onUpdateStatusConfig: (code: string, updates: Partial<StatusConfig>) => void;
+  onDeleteStatusConfig: (code: string) => void;
+  onAddStatusConfig: (label: string, colorHex: string) => void;
+  onReorderStatusConfig: (configs: StatusConfig[]) => void;
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Employee>) => void;
@@ -41,7 +51,6 @@ export function AssignmentSidebar({
   onUnassignAll: (empId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
 }) {
-  const { statusConfigs, handleUpdateConfig, handleDeleteConfig, handleAddConfig, handleReorderConfig } = useStatusConfigs();
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -107,8 +116,8 @@ export function AssignmentSidebar({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {(() => {
-            const UNAVAILABLE = new Set(["sick", "vacation", "off_shift"]);
-            const isUnavailable = (id: string) => UNAVAILABLE.has(getStatus(id));
+            const unavailableCodes = getUnavailableStatusCodes(statusConfigs);
+            const isUnavailable = (id: string) => unavailableCodes.has(getStatus(id));
             const selectedWa = workAreas.find((w) => w.id === selectedWorkAreaId);
             const visibleWorkAreas = selectedWa ? [selectedWa] : workAreas;
             const noDept = !selectedWa ? activeEmployees.filter((e) => e.homeDepartmentId === null && !isUnavailable(e.id)) : [];
@@ -353,10 +362,10 @@ export function AssignmentSidebar({
       {showManage && (
         <ManageStatusesModal
           configs={statusConfigs}
-          onUpdate={handleUpdateConfig}
-          onDelete={handleDeleteConfig}
-          onAdd={handleAddConfig}
-          onReorder={handleReorderConfig}
+          onUpdate={onUpdateStatusConfig}
+          onDelete={onDeleteStatusConfig}
+          onAdd={onAddStatusConfig}
+          onReorder={onReorderStatusConfig}
           onClose={() => setShowManage(false)}
         />
       )}

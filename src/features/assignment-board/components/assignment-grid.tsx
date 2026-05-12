@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Modal } from "@/components/shared/modal";
+// Standalone fallback defaults — only used when AssignmentGrid is rendered without props
 import {
   mockAssignments,
   mockShifts,
@@ -24,7 +25,7 @@ import { ShiftModal } from "./modals/shift-modal";
 import { StationModal } from "./modals/station-modal";
 import { WorkAreaModal } from "./modals/work-area-modal";
 
-export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void } = {}) {
+export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, workDate, defaultShifts: defaultShiftsProp }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; workDate?: string; defaultShifts?: ShiftInfo[] } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
@@ -97,12 +98,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // ── Shift handlers ──
   const handleSaveEditShift = (label: string, startTime: string, endTime: string) => {
     if (!editingShift) return;
-    setWorkAreaShifts((prev) => ({
-      ...prev,
-      [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).map((s) =>
-        s.code === editingShift.code ? { ...s, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" } : s,
-      ),
-    }));
+    if (onUpdateShiftProp) {
+      onUpdateShiftProp(selectedWorkAreaId, editingShift.code, label, startTime, endTime);
+    } else {
+      setWorkAreaShifts((prev) => ({
+        ...prev,
+        [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).map((s) =>
+          s.code === editingShift.code ? { ...s, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" } : s,
+        ),
+      }));
+    }
     setEditingShift(null);
   };
 
@@ -110,35 +115,43 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     assignments.some((a) => a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode);
 
   const handleAddShift = (label: string, startTime: string, endTime: string) => {
-    const next = `shift_${Date.now()}`;
-    setWorkAreaShifts((prev) => ({
-      ...prev,
-      [selectedWorkAreaId]: [
-        ...(prev[selectedWorkAreaId] ?? []),
-        { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
-      ],
-    }));
-    stations
-      .filter((s) => s.work_area_id === selectedWorkAreaId && s.defaultEmployeeId)
-      .forEach((s) => {
-        const mode = s.mode_code ?? "normal";
-        if (!slotHasAssignment(s.id, next, mode)) {
-          handleAssign(s.defaultEmployeeId!, s.id, next, mode);
-        }
-      });
+    if (onAddShiftProp) {
+      onAddShiftProp(selectedWorkAreaId, label, startTime, endTime);
+    } else {
+      const next = `shift_${Date.now()}`;
+      setWorkAreaShifts((prev) => ({
+        ...prev,
+        [selectedWorkAreaId]: [
+          ...(prev[selectedWorkAreaId] ?? []),
+          { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
+        ],
+      }));
+      stations
+        .filter((s) => s.work_area_id === selectedWorkAreaId && s.defaultEmployeeId)
+        .forEach((s) => {
+          const mode = s.mode_code ?? "normal";
+          if (!slotHasAssignment(s.id, next, mode)) {
+            handleAssign(s.defaultEmployeeId!, s.id, next, mode);
+          }
+        });
+    }
     setAddingShift(null);
   };
 
   const handleDeleteShift = (code: ShiftCode) => {
-    setWorkAreaShifts((prev) => ({
-      ...prev,
-      [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).filter((s) => s.code !== code),
-    }));
-    const stationIdSet = new Set(workAreaStations.map((s) => s.id));
-    if (onUnassignProp) {
-      assignments.filter((a) => stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+    if (onDeleteShiftProp) {
+      onDeleteShiftProp(selectedWorkAreaId, code);
     } else {
-      setAssignments((prev) => prev.filter((a) => !(stationIdSet.has(a.station_id) && a.shift_code === code)));
+      setWorkAreaShifts((prev) => ({
+        ...prev,
+        [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).filter((s) => s.code !== code),
+      }));
+      const stationIdSet = new Set(workAreaStations.map((s) => s.id));
+      if (onUnassignProp) {
+        assignments.filter((a) => stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+      } else {
+        setAssignments((prev) => prev.filter((a) => !(stationIdSet.has(a.station_id) && a.shift_code === code)));
+      }
     }
   };
 
@@ -146,8 +159,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (onAssignProp) { onAssignProp(employeeId, stationId, shiftCode, modeCode); return; }
     if (localAssignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    const station = mockStations.find((s) => s.id === stationId);
-    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: mockWorkDate, shift_code: shiftCode, mode_code: modeCode, activeDepartmentId: station?.work_area_id ?? "" }]);
+    const station = stations.find((s) => s.id === stationId);
+    setLocalAssignments((prev) => [...prev, { id: `a_${Date.now()}`, employee_id: employeeId, station_id: stationId, work_date: workDate ?? mockWorkDate, shift_code: shiftCode, mode_code: modeCode, activeDepartmentId: station?.work_area_id ?? "" }]);
   };
 
   const handleRemove = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -158,36 +171,40 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   // ── Station handlers ──
   const handleSaveStation = (stationId: string, name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => {
     if (!name.trim()) return;
-    const newGroup = group.trim() || undefined;
-    const station = stations.find((s) => s.id === stationId);
-    setStations((prev) => {
-      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
-      const target = sorted.find((s) => s.id === stationId);
-      if (!target || target.group === newGroup) {
-        return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined } : s);
-      }
-      const sameArea = sorted.filter((s) => s.work_area_id === target.work_area_id && (!hasModes || s.mode_code === target.mode_code));
-      const groupStations = newGroup ? sameArea.filter((s) => s.id !== stationId && s.group === newGroup) : [];
-      let insertAfterOrder: number;
-      if (groupStations.length > 0) {
-        insertAfterOrder = groupStations[groupStations.length - 1].display_order;
-      } else {
-        insertAfterOrder = sameArea[sameArea.length - 1]?.display_order ?? 0;
-      }
-      const withoutTarget = sameArea.filter((s) => s.id !== stationId);
-      const updated = withoutTarget.map((s) => ({ ...s }));
-      const insertIdx = updated.findIndex((s) => s.display_order === insertAfterOrder);
-      updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined });
-      updated.forEach((s, i) => { s.display_order = i + 1; });
-      return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
-    });
-    if (defaultEmployeeId && station) {
-      const modeCode: ModeCode = station.mode_code ?? "normal";
-      (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
-        if (!slotHasAssignment(stationId, shift.code, modeCode)) {
-          handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
+    if (onUpdateStationProp) {
+      onUpdateStationProp(stationId, { name: name.trim(), group: group.trim() || undefined, genderRestriction, defaultEmployeeId });
+    } else {
+      const newGroup = group.trim() || undefined;
+      const station = stations.find((s) => s.id === stationId);
+      setStations((prev) => {
+        const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
+        const target = sorted.find((s) => s.id === stationId);
+        if (!target || target.group === newGroup) {
+          return prev.map((s) => s.id === stationId ? { ...s, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined } : s);
         }
+        const sameArea = sorted.filter((s) => s.work_area_id === target.work_area_id && (!hasModes || s.mode_code === target.mode_code));
+        const groupStations = newGroup ? sameArea.filter((s) => s.id !== stationId && s.group === newGroup) : [];
+        let insertAfterOrder: number;
+        if (groupStations.length > 0) {
+          insertAfterOrder = groupStations[groupStations.length - 1].display_order;
+        } else {
+          insertAfterOrder = sameArea[sameArea.length - 1]?.display_order ?? 0;
+        }
+        const withoutTarget = sameArea.filter((s) => s.id !== stationId);
+        const updated = withoutTarget.map((s) => ({ ...s }));
+        const insertIdx = updated.findIndex((s) => s.display_order === insertAfterOrder);
+        updated.splice(insertIdx + 1, 0, { ...target, name: name.trim(), group: newGroup, gender_restriction: genderRestriction, defaultEmployeeId: defaultEmployeeId ?? undefined });
+        updated.forEach((s, i) => { s.display_order = i + 1; });
+        return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
       });
+      if (defaultEmployeeId && station) {
+        const modeCode: ModeCode = station.mode_code ?? "normal";
+        (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
+          if (!slotHasAssignment(stationId, shift.code, modeCode)) {
+            handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
+          }
+        });
+      }
     }
     setEditingStationId(null);
   };
@@ -209,25 +226,29 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   };
 
   const handleAddStation = (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => {
-    const stationId = `st_${Date.now()}`;
     const modeCode: ModeCode = hasModes ? selectedMode : "normal";
-    setStations((prev) => [...prev, {
-      id: stationId,
-      work_area_id: selectedWorkAreaId,
-      name,
-      required_headcount: 1,
-      display_order: workAreaStations.length + 1,
-      ...(hasModes ? { mode_code: selectedMode } : {}),
-      ...(group ? { group } : {}),
-      ...(genderRestriction ? { gender_restriction: genderRestriction } : {}),
-      ...(defaultEmployeeId ? { defaultEmployeeId } : {}),
-    }]);
-    if (defaultEmployeeId) {
-      currentShifts.forEach((shift) => {
-        if (!slotHasAssignment(stationId, shift.code, modeCode)) {
-          handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
-        }
-      });
+    if (onAddStationProp) {
+      onAddStationProp({ workAreaId: selectedWorkAreaId, name, group: group || undefined, genderRestriction, defaultEmployeeId, modeCode });
+    } else {
+      const stationId = `st_${Date.now()}`;
+      setStations((prev) => [...prev, {
+        id: stationId,
+        work_area_id: selectedWorkAreaId,
+        name,
+        required_headcount: 1,
+        display_order: workAreaStations.length + 1,
+        ...(hasModes ? { mode_code: selectedMode } : {}),
+        ...(group ? { group } : {}),
+        ...(genderRestriction ? { gender_restriction: genderRestriction } : {}),
+        ...(defaultEmployeeId ? { defaultEmployeeId } : {}),
+      }]);
+      if (defaultEmployeeId) {
+        currentShifts.forEach((shift) => {
+          if (!slotHasAssignment(stationId, shift.code, modeCode)) {
+            handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
+          }
+        });
+      }
     }
     setAddingStation(false);
   };
@@ -249,59 +270,81 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const handleStationDrop = (targetStationId: string) => {
     if (!dragStationId || dragStationId === targetStationId) return;
-    setStations((prev) => {
-      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
-      const dragged = sorted.find((s) => s.id === dragStationId);
-      const target = sorted.find((s) => s.id === targetStationId);
-      if (!dragged || !target) return prev;
-      const sameArea = sorted.filter((s) => s.work_area_id === dragged.work_area_id && (!hasModes || s.mode_code === dragged.mode_code));
-      const draggedOriginalIdx = sameArea.findIndex((s) => s.id === dragStationId);
-      const targetOriginalIdx = sameArea.findIndex((s) => s.id === targetStationId);
-      const movingUp = draggedOriginalIdx > targetOriginalIdx;
-      if (dragged.protected) return prev;
-      if (movingUp && target.protected) return prev;
-      const withoutDragged = sameArea.filter((s) => s.id !== dragStationId);
-      const targetIdx = withoutDragged.findIndex((s) => s.id === targetStationId);
-      withoutDragged.splice(movingUp ? targetIdx : targetIdx + 1, 0, { ...dragged, group: target.group });
-      withoutDragged.forEach((s, i) => { s.display_order = i + 1; });
-      return prev.map((s) => withoutDragged.find((u) => u.id === s.id) ?? s);
-    });
+    if (onReorderStationProp) {
+      onReorderStationProp(dragStationId, targetStationId);
+    } else {
+      setStations((prev) => {
+        const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
+        const dragged = sorted.find((s) => s.id === dragStationId);
+        const target = sorted.find((s) => s.id === targetStationId);
+        if (!dragged || !target) return prev;
+        const sameArea = sorted.filter((s) => s.work_area_id === dragged.work_area_id && (!hasModes || s.mode_code === dragged.mode_code));
+        const draggedOriginalIdx = sameArea.findIndex((s) => s.id === dragStationId);
+        const targetOriginalIdx = sameArea.findIndex((s) => s.id === targetStationId);
+        const movingUp = draggedOriginalIdx > targetOriginalIdx;
+        if (dragged.protected) return prev;
+        if (movingUp && target.protected) return prev;
+        const withoutDragged = sameArea.filter((s) => s.id !== dragStationId);
+        const targetIdx = withoutDragged.findIndex((s) => s.id === targetStationId);
+        withoutDragged.splice(movingUp ? targetIdx : targetIdx + 1, 0, { ...dragged, group: target.group });
+        withoutDragged.forEach((s, i) => { s.display_order = i + 1; });
+        return prev.map((s) => withoutDragged.find((u) => u.id === s.id) ?? s);
+      });
+    }
     setDragStationId(null);
     setDragOverStationId(null);
   };
 
   const handleDeleteStation = (stationId: string) => {
-    setStations((prev) => prev.filter((s) => s.id !== stationId));
-    if (onUnassignProp) {
-      assignments.filter((a) => a.station_id === stationId).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+    if (onDeleteStationProp) {
+      onDeleteStationProp(stationId);
     } else {
-      setAssignments((prev) => prev.filter((a) => a.station_id !== stationId));
+      setStations((prev) => prev.filter((s) => s.id !== stationId));
+      if (onUnassignProp) {
+        assignments.filter((a) => a.station_id === stationId).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+      } else {
+        setAssignments((prev) => prev.filter((a) => a.station_id !== stationId));
+      }
     }
   };
 
   // ── Work area handlers ──
   const handleSaveWorkArea = (name: string, color: string, modeViews: WorkAreaModeView[]) => {
     if (workAreaModal === "add") {
-      const newWa: WorkArea = { id: `wa_${Date.now()}`, name, color_hex: color, display_order: workAreas.length + 1, mode_views: modeViews.length ? modeViews : undefined };
-      setWorkAreas((prev) => [...prev, newWa]);
-      setWorkAreaShifts((prev) => ({ ...prev, [newWa.id]: [...mockShifts] }));
-      setWorkAreaModal(null);
-      selectWorkArea(newWa.id);
+      if (onAddWorkAreaProp) {
+        const newId = onAddWorkAreaProp(name, color, modeViews);
+        setWorkAreaModal(null);
+        selectWorkArea(newId);
+      } else {
+        const newWa: WorkArea = { id: `wa_${Date.now()}`, name, color_hex: color, display_order: workAreas.length + 1, mode_views: modeViews.length ? modeViews : undefined };
+        setWorkAreas((prev) => [...prev, newWa]);
+        setWorkAreaShifts((prev) => ({ ...prev, [newWa.id]: [...(defaultShiftsProp ?? mockShifts)] }));
+        setWorkAreaModal(null);
+        selectWorkArea(newWa.id);
+      }
     } else if (workAreaModal && typeof workAreaModal === "object") {
-      setWorkAreas((prev) => prev.map((wa) => wa.id === workAreaModal.id ? { ...wa, name, color_hex: color, mode_views: modeViews.length ? modeViews : undefined } : wa));
+      if (onUpdateWorkAreaProp) {
+        onUpdateWorkAreaProp(workAreaModal.id, name, color, modeViews);
+      } else {
+        setWorkAreas((prev) => prev.map((wa) => wa.id === workAreaModal.id ? { ...wa, name, color_hex: color, mode_views: modeViews.length ? modeViews : undefined } : wa));
+      }
       setWorkAreaModal(null);
     }
   };
 
   const handleDeleteWorkArea = (wa: WorkArea) => {
-    setWorkAreas((prev) => prev.filter((w) => w.id !== wa.id));
-    setStations((prev) => prev.filter((s) => s.work_area_id !== wa.id));
-    setAssignments((prev) => prev.filter((a) => {
-      const stationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
-      return !stationIds.has(a.station_id);
-    }));
-    setWorkAreaShifts((prev) => { const next = { ...prev }; delete next[wa.id]; return next; });
     const remaining = workAreas.filter((w) => w.id !== wa.id);
+    if (onDeleteWorkAreaProp) {
+      onDeleteWorkAreaProp(wa.id);
+    } else {
+      setWorkAreas((prev) => prev.filter((w) => w.id !== wa.id));
+      setStations((prev) => prev.filter((s) => s.work_area_id !== wa.id));
+      setAssignments((prev) => prev.filter((a) => {
+        const stationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
+        return !stationIds.has(a.station_id);
+      }));
+      setWorkAreaShifts((prev) => { const next = { ...prev }; delete next[wa.id]; return next; });
+    }
     if (remaining.length > 0) selectWorkArea(remaining[0].id);
     setConfirmDeleteWorkArea(null);
     setWorkAreaModal(null);
