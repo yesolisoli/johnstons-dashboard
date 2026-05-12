@@ -5,6 +5,7 @@ import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from 
 import { mockShifts } from "../mock-data";
 import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
 import { abbrevDept, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
+import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
 
 const DEPT_ICONS: Record<string, React.ReactNode> = {
   "Loading Dock": <Truck size={13} />,
@@ -13,8 +14,6 @@ const DEPT_ICONS: Record<string, React.ReactNode> = {
   "Meat Cutting": <Scissors size={13} />,
   "Packaging": <Archive size={13} />,
 };
-
-const UNAVAILABLE = new Set(["sick", "vacation", "off_shift"]);
 
 function AutoScrollRows({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -51,6 +50,7 @@ export function TVDisplay({
   workAreas,
   shifts: shiftsProp,
   workAreaShifts,
+  statusConfigs,
   announcement = "Please clean your work area and report any equipment issues.",
   onClose,
 }: {
@@ -61,9 +61,11 @@ export function TVDisplay({
   workAreas: WorkArea[];
   shifts?: ShiftInfo[];
   workAreaShifts?: Record<string, ShiftInfo[]>;
+  statusConfigs: StatusConfig[];
   announcement?: string;
   onClose: () => void;
 }) {
+  const unavailableCodes = getUnavailableStatusCodes(statusConfigs);
   const [now, setNow] = useState(new Date());
   const [previewMode, setPreviewMode] = useState(false);
   const [previewTime, setPreviewTime] = useState(() => {
@@ -290,7 +292,7 @@ export function TVDisplay({
                     (a) => a.station_id === station.id && a.mode_code === activeModeCode
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
-                  const isUnavailableEmp = emp ? UNAVAILABLE.has(statuses[emp.id] ?? "") : false;
+                  const isUnavailableEmp = emp ? unavailableCodes.has(statuses[emp.id] ?? "") : false;
                   const isLoanedIn = asgn && emp ? asgn.activeDepartmentId !== emp.homeDepartmentId : false;
                   const dotColor = !emp || isUnavailableEmp
                     ? "bg-red-500"

@@ -8,6 +8,12 @@ import type {
   WorkArea,
 } from "./types";
 
+export function isEmployeeEligibleForWorkArea(employee: Employee, workAreaId: string): boolean {
+  if (employee.homeDepartmentId === workAreaId) return true;
+  if (employee.qualifiedDepartmentIds.includes(workAreaId)) return true;
+  return false;
+}
+
 export function abbrevDept(dept: string): string {
   return dept.split(/\s+/).map((w) => w[0].toUpperCase()).join("");
 }

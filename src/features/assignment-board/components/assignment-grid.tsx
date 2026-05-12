@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
 // Standalone fallback defaults — only used when AssignmentGrid is rendered without props
 import {
@@ -72,6 +72,18 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const [workAreaModal, setWorkAreaModal] = useState<"add" | WorkArea | null>(null);
   const [confirmDeleteWorkArea, setConfirmDeleteWorkArea] = useState<WorkArea | null>(null);
+  const [loanPopover, setLoanPopover] = useState<{ names: string[]; label: string; top: number; left: number } | null>(null);
+  const loanPopoverRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!loanPopover) return;
+    const handler = (e: MouseEvent) => {
+      if (loanPopoverRef.current && !loanPopoverRef.current.contains(e.target as Node)) {
+        setLoanPopover(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [loanPopover]);
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
   const selectedWorkArea = workAreas.find((wa) => wa.id === selectedWorkAreaId) ?? workAreas[0];
@@ -308,18 +320,24 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         const newId = onAddWorkAreaProp(name, color, modeViews);
         setWorkAreaModal(null);
         selectWorkArea(newId);
+        if (modeViews.length > 0) setSelectedMode(modeViews[0].mode_code as ModeCode);
       } else {
         const newWa: WorkArea = { id: `wa_${Date.now()}`, name, color_hex: color, display_order: workAreas.length + 1, mode_views: modeViews.length ? modeViews : undefined };
         setWorkAreas((prev) => [...prev, newWa]);
         setWorkAreaShifts((prev) => ({ ...prev, [newWa.id]: [...(defaultShiftsProp ?? mockShifts)] }));
         setWorkAreaModal(null);
         selectWorkArea(newWa.id);
+        if (modeViews.length > 0) setSelectedMode(modeViews[0].mode_code as ModeCode);
       }
     } else if (workAreaModal && typeof workAreaModal === "object") {
       if (onUpdateWorkAreaProp) {
         onUpdateWorkAreaProp(workAreaModal.id, name, color, modeViews);
       } else {
         setWorkAreas((prev) => prev.map((wa) => wa.id === workAreaModal.id ? { ...wa, name, color_hex: color, mode_views: modeViews.length ? modeViews : undefined } : wa));
+      }
+      // Switch to first mode if modes were just enabled
+      if (modeViews.length > 0 && !workAreaModal.mode_views?.length) {
+        setSelectedMode(modeViews[0].mode_code as ModeCode);
       }
       setWorkAreaModal(null);
     }
@@ -343,7 +361,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const color = selectedWorkArea?.color_hex ?? "#334155";
 
   return (
-    <div className="flex h-full min-w-0 flex-col gap-4">
+    <div className="flex h-full min-w-0 flex-col gap-4" onClick={() => setLoanPopover(null)}>
       {/* Work Area Tabs */}
       <div className="shrink-0 flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap items-center gap-2">
@@ -408,22 +426,26 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 const shiftAssignments = assignments.filter(
                   (a) => a.shift_code === shift.code && (!hasModes || a.mode_code === selectedMode)
                 );
-                const loanedIn = new Set(
+                // loanedIn: cross-dept employees assigned to this work area (mode-filtered, they're in our stations)
+                const loanedInEmps = [...new Set(
                   shiftAssignments
                     .filter((a) =>
                       a.activeDepartmentId === selectedWorkAreaId &&
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
-                ).size;
-                const loanedOut = new Set(
+                )].flatMap((id) => { const e = employees.find((e) => e.id === id); return e ? [e.full_name] : []; });
+                // loanedOut: home dept employees working elsewhere (mode-filtered, loaned-out assignments are migrated to match mode)
+                const loanedOutEmps = [...new Set(
                   shiftAssignments
                     .filter((a) =>
                       a.activeDepartmentId !== selectedWorkAreaId &&
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
-                ).size;
+                )].flatMap((id) => { const e = employees.find((e) => e.id === id); return e ? [e.full_name] : []; });
+                const loanedIn = loanedInEmps.length;
+                const loanedOut = loanedOutEmps.length;
                 return (
                   <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
                     <div className="flex items-center gap-2">
@@ -438,14 +460,20 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                           {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
                         </span>
                         {loanedIn > 0 && (
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `in-${shift.code}` ? null : { names: loanedInEmps, label: `in-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
+                            className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100 hover:bg-emerald-400/50"
+                          >
                             ↓ {loanedIn} in
-                          </span>
+                          </button>
                         )}
                         {loanedOut > 0 && (
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `out-${shift.code}` ? null : { names: loanedOutEmps, label: `out-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
+                            className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100 hover:bg-orange-400/50"
+                          >
                             ↑ {loanedOut} out
-                          </span>
+                          </button>
                         )}
                       </div>
                       <button onClick={() => handleDeleteShift(shift.code)}
@@ -528,7 +556,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0", width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
                   {station.protected ? (
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold text-slate-800">{station.name}</span>
+                      <span
+                        className="cursor-pointer text-sm font-semibold text-slate-800 hover:text-slate-600"
+                        onDoubleClick={() => setEditingStationId(station.id)}
+                        title="Double-click to set default employee"
+                      >{station.name}</span>
                       {station.gender_restriction && (
                         <span className={`self-start rounded px-1.5 py-0.5 text-[10px] font-bold ${station.gender_restriction === "M" ? "bg-sky-100 text-sky-600" : "bg-rose-100 text-rose-500"}`}>
                           {station.gender_restriction === "M" ? "M only" : "F only"}
@@ -635,6 +667,9 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         return (
           <StationModal
             employees={employees}
+            workAreaId={selectedWorkAreaId}
+            workAreas={workAreas}
+            defaultOnly={s.protected}
             initial={{ name: s.name, group: s.group ?? "", genderRestriction: s.gender_restriction, defaultEmployeeId: s.defaultEmployeeId }}
             existingGroups={Array.from(new Set(workAreaStations.filter((st) => st.group).map((st) => st.group as string)))}
             onClose={() => setEditingStationId(null)}
@@ -647,6 +682,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {addingStation && (
         <StationModal
           employees={employees}
+          workAreaId={selectedWorkAreaId}
+          workAreas={workAreas}
           existingGroups={Array.from(new Set(
             workAreaStations.filter((s) => s.group).map((s) => s.group as string)
           ))}
@@ -742,6 +779,26 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Loan popover */}
+      {loanPopover && (
+        <div
+          ref={loanPopoverRef}
+          className="fixed z-50 min-w-36 rounded-xl border border-slate-200 bg-white shadow-xl"
+          style={{ top: loanPopover.top, left: loanPopover.left }}
+        >
+          <div className="px-3 py-2 border-b border-slate-100">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              {loanPopover.label.startsWith("in") ? "Support In" : "Loaned Out"}
+            </p>
+          </div>
+          <div className="p-1.5">
+            {loanPopover.names.map((name) => (
+              <p key={name} className="px-2.5 py-1.5 text-sm font-medium text-slate-700">{name}</p>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

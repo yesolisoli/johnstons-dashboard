@@ -22,8 +22,11 @@ export function WorkAreaModal({ initial, onClose, onSave, onDelete }: {
     initial?.mode_views?.[1]?.time_range ?? "",
   ]);
   const modeCodes: ModeCode[] = ["hog_break", "after_hog_break"];
+  const modeDefaults = ["05:00 - 09:00", "09:30 - 10:00"];
+  const normalizeTimeRange = (val: string, i: number) =>
+    (val || modeDefaults[i]).replace(/\s*-\s*/g, " - ").trim();
   const buildViews = (): WorkAreaModeView[] =>
-    hasModes ? modeCodes.map((mc, i) => ({ mode_code: mc, label: modeLabels[i], time_range: modeTimeRanges[i] || undefined })) : [];
+    hasModes ? modeCodes.map((mc, i) => ({ mode_code: mc, label: modeLabels[i], time_range: normalizeTimeRange(modeTimeRanges[i], i) })) : [];
 
   return (
     <Modal
@@ -101,7 +104,7 @@ export function WorkAreaModal({ initial, onClose, onSave, onDelete }: {
                     value={modeTimeRanges[i]}
                     onChange={(e) => setModeTimeRanges((prev) => { const n = [...prev] as [string, string]; n[i] = e.target.value; return n; })}
                     className="w-32 rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                    placeholder="05:00–09:00"
+                    placeholder={modeDefaults[i]}
                   />
                 </div>
               ))}

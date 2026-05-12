@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
 import { StatusSelect, type StatusConfig } from "../status-select";
 import { MultiFilterSelect } from "../multi-filter-select";
@@ -38,7 +38,7 @@ export function RosterManageModal({
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Employee>) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
-  onUnassignAll: (empId: string) => void;
+  onUnassignAll: (empId: string, resetStatus?: boolean) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
   getEmployeeEffectiveDepartmentIds: (emp: Employee) => string[];
@@ -57,6 +57,18 @@ export function RosterManageModal({
   const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level" | "gender">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pinnedNewIds, setPinnedNewIds] = useState<Set<string>>(new Set());
+  const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
+        setDeptDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -164,16 +176,43 @@ export function RosterManageModal({
             placeholder="New employee name..."
             className="flex-1 rounded-md border px-3 py-2 text-sm"
           />
-          <select
-            value={newDeptId}
-            onChange={(e) => setNewDeptId(e.target.value)}
-            className="rounded-md border px-3 py-2 text-sm text-slate-700 bg-white"
-          >
-            <option value="">Select dept...</option>
-            {workAreas.map((wa) => (
-              <option key={wa.id} value={wa.id}>{wa.name}</option>
-            ))}
-          </select>
+          <div ref={deptDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setDeptDropdownOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:border-slate-400 min-w-36"
+            >
+              <span className="flex-1 text-left truncate">
+                {newDeptId ? (workAreas.find((w) => w.id === newDeptId)?.name ?? "Select dept...") : <span className="text-slate-400">Select dept...</span>}
+              </span>
+              <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            {deptDropdownOpen && (
+              <div className="absolute bottom-full left-0 z-50 mb-1 min-w-full rounded-lg border border-slate-200 bg-white shadow-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => { setNewDeptId(""); setDeptDropdownOpen(false); }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${!newDeptId ? "font-semibold text-slate-700" : "text-slate-400"}`}
+                >
+                  Select dept...
+                  {!newDeptId && <svg className="ml-2 inline h-3 w-3 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8l4 4 6-7"/></svg>}
+                </button>
+                {workAreas.map((wa) => (
+                  <button
+                    key={wa.id}
+                    type="button"
+                    onClick={() => { setNewDeptId(wa.id); setDeptDropdownOpen(false); }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium hover:bg-slate-50 ${newDeptId === wa.id ? "bg-slate-50" : ""}`}
+                    style={{ color: wa.color_hex ?? "#475569" }}
+                  >
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
+                    {wa.name}
+                    {newDeptId === wa.id && <svg className="ml-auto h-3 w-3 shrink-0 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8l4 4 6-7"/></svg>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-600 select-none">
             <input
               type="checkbox"
@@ -312,12 +351,9 @@ export function RosterManageModal({
                       qualifiedDepartmentIds={emp.qualifiedDepartmentIds}
                       workAreas={workAreas}
                       onChangeHome={(waId) => {
-                        const q = waId && !emp.qualifiedDepartmentIds.includes(waId) ? [waId, ...emp.qualifiedDepartmentIds] : emp.qualifiedDepartmentIds;
+                        const q = waId ? [waId] : [];
                         onUpdate(emp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });
-                        if (!waId) { onUnassignAll(emp.id); onStatusChange(emp.id, "available"); }
-                        if (waId && !assignments.some((a) => a.employee_id === emp.id)) {
-                          scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
-                        }
+                        onUnassignAll(emp.id, false);
                       }}
                       onChangeQualified={(waIds) => onUpdate(emp.id, { qualifiedDepartmentIds: waIds })}
                     />
@@ -326,7 +362,15 @@ export function RosterManageModal({
                     <ActiveDeptSelect
                       activeDepartmentIds={effectiveActiveDeptIds}
                       workAreas={workAreas}
-                      onChange={(ids) => onUpdate(emp.id, { activeDepartmentIds: ids })}
+                      onChange={(ids) => {
+                        const removed = effectiveActiveDeptIds.filter((id) => !ids.includes(id));
+                        removed.forEach((deptId) => {
+                          stations
+                            .filter((s) => s.work_area_id === deptId)
+                            .forEach((s) => onUnassignFromStation(emp.id, s.id));
+                        });
+                        onUpdate(emp.id, { activeDepartmentIds: ids });
+                      }}
                     />
                   </td>
                   <td className="px-4 py-2.5">

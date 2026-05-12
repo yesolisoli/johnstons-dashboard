@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Employee, ModeCode, ShiftCode, StationAssignment, WorkArea } from "../types";
+import { isEmployeeEligibleForWorkArea } from "../utils";
 import { EmployeeCard } from "./employee-card";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -77,14 +78,13 @@ export function AssignmentCell({
 
   const isEligible = (e: Employee): boolean => {
     if (!workAreaId) return true;
-    if (e.homeDepartmentId === workAreaId) return true;
-    if (e.qualifiedDepartmentIds.includes(workAreaId)) return true;
+    if (isEmployeeEligibleForWorkArea(e, workAreaId)) return true;
     return assignments.some((a) => a.employee_id === e.id && a.activeDepartmentId === workAreaId);
   };
 
   const eligibleEmployees = workAreaId ? allEmployees.filter(isEligible) : allEmployees;
   const allPickable = eligibleEmployees.filter((e) => !assignedIds.has(e.id) && !disabledEmployeeIds?.has(e.id));
-  // Department tab: all eligible employees not already in this cell
+  // Department tab: all eligible employees for this work area (assigned elsewhere or not)
   const assignedDeptPickable = allPickable
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
   // Unassigned tab: eligible employees with zero assignments anywhere

@@ -83,6 +83,7 @@ export function AssignmentBoardClient() {
           workAreas={workAreas}
           shifts={Object.values(workAreaShifts).flat().filter((s, i, arr) => arr.findIndex(x => x.code === s.code) === i)}
           workAreaShifts={workAreaShifts}
+          statusConfigs={statusConfigs}
           announcement={announcement}
           onClose={() => setShowTV(false)}
         />

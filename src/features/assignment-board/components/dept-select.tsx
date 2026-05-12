@@ -34,10 +34,6 @@ export function DeptSelect({ homeDepartmentId, qualifiedDepartmentIds, workAreas
 
   const setHome = (waId: string | null) => {
     onChangeHome(waId);
-    // ensure home is always in qualified list
-    if (waId && !qualifiedDepartmentIds.includes(waId)) {
-      onChangeQualified([waId, ...qualifiedDepartmentIds]);
-    }
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isEmployeeEligibleForWorkArea } from "../utils";
 import { Settings } from "lucide-react";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
@@ -49,7 +50,7 @@ export function AssignmentSidebar({
   onUpdate: (id: string, updates: Partial<Employee>) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
-  onUnassignAll: (empId: string) => void;
+  onUnassignAll: (empId: string, resetStatus?: boolean) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
   getEmployeeEffectiveDepartmentIds: (emp: import("../types").Employee) => string[];
 }) {
@@ -132,7 +133,7 @@ export function AssignmentSidebar({
             const unavailableEmps = activeEmployees.filter((e) => {
               if (!isUnavailable(e.id)) return false;
               if (!selectedWa) return true;
-              return e.homeDepartmentId === selectedWa.id || e.qualifiedDepartmentIds.includes(selectedWa.id);
+              return isEmployeeEligibleForWorkArea(e, selectedWa.id);
             });
             const abbrevWa = (name: string) =>
               name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
@@ -143,7 +144,7 @@ export function AssignmentSidebar({
                     if (isUnavailable(e.id)) return false;
                     if (assignments.some((a) => a.employee_id === e.id)) return false;
                     if (selectedWa) {
-                      return e.homeDepartmentId === wa.id || e.qualifiedDepartmentIds.includes(wa.id);
+                      return isEmployeeEligibleForWorkArea(e, wa.id);
                     }
                     return e.homeDepartmentId === wa.id;
                   });

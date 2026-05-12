@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Employee } from "../../types";
+import type { Employee, WorkArea } from "../../types";
 
-export function EmployeeSelect({ employees, value, onChange }: {
+export function EmployeeSelect({ employees, value, onChange, workAreaId, workAreas, genderRestriction }: {
   employees: Employee[];
   value: string | undefined;
   onChange: (id: string | undefined) => void;
+  workAreaId?: string;
+  workAreas?: WorkArea[];
+  genderRestriction?: "M" | "F";
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -26,6 +29,11 @@ export function EmployeeSelect({ employees, value, onChange }: {
     (e.employee_code ?? "").toLowerCase().includes(query.toLowerCase())
   ).slice(0, 50);
 
+  const isCrossDept = (emp: Employee) =>
+    !!workAreaId && emp.homeDepartmentId !== workAreaId;
+  const homeDeptName = (emp: Employee) =>
+    workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? null;
+
   const handleSelect = (id: string | undefined) => {
     onChange(id);
     setQuery("");
@@ -40,7 +48,7 @@ export function EmployeeSelect({ employees, value, onChange }: {
         className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
       >
         {selected
-          ? <span className="text-slate-800">{selected.full_name}{selected.employee_code ? <span className="ml-1.5 text-xs text-slate-400">#{selected.employee_code}</span> : null}</span>
+          ? <span className="text-slate-800">{selected.full_name}</span>
           : <span className="text-slate-400">None</span>
         }
       </button>
@@ -68,11 +76,20 @@ export function EmployeeSelect({ employees, value, onChange }: {
                 key={emp.id}
                 type="button"
                 onClick={() => handleSelect(emp.id)}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${value === emp.id ? "bg-slate-800 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors ${value === emp.id ? "bg-slate-800 text-white" : "text-slate-700 hover:bg-slate-50"}`}
               >
-                {emp.full_name}
-                {emp.employee_code && (
-                  <span className={`ml-1.5 text-xs ${value === emp.id ? "text-slate-300" : "text-slate-400"}`}>#{emp.employee_code}</span>
+                <span className="flex-1 truncate">
+                  {emp.full_name}
+                </span>
+                {genderRestriction && emp.gender && emp.gender !== genderRestriction && (
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-rose-50 text-rose-500 border border-rose-200">
+                    ⚠ {emp.gender === "M" ? "M" : "F"}
+                  </span>
+                )}
+                {isCrossDept(emp) && (
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                    {homeDeptName(emp) ?? "Other"}
+                  </span>
                 )}
               </button>
             ))}

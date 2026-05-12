@@ -121,9 +121,9 @@ export function useAssignmentBoardData() {
     ));
   };
 
-  const handleUnassignAll = (employeeId: string) => {
+  const handleUnassignAll = (employeeId: string, resetStatus = true) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
-    setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
+    if (resetStatus) setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
     setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, activeDepartmentIds: [] } : e));
   };
 
@@ -191,9 +191,58 @@ export function useAssignmentBoardData() {
   };
 
   const handleUpdateWorkArea = (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => {
+    const prevWa = workAreas.find((w) => w.id === id);
+    const wasNoModes = !prevWa?.mode_views?.length;
+    const nowHasModes = modeViews.length > 0;
+
     setWorkAreas((prev) =>
       prev.map((wa) => wa.id === id ? { ...wa, name, color_hex: color, mode_views: modeViews.length ? modeViews : undefined } : wa),
     );
+
+    // Migrate existing data to second mode (After Hog Break) when modes are first enabled
+    if (wasNoModes && nowHasModes) {
+      const firstModeCode = modeViews[0].mode_code as ModeCode;
+      const secondModeCode = (modeViews[1]?.mode_code ?? modeViews[0].mode_code) as ModeCode;
+
+      const affectedStationIds = new Set(
+        stations.filter((s) => s.work_area_id === id && !s.mode_code).map((s) => s.id),
+      );
+
+      // Migrate existing stations → second mode
+      setStations((prev) => {
+        const migrated = prev.map((s) =>
+          s.work_area_id === id && !s.mode_code ? { ...s, mode_code: secondModeCode } : s,
+        );
+        // Add 3 default stations for first mode (Hog Break)
+        const ts = Date.now();
+        const newStations: Station[] = ["Station 1", "Station 2", "Station 3"].map((name, i) => ({
+          id: `st_${ts}_${firstModeCode}_${i}`,
+          work_area_id: id,
+          name,
+          required_headcount: 1,
+          display_order: i + 1,
+          group: "Group 1",
+          mode_code: firstModeCode,
+        }));
+        return [...migrated, ...newStations];
+      });
+
+      // Migrate assignments in this work area → second mode
+      // Also migrate loaned-out assignments (home dept = this WA, assigned elsewhere) → second mode
+      // so loanedOut count shows correctly per mode tab
+      const loanedOutEmpIds = new Set(
+        employees
+          .filter((e) => e.homeDepartmentId === id)
+          .map((e) => e.id),
+      );
+      setAssignments((prev) =>
+        prev.map((a) => {
+          if (affectedStationIds.has(a.station_id)) return { ...a, mode_code: secondModeCode };
+          if (loanedOutEmpIds.has(a.employee_id) && a.activeDepartmentId !== id) return { ...a, mode_code: secondModeCode };
+          return a;
+        }),
+      );
+    }
   };
 
   const handleAddWorkArea = (name: string, color: string, modeViews: WorkAreaModeView[]): string => {
@@ -207,6 +256,28 @@ export function useAssignmentBoardData() {
     };
     setWorkAreas((prev) => [...prev, newWa]);
     setWorkAreaShifts((prev) => ({ ...prev, [newId]: [...defaultShiftTemplate] }));
+    const hasModes = modeViews.length > 0;
+    const defaultStations: Station[] = hasModes
+      ? modeViews.flatMap((mv) =>
+          ["Station 1", "Station 2", "Station 3"].map((stName, i) => ({
+            id: `st_${Date.now()}_${mv.mode_code}_${i}`,
+            work_area_id: newId,
+            name: stName,
+            required_headcount: 1,
+            display_order: i + 1,
+            group: "Group 1",
+            mode_code: mv.mode_code as ModeCode,
+          }))
+        )
+      : ["Station 1", "Station 2", "Station 3"].map((stName, i) => ({
+          id: `st_${Date.now()}_${i}`,
+          work_area_id: newId,
+          name: stName,
+          required_headcount: 1,
+          display_order: i + 1,
+          group: "Group 1",
+        }));
+    setStations((prev) => [...prev, ...defaultStations]);
     return newId;
   };
 
@@ -271,11 +342,28 @@ export function useAssignmentBoardData() {
 
     if (params.defaultEmployeeId) {
       const modeCode: ModeCode = station.mode_code ?? "normal";
-      (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
-        if (!assignments.some((a) => a.station_id === stationId && a.shift_code === shift.code && a.mode_code === modeCode)) {
-          handleAssign(params.defaultEmployeeId!, stationId, shift.code, modeCode);
-        }
-      });
+      const shifts = workAreaShifts[station.work_area_id] ?? [];
+      const empId = params.defaultEmployeeId;
+      // Single update: remove all existing station assignments and add new default employee
+      setAssignments((prev) => [
+        ...prev.filter((a) => a.station_id !== stationId),
+        ...shifts.map((shift) => ({
+          id: `a_${Date.now()}_${shift.code}`,
+          employee_id: empId,
+          station_id: stationId,
+          work_date: currentWorkDate,
+          shift_code: shift.code,
+          mode_code: modeCode,
+          activeDepartmentId: station.work_area_id,
+        })),
+      ]);
+      // Update activeDepartmentIds for the new default employee
+      setEmployees((prev) => prev.map((e) => {
+        if (e.id !== empId) return e;
+        const current = e.activeDepartmentIds ?? [];
+        if (current.includes(station.work_area_id)) return e;
+        return { ...e, activeDepartmentIds: [...current, station.work_area_id] };
+      }));
     }
   };
 
