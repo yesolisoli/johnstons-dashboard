@@ -66,6 +66,16 @@ export function useAssignmentBoardData() {
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
     const station = stations.find((s) => s.id === stationId);
+    const workAreaId = station?.work_area_id ?? "";
+    const emp = employees.find((e) => e.id === employeeId);
+    if (emp && workAreaId && emp.homeDepartmentId !== workAreaId) {
+      const current = emp.activeDepartmentIds ?? (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
+      if (!current.includes(workAreaId)) {
+        setEmployees((prev) => prev.map((e) =>
+          e.id === employeeId ? { ...e, activeDepartmentIds: [...current, workAreaId] } : e,
+        ));
+      }
+    }
     setAssignments((prev) => [...prev, {
       id: `a_${Date.now()}`,
       employee_id: employeeId,
@@ -73,11 +83,29 @@ export function useAssignmentBoardData() {
       work_date: currentWorkDate,
       shift_code: shiftCode,
       mode_code: modeCode,
-      activeDepartmentId: station?.work_area_id ?? "",
+      activeDepartmentId: workAreaId,
     }]);
   };
 
   const handleUnassign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
+    const workAreaId = stations.find((s) => s.id === stationId)?.work_area_id;
+    const emp = employees.find((e) => e.id === employeeId);
+
+    if (workAreaId && emp && emp.homeDepartmentId !== workAreaId) {
+      const waStationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
+      const remainingInWa = assignments.filter(
+        (a) => a.employee_id === employeeId && waStationIds.has(a.station_id)
+          && !(a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode),
+      );
+      if (remainingInWa.length === 0) {
+        setEmployees((prev) => prev.map((e) =>
+          e.id === employeeId
+            ? { ...e, activeDepartmentIds: (e.activeDepartmentIds ?? []).filter((id) => id !== workAreaId) }
+            : e,
+        ));
+      }
+    }
+
     setAssignments((prev) => prev.filter(
       (a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)
     ));

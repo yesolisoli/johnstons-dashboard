@@ -245,9 +245,14 @@ export function RosterManageModal({
             {filtered.map((emp) => {
               const alert = hasNoStation(emp);
               const genderViolations = getGenderViolations(emp);
-              const effectiveActiveDeptIds = emp.activeDepartmentIds != null
+              const assignedWaIds = assignments
+                .filter((a) => a.employee_id === emp.id)
+                .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
+                .filter((id): id is string => !!id);
+              const baseActiveDeptIds = emp.activeDepartmentIds != null
                 ? emp.activeDepartmentIds
                 : (emp.homeDepartmentId ? [emp.homeDepartmentId] : []);
+              const effectiveActiveDeptIds = [...new Set([...baseActiveDeptIds, ...assignedWaIds])];
               return (
                 <tr key={emp.id} className={`group border-b last:border-b-0 ${alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">

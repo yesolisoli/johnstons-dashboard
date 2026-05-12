@@ -125,19 +125,19 @@ export function AssignmentSidebar({
             const unavailableEmps = activeEmployees.filter((e) => isUnavailable(e.id));
             return (
               <>
-                {visibleWorkAreas.map((wa) => {
+                {workAreas.map((wa) => {
                   const waStationIds = new Set(stations.filter((s) => s.work_area_id === wa.id).map((s) => s.id));
                   const deptEmps = activeEmployees.filter((e) => {
-                    const inThisDept = e.homeDepartmentId === wa.id || e.activeDepartmentIds?.includes(wa.id);
-                    if (!inThisDept || isUnavailable(e.id)) return false;
+                    if (e.homeDepartmentId !== wa.id || isUnavailable(e.id)) return false;
                     return !assignments.some((a) => a.employee_id === e.id && waStationIds.has(a.station_id));
                   });
                   if (deptEmps.length === 0) return null;
                   return (
                     <div key={wa.id}>
                       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t bg-slate-100 px-4 py-2">
-                        <span className="h-2 w-2 rounded-full shrink-0 bg-red-600" />
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#ef4444" }} />
                         <span className="text-xs font-semibold text-slate-600">No Station</span>
+                        <span className="text-xs text-slate-400">· {wa.name}</span>
                         <span className="ml-auto text-xs text-slate-400">{deptEmps.length}</span>
                       </div>
                       {deptEmps.map((emp) => {
