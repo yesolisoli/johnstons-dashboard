@@ -9,7 +9,6 @@ import { StatusSelect, getUnavailableStatusCodes } from "./status-select";
 import type { StatusConfig } from "./status-select";
 import { ManageStatusesModal } from "./modals/manage-statuses-modal";
 import { AssignmentModal } from "./modals/assignment-modal";
-import { RosterManageModal } from "./modals/roster-manage-modal";
 
 type EmployeeStatus = string;
 
@@ -33,6 +32,7 @@ export function AssignmentSidebar({
   onUnassignAll,
   onUnassignFromStation,
   getEmployeeEffectiveDepartmentIds,
+  onOpenRoster,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
@@ -53,10 +53,10 @@ export function AssignmentSidebar({
   onUnassignAll: (empId: string, resetStatus?: boolean) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
   getEmployeeEffectiveDepartmentIds: (emp: import("../types").Employee) => string[];
+  onOpenRoster: (search: string) => void;
 }) {
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [showManage, setShowManage] = useState(false);
-  const [showRosterManage, setShowRosterManage] = useState(false);
 
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
 
@@ -102,7 +102,7 @@ export function AssignmentSidebar({
             </span>
           </p>
           <button
-            onClick={() => setShowRosterManage(true)}
+            onClick={() => onOpenRoster("")}
             className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
           >
             <Settings size={14} />
@@ -173,7 +173,8 @@ export function AssignmentSidebar({
                                   setTimeout(() => document.body.removeChild(ghost), 0);
                                 }}
                                 className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
-                                title="Drag to assign station">
+                                title="Drag to assign station · Double-click to look up"
+                                onDoubleClick={() => onOpenRoster(emp.full_name)}>
                                 {emp.full_name}
                               </p>
                             {emp.temporary && (
@@ -221,6 +222,7 @@ export function AssignmentSidebar({
                               setTimeout(() => document.body.removeChild(ghost), 0);
                             }}
                             className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
+                            onDoubleClick={() => onOpenRoster(emp.full_name)}
                           >{emp.full_name}</p>
                           {emp.temporary && (
                             <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
@@ -248,7 +250,7 @@ export function AssignmentSidebar({
                     </div>
                     {unavailableEmps.map((emp) => (
                       <div key={emp.id} className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
-                        <p className="min-w-0 truncate text-sm font-medium text-slate-400">{emp.full_name}</p>
+                        <p className="min-w-0 cursor-pointer truncate text-sm font-medium text-slate-400" onDoubleClick={() => onOpenRoster(emp.full_name)}>{emp.full_name}</p>
                         {emp.temporary && (
                           <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                         )}
@@ -300,6 +302,7 @@ export function AssignmentSidebar({
                                 setTimeout(() => document.body.removeChild(ghost), 0);
                               }}
                               className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-600 active:cursor-grabbing"
+                              onDoubleClick={() => onOpenRoster(emp.full_name)}
                             >{emp.full_name}</p>
                             {emp.temporary && (
                               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
@@ -333,7 +336,8 @@ export function AssignmentSidebar({
                               e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                               setTimeout(() => document.body.removeChild(ghost), 0);
                             }}
-                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing">
+                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
+                            onDoubleClick={() => onOpenRoster(emp.full_name)}>
                             {emp.full_name}
                           </p>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -392,26 +396,6 @@ export function AssignmentSidebar({
         />
       )}
 
-      {showRosterManage && (
-        <RosterManageModal
-          employees={employees}
-          statuses={statuses}
-          assignments={assignments}
-          stations={stations}
-          workAreas={workAreas}
-          statusConfigs={statusConfigs}
-          onAdd={onAdd}
-          onRemove={onRemove}
-          onUpdate={onUpdate}
-          onStatusChange={onStatusChange}
-          onUnassignAll={onUnassignAll}
-          onAssignToStation={onAssignToStation}
-          onUnassignFromStation={onUnassignFromStation}
-          getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
-          onManageStatuses={() => setShowManage(true)}
-          onClose={() => setShowRosterManage(false)}
-        />
-      )}
     </div>
   );
 }

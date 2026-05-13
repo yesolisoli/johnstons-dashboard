@@ -29,6 +29,7 @@ export function RosterManageModal({
   getEmployeeEffectiveDepartmentIds,
   onManageStatuses,
   onClose,
+  initialSearch,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
@@ -46,8 +47,9 @@ export function RosterManageModal({
   getEmployeeEffectiveDepartmentIds: (emp: Employee) => string[];
   onManageStatuses?: () => void;
   onClose: () => void;
+  initialSearch?: string;
 }) {
-  const [searchName, setSearchName] = useState("");
+  const [searchName, setSearchName] = useState(initialSearch ?? "");
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterDept, setFilterDept] = useState<string[]>([]);
   const [newName, setNewName] = useState("");

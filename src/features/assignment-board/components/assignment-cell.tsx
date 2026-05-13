@@ -25,7 +25,7 @@ type PendingMove = {
 };
 
 export function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, genderRestriction,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, genderRestriction, onEmployeeDoubleClick,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -40,6 +40,7 @@ export function AssignmentCell({
   workAreaId?: string;
   workAreas?: WorkArea[];
   genderRestriction?: "M" | "F";
+  onEmployeeDoubleClick?: (name: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -241,6 +242,7 @@ export function AssignmentCell({
                       modeCode={modeCode}
                       onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
                       loanInfo={{ isLoanedIn: isLoaned, homeWaName }}
+                      onDoubleClick={() => onEmployeeDoubleClick?.(emp.full_name)}
                     />
                   </div>
                   {genderViolation && (

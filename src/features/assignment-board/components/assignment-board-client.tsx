@@ -6,6 +6,7 @@ import { useAssignmentBoardData } from "../hooks/use-assignment-board-data";
 import { AssignmentGrid } from "./assignment-grid";
 import { AssignmentSidebar } from "./assignment-sidebar";
 import { TVDisplay } from "./tv-display";
+import { RosterManageModal } from "./modals/roster-manage-modal";
 
 export function AssignmentBoardClient() {
   const {
@@ -54,6 +55,8 @@ export function AssignmentBoardClient() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showTV, setShowTV] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [rosterSearch, setRosterSearch] = useState("");
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementDraft, setAnnouncementDraft] = useState(announcement);
 
@@ -132,6 +135,7 @@ export function AssignmentBoardClient() {
             onUnassignAll={handleUnassignAll}
             onUnassignFromStation={handleUnassignFromStation}
             getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
+            onOpenRoster={(search) => { setRosterSearch(search); setRosterOpen(true); }}
           />
         </div>
 
@@ -187,9 +191,31 @@ export function AssignmentBoardClient() {
             onWorkAreaShiftsChange={handleWorkAreaShiftsChange}
             onWorkAreasChange={handleWorkAreasChange}
             defaultShifts={defaultShiftTemplate}
+            onEmployeeDoubleClick={(name) => { setRosterSearch(name); setRosterOpen(true); }}
           />
         </div>
       </div>
+
+      {rosterOpen && (
+        <RosterManageModal
+          employees={employees}
+          statuses={statuses}
+          assignments={assignments}
+          stations={stations}
+          workAreas={workAreas}
+          statusConfigs={statusConfigs}
+          onAdd={handleAdd}
+          onRemove={handleRemoveEmployee}
+          onUpdate={handleUpdate}
+          onStatusChange={handleStatusChange}
+          onUnassignAll={handleUnassignAll}
+          onAssignToStation={handleQuickAssign}
+          onUnassignFromStation={handleUnassignFromStation}
+          getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
+          initialSearch={rosterSearch}
+          onClose={() => { setRosterOpen(false); setRosterSearch(""); }}
+        />
+      )}
     </>
   );
 }

@@ -4,13 +4,14 @@ import React from "react";
 import type { Employee } from "../types";
 import type { ModeCode, ShiftCode } from "../types";
 
-export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove, loanInfo }: {
+export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemove, loanInfo, onDoubleClick }: {
   employee: Employee;
   stationId: string;
   shiftCode: ShiftCode;
   modeCode: ModeCode;
   onRemove: () => void;
   loanInfo?: { isLoanedIn: boolean; homeWaName?: string };
+  onDoubleClick?: () => void;
 }) {
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -39,6 +40,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
     <div
       draggable
       onDragStart={handleDragStart}
+      onDoubleClick={onDoubleClick}
       className="group flex cursor-grab flex-col gap-0.5 rounded-md bg-white/60 px-3 py-2 text-sm shadow-sm backdrop-blur-sm active:cursor-grabbing"
     >
       <div className="flex items-center justify-between gap-2">
