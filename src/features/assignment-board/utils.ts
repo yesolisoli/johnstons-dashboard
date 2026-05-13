@@ -1,3 +1,4 @@
+import { DEFAULT_MODE_CODE } from "./types";
 import type {
   Employee,
   ShiftInfo,
@@ -37,7 +38,7 @@ export function getActiveShift(shifts: ShiftInfo[], now: Date): ShiftInfo | null
 }
 
 export function getWaActiveMode(wa: WorkArea, nowMin: number): string {
-  if (!wa.mode_views || wa.mode_views.length === 0) return "normal";
+  if (!wa.mode_views || wa.mode_views.length === 0) return DEFAULT_MODE_CODE;
   for (const mv of wa.mode_views) {
     if (!mv.time_range) continue;
     const parts = mv.time_range.split("-").map((s) => s.trim());
@@ -45,7 +46,7 @@ export function getWaActiveMode(wa: WorkArea, nowMin: number): string {
       return mv.mode_code;
     }
   }
-  return "normal";
+  return DEFAULT_MODE_CODE;
 }
 
 export function getNextShift(shifts: ShiftInfo[], current: ShiftInfo | null): ShiftInfo | null {

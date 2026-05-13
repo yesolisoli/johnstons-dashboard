@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings } from "lucide-react";
-import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
+import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea, getEmployeeQualifiedWorkAreaIds } from "../utils";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
 import { StatusSelect, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "./status-select";
@@ -385,7 +385,8 @@ export function AssignmentSidebar({
           stations={stations}
           assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id && a.station_id !== null).map((a) => a.station_id!))}
           onSave={(waId: string, toAdd: string[], toRemove: string[]) => {
-            const q = assignModalEmp.qualifiedDepartmentIds.includes(waId) ? assignModalEmp.qualifiedDepartmentIds : [waId, ...assignModalEmp.qualifiedDepartmentIds];
+            const qualified = getEmployeeQualifiedWorkAreaIds(assignModalEmp);
+            const q = qualified.includes(waId) ? qualified : [waId, ...qualified];
             onUpdate(assignModalEmp.id, { homeDepartmentId: waId });
             onSetQualifiedWorkAreas(assignModalEmp.id, q);
             toAdd.forEach((sid) => onAssignToStation(assignModalEmp.id, sid));

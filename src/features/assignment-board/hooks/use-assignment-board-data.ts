@@ -342,7 +342,7 @@ export function useAssignmentBoardData() {
     });
 
     if (params.defaultEmployeeId) {
-      const modeCode: ModeCode = station.mode_code ?? "normal";
+      const modeCode: ModeCode = station.mode_code ?? DEFAULT_MODE_CODE;
       const shifts = workAreaShifts[station.work_area_id] ?? [];
       const empId = params.defaultEmployeeId;
       // Single update: remove all existing station assignments and add new default employee
