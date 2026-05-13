@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
 import { StatusSelect, STATUS_CODE_AVAILABLE, STATUS_CODE_ASSIGNED, type StatusConfig } from "../status-select";
 import { MultiFilterSelect } from "../multi-filter-select";
 import { DeptSelect } from "../dept-select";
 import { ActiveDeptSelect } from "../active-dept-select";
+import { BaseDropdown, DropdownSection } from "../base-dropdown";
 import type { Employee, Station, StationAssignment, WorkArea } from "../../types";
 import { getEmployeeQualifiedWorkAreaIds, isEmployeeEligibleForWorkArea } from "../../utils";
 
@@ -65,15 +66,11 @@ export function RosterManageModal({
   const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level" | "gender">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pinnedNewIds, setPinnedNewIds] = useState<Set<string>>(new Set());
-  const [stationPopoverEmpId, setStationPopoverEmpId] = useState<string | null>(null);
-  const [stationPopoverPos, setStationPopoverPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (!stationPopoverEmpId) return;
-    const handler = () => setStationPopoverEmpId(null);
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [stationPopoverEmpId]);
+  const [stationPopover, setStationPopover] = useState<{
+    empId: string;
+    triggerEl: HTMLButtonElement;
+    stations: Station[];
+  } | null>(null);
 
   const handleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -363,10 +360,8 @@ export function RosterManageModal({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (stationPopoverEmpId === emp.id) { setStationPopoverEmpId(null); return; }
-                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                          setStationPopoverPos({ top: rect.bottom + 4, left: rect.left });
-                          setStationPopoverEmpId(emp.id);
+                          if (stationPopover?.empId === emp.id) { setStationPopover(null); return; }
+                          setStationPopover({ empId: emp.id, triggerEl: e.currentTarget, stations: assignedStations });
                         }}
                         className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-slate-900"
                       >
@@ -456,25 +451,21 @@ export function RosterManageModal({
           </div>
         </div>
       )}
-      {stationPopoverEmpId && (() => {
-        const openStations = [...new Set(
-          assignments.filter((a) => a.employee_id === stationPopoverEmpId && a.station_id !== null).map((a) => a.station_id!),
-        )].map((id) => stations.find((s) => s.id === id)).filter((s): s is Station => s !== undefined);
-        return (
-          <div
-            className="fixed z-200 min-w-32 overflow-hidden rounded-lg border bg-white shadow-lg"
-            style={{ top: stationPopoverPos.top, left: stationPopoverPos.left }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="border-b px-3 py-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Stations</p>
-            </div>
-            {openStations.map((s) => (
+      {stationPopover && (
+        <BaseDropdown
+          open={true}
+          onClose={() => setStationPopover(null)}
+          triggerEl={stationPopover.triggerEl}
+          minWidth={128}
+          offsetY={4}
+        >
+          <DropdownSection title="Stations">
+            {stationPopover.stations.map((s) => (
               <div key={s.id} className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">{s.name}</div>
             ))}
-          </div>
-        );
-      })()}
+          </DropdownSection>
+        </BaseDropdown>
+      )}
     </Modal>
   );
 }

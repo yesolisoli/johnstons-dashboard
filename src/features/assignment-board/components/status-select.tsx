@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { BaseDropdown } from "./base-dropdown";
 
 export const STATUS_CODE_AVAILABLE = "available" as const;
 export const STATUS_CODE_ASSIGNED = "assigned" as const;
@@ -59,79 +60,62 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
   onManageStatuses?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const options = configs.filter((c) => c.code !== STATUS_CODE_ASSIGNED);
   const current = options.find((c) => c.code === value) ?? options[0];
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleOpen = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
-    setOpen((v) => !v);
-  };
-
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
-        ref={btnRef}
-        onClick={handleOpen}
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${cfgBadge(current).cls}`}
         style={cfgBadge(current).sty}
       >
         {current.label}
         <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
       </button>
-      {open && (
-        <div
-          className="fixed z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
-          style={{ top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 130) }}
-        >
-          <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
-            {onManageStatuses && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setOpen(false); onManageStatuses(); }}
-                className="flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                title="Manage statuses"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="p-1.5 space-y-0.5">
-            {options.map((cfg) => {
-              const active = cfg.code === value;
-              return (
-                <button
-                  key={cfg.code}
-                  onClick={() => { onChange(cfg.code); setOpen(false); }}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
-                >
-                  <span className={`shrink-0 ${cfgBadge(cfg).cls}`} style={cfgBadge(cfg).sty}>{cfg.label}</span>
-                  {active && (
-                    <svg className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 8l4 4 6-7" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+      <BaseDropdown
+        open={open}
+        onClose={() => setOpen(false)}
+        triggerRef={triggerRef}
+        minWidth={130}
+        offsetY={4}
+      >
+        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
+          {onManageStatuses && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onManageStatuses(); }}
+              className="flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Manage statuses"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+              </svg>
+            </button>
+          )}
         </div>
-      )}
+        <div className="p-1.5 space-y-0.5">
+          {options.map((cfg) => {
+            const active = cfg.code === value;
+            return (
+              <button
+                key={cfg.code}
+                onClick={() => { onChange(cfg.code); setOpen(false); }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
+              >
+                <span className={`shrink-0 ${cfgBadge(cfg).cls}`} style={cfgBadge(cfg).sty}>{cfg.label}</span>
+                {active && (
+                  <svg className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 8l4 4 6-7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </BaseDropdown>
     </div>
   );
 }
