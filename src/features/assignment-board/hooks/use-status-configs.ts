@@ -13,7 +13,7 @@ export function useStatusConfigs() {
     setStatusConfigs((prev) => prev.filter((c) => c.code !== code));
 
   const handleAddConfig = (label: string, colorHex: string) => {
-    const code = `status_${Date.now()}`;
+    const code = `status_${crypto.randomUUID()}`;
     setStatusConfigs((prev) => [...prev, { code, label, className: "", colorHex }]);
   };
 

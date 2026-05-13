@@ -26,27 +26,27 @@ export function cfgBadge(cfg: StatusConfig): { cls: string; sty?: React.CSSPrope
   return { cls: `rounded-md px-2.5 py-1 text-xs font-semibold ${cfg.className}` };
 }
 
-export const COLOR_OPTIONS: { label: string; className: string }[] = [
-  { label: "Green",  className: "bg-green-100 text-green-700" },
-  { label: "Blue",   className: "bg-blue-100 text-blue-700" },
-  { label: "Slate",  className: "bg-slate-200 text-slate-500" },
-  { label: "Red",    className: "bg-red-100 text-red-600" },
-  { label: "Yellow", className: "bg-yellow-100 text-yellow-700" },
-  { label: "Orange", className: "bg-orange-100 text-orange-700" },
-  { label: "Purple", className: "bg-purple-100 text-purple-700" },
-  { label: "Gray",   className: "bg-slate-100 text-slate-600" },
-  { label: "Teal",   className: "bg-teal-100 text-teal-700" },
-  { label: "Pink",   className: "bg-pink-100 text-pink-700" },
+export const COLOR_OPTIONS: { label: string; colorHex: string }[] = [
+  { label: "Green",  colorHex: "#15803d" },
+  { label: "Blue",   colorHex: "#1d4ed8" },
+  { label: "Slate",  colorHex: "#64748b" },
+  { label: "Red",    colorHex: "#dc2626" },
+  { label: "Yellow", colorHex: "#a16207" },
+  { label: "Orange", colorHex: "#c2410c" },
+  { label: "Purple", colorHex: "#7e22ce" },
+  { label: "Gray",   colorHex: "#475569" },
+  { label: "Teal",   colorHex: "#0f766e" },
+  { label: "Pink",   colorHex: "#be185d" },
 ];
 
 export const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
-  { code: "available",  label: "Available",  className: "bg-emerald-50 text-emerald-600",  protected: true },
-  { code: "assigned",   label: "Assigned",   className: "bg-sky-50 text-sky-600",          protected: true },
-  { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500",        unavailable: true },
-  { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500",      unavailable: true },
-  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400",    unavailable: true },
-  { code: "training",   label: "Training",   className: "bg-violet-50 text-violet-400" },
-  { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400",     unavailable: true },
+  { code: "available",  label: "Available",  className: "bg-emerald-50 text-emerald-600",  colorHex: "#059669", protected: true },
+  { code: "assigned",   label: "Assigned",   className: "bg-sky-50 text-sky-600",          colorHex: "#0284c7", protected: true },
+  { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500",        colorHex: "#f43f5e", unavailable: true },
+  { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500",      colorHex: "#f59e0b", unavailable: true },
+  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400",    colorHex: "#fb923c", unavailable: true },
+  { code: "training",   label: "Training",   className: "bg-violet-50 text-violet-400",    colorHex: "#a78bfa" },
+  { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400",     colorHex: "#94a3b8", unavailable: true },
 ];
 
 export function StatusSelect({ value, configs, onChange, onManageStatuses }: {

@@ -75,7 +75,7 @@ export function useAssignmentBoardData() {
     setAssignments((prev) => [
       ...prev.filter((a) => !(a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId)),
       {
-        id: `a_${Date.now()}`,
+        id: `a_${crypto.randomUUID()}`,
         employee_id: employeeId,
         station_id: stationId,
         work_area_id: null,
@@ -120,7 +120,7 @@ export function useAssignmentBoardData() {
       (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId && a.shift_code === resolvedShift && a.mode_code === resolvedMode,
     )) return;
     setAssignments((prev) => [...prev, {
-      id: `a_${Date.now()}`,
+      id: `a_${crypto.randomUUID()}`,
       employee_id: employeeId,
       station_id: null,
       work_area_id: workAreaId,
@@ -164,7 +164,7 @@ export function useAssignmentBoardData() {
   };
 
   const handleAddShift = (workAreaId: string, label: string, startTime: string, endTime: string) => {
-    const code = `shift_${Date.now()}`;
+    const code = `shift_${crypto.randomUUID()}`;
     setWorkAreaShifts((prev) => ({
       ...prev,
       [workAreaId]: [
@@ -213,9 +213,8 @@ export function useAssignmentBoardData() {
           s.work_area_id === id && !s.mode_code ? { ...s, mode_code: secondModeCode } : s,
         );
         // Add 3 default stations for first mode (Hog Break)
-        const ts = Date.now();
         const newStations: Station[] = ["Station 1", "Station 2", "Station 3"].map((name, i) => ({
-          id: `st_${ts}_${firstModeCode}_${i}`,
+          id: `st_${crypto.randomUUID()}`,
           work_area_id: id,
           name,
           required_headcount: 1,
@@ -245,7 +244,7 @@ export function useAssignmentBoardData() {
   };
 
   const handleAddWorkArea = (name: string, color: string, modeViews: WorkAreaModeView[]): string => {
-    const newId = `wa_${Date.now()}`;
+    const newId = `wa_${crypto.randomUUID()}`;
     const newWa: WorkArea = {
       id: newId,
       name,
@@ -259,7 +258,7 @@ export function useAssignmentBoardData() {
     const defaultStations: Station[] = hasModes
       ? modeViews.flatMap((mv) =>
           ["Station 1", "Station 2", "Station 3"].map((stName, i) => ({
-            id: `st_${Date.now()}_${mv.mode_code}_${i}`,
+            id: `st_${crypto.randomUUID()}`,
             work_area_id: newId,
             name: stName,
             required_headcount: 1,
@@ -269,7 +268,7 @@ export function useAssignmentBoardData() {
           }))
         )
       : ["Station 1", "Station 2", "Station 3"].map((stName, i) => ({
-          id: `st_${Date.now()}_${i}`,
+          id: `st_${crypto.randomUUID()}`,
           work_area_id: newId,
           name: stName,
           required_headcount: 1,
@@ -347,7 +346,7 @@ export function useAssignmentBoardData() {
       setAssignments((prev) => [
         ...prev.filter((a) => a.station_id !== stationId),
         ...shifts.map((shift) => ({
-          id: `a_${Date.now()}_${shift.code}`,
+          id: `a_${crypto.randomUUID()}`,
           employee_id: empId,
           station_id: stationId,
           work_area_id: null,
@@ -367,7 +366,7 @@ export function useAssignmentBoardData() {
     defaultEmployeeId?: string;
     modeCode: ModeCode;
   }) => {
-    const stationId = `st_${Date.now()}`;
+    const stationId = `st_${crypto.randomUUID()}`;
     const wa = workAreas.find((w) => w.id === params.workAreaId);
     const hasModes = !!(wa?.mode_views?.length);
     const currentShifts = workAreaShifts[params.workAreaId] ?? [];

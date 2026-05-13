@@ -158,9 +158,10 @@ export function ManageStatusesModal({
               <div className="mb-1 ml-2 flex flex-wrap gap-2 rounded-lg bg-slate-50 px-3 py-2">
                 {COLOR_OPTIONS.map((c) => (
                   <button
-                    key={c.className}
-                    onClick={() => { onUpdate(cfg.code, { className: c.className }); setColorPickerFor(null); }}
-                    className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${c.className} ${cfg.className === c.className ? "border-slate-600 scale-110" : "border-transparent"}`}
+                    key={c.colorHex}
+                    onClick={() => { onUpdate(cfg.code, { colorHex: c.colorHex }); setColorPickerFor(null); }}
+                    className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${cfg.colorHex === c.colorHex ? "border-slate-600 scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c.colorHex + "28", color: c.colorHex, outline: `2px solid ${c.colorHex}40` }}
                     title={c.label}
                   />
                 ))}

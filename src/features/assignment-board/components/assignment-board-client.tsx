@@ -193,6 +193,7 @@ export function AssignmentBoardClient() {
             onWorkAreaShiftsChange={handleWorkAreaShiftsChange}
             onWorkAreasChange={handleWorkAreasChange}
             defaultShifts={defaultShiftTemplate}
+            statusConfigs={statusConfigs}
             onEmployeeDoubleClick={(name) => { setRosterSearch(name); setRosterOpen(true); }}
           />
         </div>

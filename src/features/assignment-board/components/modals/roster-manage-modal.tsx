@@ -144,7 +144,7 @@ export function RosterManageModal({
       return match ? Math.max(max, parseInt(match[1], 10)) : max;
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
-    const newId = `emp_${Date.now()}`;
+    const newId = `emp_${crypto.randomUUID()}`;
     onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), homeDepartmentId: newDeptId, qualifiedDepartmentIds: [newDeptId], active: true, ...(newTemporary ? { temporary: true } : {}) });
     onStatusChange(newId, "available");
     setNewName("");

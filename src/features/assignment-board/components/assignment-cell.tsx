@@ -3,16 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Employee, ModeCode, ShiftCode, Station, StationAssignment, WorkArea } from "../types";
 import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
+import { cfgBadge, type StatusConfig } from "./status-select";
 import { EmployeeCard } from "./employee-card";
-
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  available:  { label: "Available",  className: "bg-green-100 text-green-700" },
-  sick:       { label: "Sick",       className: "bg-red-100 text-red-600" },
-  vacation:   { label: "Vacation",   className: "bg-yellow-100 text-yellow-600" },
-  injured:    { label: "Injured",    className: "bg-orange-100 text-orange-600" },
-  training:   { label: "Training",   className: "bg-purple-100 text-purple-600" },
-  off_shift:  { label: "Off Shift",  className: "bg-slate-100 text-slate-500" },
-};
 
 type PendingMove = {
   employeeId: string;
@@ -25,7 +17,7 @@ type PendingMove = {
 };
 
 export function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, stations, genderRestriction, onEmployeeDoubleClick,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, stations, genderRestriction, onEmployeeDoubleClick, statusConfigs,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -42,6 +34,7 @@ export function AssignmentCell({
   stations: Station[];
   genderRestriction?: "M" | "F";
   onEmployeeDoubleClick?: (name: string) => void;
+  statusConfigs?: StatusConfig[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -303,7 +296,7 @@ export function AssignmentCell({
                   )}
                   {filtered.map((emp) => {
                     const status = statuses?.[emp.id] ?? "available";
-                    const badge = STATUS_BADGE[status] ?? STATUS_BADGE.available;
+                    const statusCfg = statusConfigs?.find((c) => c.code === status) ?? statusConfigs?.find((c) => c.code === "available");
                     const empAssignCount = assignments.filter((a) => a.employee_id === emp.id).length;
                     const crossDept = isCrossDept(emp);
                     return (
@@ -325,7 +318,7 @@ export function AssignmentCell({
                             </span>
                           )}
                           {tab === "unassigned" ? (
-                            <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                            <span className="rounded px-1.5 py-0.5 text-xs font-medium" style={statusCfg ? cfgBadge(statusCfg).sty : undefined}>{statusCfg?.label ?? status}</span>
                           ) : (
                             empAssignCount > 0 && (
                               <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-500">{empAssignCount}</span>
