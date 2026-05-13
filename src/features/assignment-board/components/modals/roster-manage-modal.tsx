@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
 import { StatusSelect, STATUS_CODE_AVAILABLE, STATUS_CODE_ASSIGNED, type StatusConfig } from "../status-select";
 import { MultiFilterSelect } from "../multi-filter-select";
 import { DeptSelect } from "../dept-select";
-import { StationSelect } from "../station-select";
 import { ActiveDeptSelect } from "../active-dept-select";
 import type { Employee, Station, StationAssignment, WorkArea } from "../../types";
 import { getEmployeeQualifiedWorkAreaIds, isEmployeeEligibleForWorkArea } from "../../utils";
@@ -25,7 +24,6 @@ export function RosterManageModal({
   onSetQualifiedWorkAreas,
   onStatusChange,
   onUnassignAll,
-  onAssignToStation,
   onUnassignFromStation,
   onAssignToDepartment,
   onUnassignFromDepartment,
@@ -46,7 +44,6 @@ export function RosterManageModal({
   onSetQualifiedWorkAreas: (id: string, workAreaIds: string[]) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
   onUnassignAll: (empId: string, resetStatus?: boolean) => void;
-  onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
   onAssignToDepartment: (empId: string, workAreaId: string) => void;
   onUnassignFromDepartment: (empId: string, workAreaId: string) => void;
@@ -68,6 +65,15 @@ export function RosterManageModal({
   const [sortKey, setSortKey] = useState<"name" | "code" | "dept" | "status" | "level" | "gender">("dept");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pinnedNewIds, setPinnedNewIds] = useState<Set<string>>(new Set());
+  const [stationPopoverEmpId, setStationPopoverEmpId] = useState<string | null>(null);
+  const [stationPopoverPos, setStationPopoverPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!stationPopoverEmpId) return;
+    const handler = () => setStationPopoverEmpId(null);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [stationPopoverEmpId]);
 
   const handleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -277,6 +283,9 @@ export function RosterManageModal({
               const genderViolations = getGenderViolations(emp);
               const effectiveActiveDeptIds = getEmployeeEffectiveDepartmentIds(emp);
               const isNew = pinnedNewIds.has(emp.id);
+              const assignedStations = [...new Set(
+                assignments.filter((a) => a.employee_id === emp.id && a.station_id !== null).map((a) => a.station_id!),
+              )].map((id) => stations.find((s) => s.id === id)).filter((s): s is Station => s !== undefined);
               return (
                 <tr key={emp.id} className={`group border-b last:border-b-0 ${isNew ? "bg-emerald-50 hover:bg-emerald-100" : alert ? "bg-red-100 hover:bg-red-200" : "hover:bg-slate-50"}`}>
                   <td className="px-4 py-2.5">
@@ -346,15 +355,25 @@ export function RosterManageModal({
                     />
                   </td>
                   <td className="px-4 py-2.5">
-                    <StationSelect
-                      employeeId={emp.id}
-                      qualifiedDepartmentIds={effectiveActiveDeptIds}
-                      assignments={assignments}
-                      stations={stations}
-                      workAreas={workAreas}
-                      onAssign={(stationId) => onAssignToStation(emp.id, stationId)}
-                      onUnassign={(stationId) => onUnassignFromStation(emp.id, stationId)}
-                    />
+                    {assignedStations.length === 0 ? (
+                      <span className="text-xs text-slate-400">— None —</span>
+                    ) : assignedStations.length === 1 ? (
+                      <span className="text-xs font-medium text-slate-700">{assignedStations[0].name}</span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (stationPopoverEmpId === emp.id) { setStationPopoverEmpId(null); return; }
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          setStationPopoverPos({ top: rect.bottom + 4, left: rect.left });
+                          setStationPopoverEmpId(emp.id);
+                        }}
+                        className="flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-slate-900"
+                      >
+                        {assignedStations.length} stations
+                        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+                      </button>
+                    )}
                     {genderViolations.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {genderViolations.map((v, i) => (
@@ -437,6 +456,25 @@ export function RosterManageModal({
           </div>
         </div>
       )}
+      {stationPopoverEmpId && (() => {
+        const openStations = [...new Set(
+          assignments.filter((a) => a.employee_id === stationPopoverEmpId && a.station_id !== null).map((a) => a.station_id!),
+        )].map((id) => stations.find((s) => s.id === id)).filter((s): s is Station => s !== undefined);
+        return (
+          <div
+            className="fixed z-200 min-w-32 overflow-hidden rounded-lg border bg-white shadow-lg"
+            style={{ top: stationPopoverPos.top, left: stationPopoverPos.left }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="border-b px-3 py-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Stations</p>
+            </div>
+            {openStations.map((s) => (
+              <div key={s.id} className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">{s.name}</div>
+            ))}
+          </div>
+        );
+      })()}
     </Modal>
   );
 }

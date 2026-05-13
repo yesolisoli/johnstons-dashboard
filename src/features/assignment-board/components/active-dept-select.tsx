@@ -44,7 +44,10 @@ export function ActiveDeptSelect({ activeDepartmentIds, workAreas, onChange }: {
         <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-44 overflow-hidden rounded-lg border bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-36 overflow-hidden rounded-lg border bg-white shadow-lg">
+          <div className="border-b px-3 py-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Active Dept</p>
+          </div>
           {workAreas.map((wa) => {
             const selected = activeDepartmentIds.includes(wa.id);
             const waColor = wa.color_hex ?? "#475569";

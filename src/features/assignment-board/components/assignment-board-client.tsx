@@ -215,7 +215,6 @@ export function AssignmentBoardClient() {
           onSetQualifiedWorkAreas={handleSetQualifiedWorkAreas}
           onStatusChange={handleStatusChange}
           onUnassignAll={handleUnassignAll}
-          onAssignToStation={handleQuickAssign}
           onUnassignFromStation={handleUnassignFromStation}
           onAssignToDepartment={handleAssignToDepartment}
           onUnassignFromDepartment={handleUnassignFromDepartment}
