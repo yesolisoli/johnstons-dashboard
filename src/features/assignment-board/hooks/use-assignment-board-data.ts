@@ -59,8 +59,10 @@ export function useAssignmentBoardData() {
 
   const handleAdd = (emp: Employee) => setEmployees((prev) => [...prev, emp]);
   const handleRemoveEmployee = (id: string) => setEmployees((prev) => prev.filter((e) => e.id !== id));
-  const handleUpdate = (id: string, updates: Partial<Employee>) =>
+  const handleUpdate = (id: string, updates: Partial<Omit<Employee, "qualifiedDepartmentIds">>) =>
     setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+  const handleSetQualifiedWorkAreas = (employeeId: string, workAreaIds: string[]) =>
+    setEmployees((prev) => prev.map((e) => (e.id === employeeId ? { ...e, qualifiedDepartmentIds: workAreaIds } : e)));
   const handleStatusChange = (id: string, status: EmployeeStatus) => {
     setStatuses((prev) => ({ ...prev, [id]: status }));
     if (getUnavailableStatusCodes(statusConfigs).has(status)) {
@@ -447,6 +449,7 @@ export function useAssignmentBoardData() {
     handleAdd,
     handleRemoveEmployee,
     handleUpdate,
+    handleSetQualifiedWorkAreas,
     handleStatusChange,
     handleAssign,
     handleUnassign,

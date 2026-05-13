@@ -27,6 +27,7 @@ export function AssignmentSidebar({
   onAdd,
   onRemove,
   onUpdate,
+  onSetQualifiedWorkAreas,
   onStatusChange,
   onAssignToStation,
   onUnassignAll,
@@ -47,7 +48,8 @@ export function AssignmentSidebar({
   onReorderStatusConfig: (configs: StatusConfig[]) => void;
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Employee>) => void;
+  onUpdate: (id: string, updates: Partial<Omit<Employee, "qualifiedDepartmentIds">>) => void;
+  onSetQualifiedWorkAreas: (id: string, workAreaIds: string[]) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignAll: (empId: string, resetStatus?: boolean) => void;
@@ -384,7 +386,8 @@ export function AssignmentSidebar({
           assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id && a.station_id !== null).map((a) => a.station_id!))}
           onSave={(waId: string, toAdd: string[], toRemove: string[]) => {
             const q = assignModalEmp.qualifiedDepartmentIds.includes(waId) ? assignModalEmp.qualifiedDepartmentIds : [waId, ...assignModalEmp.qualifiedDepartmentIds];
-            onUpdate(assignModalEmp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });
+            onUpdate(assignModalEmp.id, { homeDepartmentId: waId });
+            onSetQualifiedWorkAreas(assignModalEmp.id, q);
             toAdd.forEach((sid) => onAssignToStation(assignModalEmp.id, sid));
             toRemove.forEach((sid) => onUnassignFromStation(assignModalEmp.id, sid));
             setAssignModalEmp(null);

@@ -43,6 +43,7 @@ export function AssignmentBoardClient() {
     handleAdd,
     handleRemoveEmployee,
     handleUpdate,
+    handleSetQualifiedWorkAreas,
     handleStatusChange,
     handleAssign,
     handleUnassign,
@@ -132,6 +133,7 @@ export function AssignmentBoardClient() {
             onAdd={handleAdd}
             onRemove={handleRemoveEmployee}
             onUpdate={handleUpdate}
+            onSetQualifiedWorkAreas={handleSetQualifiedWorkAreas}
             onStatusChange={handleStatusChange}
             onAssignToStation={handleQuickAssign}
             onUnassignAll={handleUnassignAll}
@@ -210,6 +212,7 @@ export function AssignmentBoardClient() {
           onAdd={handleAdd}
           onRemove={handleRemoveEmployee}
           onUpdate={handleUpdate}
+          onSetQualifiedWorkAreas={handleSetQualifiedWorkAreas}
           onStatusChange={handleStatusChange}
           onUnassignAll={handleUnassignAll}
           onAssignToStation={handleQuickAssign}

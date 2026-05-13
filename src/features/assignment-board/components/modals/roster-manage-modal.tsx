@@ -8,7 +8,7 @@ import { DeptSelect } from "../dept-select";
 import { StationSelect } from "../station-select";
 import { ActiveDeptSelect } from "../active-dept-select";
 import type { Employee, Station, StationAssignment, WorkArea } from "../../types";
-import { isEmployeeEligibleForWorkArea } from "../../utils";
+import { getEmployeeQualifiedWorkAreaIds, isEmployeeEligibleForWorkArea } from "../../utils";
 
 type EmployeeStatus = string;
 
@@ -22,6 +22,7 @@ export function RosterManageModal({
   onAdd,
   onRemove,
   onUpdate,
+  onSetQualifiedWorkAreas,
   onStatusChange,
   onUnassignAll,
   onAssignToStation,
@@ -41,7 +42,8 @@ export function RosterManageModal({
   statusConfigs: StatusConfig[];
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Employee>) => void;
+  onUpdate: (id: string, updates: Partial<Omit<Employee, "qualifiedDepartmentIds">>) => void;
+  onSetQualifiedWorkAreas: (id: string, workAreaIds: string[]) => void;
   onStatusChange: (id: string, status: EmployeeStatus) => void;
   onUnassignAll: (empId: string, resetStatus?: boolean) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
@@ -316,14 +318,14 @@ export function RosterManageModal({
                   <td className="px-4 py-2.5 max-w-0">
                     <DeptSelect
                       homeDepartmentId={emp.homeDepartmentId}
-                      qualifiedDepartmentIds={emp.qualifiedDepartmentIds}
+                      qualifiedDepartmentIds={getEmployeeQualifiedWorkAreaIds(emp)}
                       workAreas={workAreas}
                       onChangeHome={(waId) => {
-                        const q = waId ? [waId] : [];
-                        onUpdate(emp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });
+                        onUpdate(emp.id, { homeDepartmentId: waId });
+                        onSetQualifiedWorkAreas(emp.id, waId ? [waId] : []);
                         onUnassignAll(emp.id, false);
                       }}
-                      onChangeQualified={(waIds) => onUpdate(emp.id, { qualifiedDepartmentIds: waIds })}
+                      onChangeQualified={(waIds) => onSetQualifiedWorkAreas(emp.id, waIds)}
                     />
                   </td>
                   <td className="px-4 py-2.5">

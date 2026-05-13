@@ -6,9 +6,13 @@ import type {
   WorkArea,
 } from "./types";
 
+export function getEmployeeQualifiedWorkAreaIds(employee: Employee): string[] {
+  return employee.qualifiedDepartmentIds;
+}
+
 export function isEmployeeEligibleForWorkArea(employee: Employee, workAreaId: string): boolean {
   if (employee.homeDepartmentId === workAreaId) return true;
-  if (employee.qualifiedDepartmentIds.includes(workAreaId)) return true;
+  if (getEmployeeQualifiedWorkAreaIds(employee).includes(workAreaId)) return true;
   return false;
 }
 
