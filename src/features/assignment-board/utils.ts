@@ -1,6 +1,8 @@
 import type {
   Employee,
   ShiftInfo,
+  Station,
+  StationAssignment,
   WorkArea,
 } from "./types";
 
@@ -46,5 +48,27 @@ export function getNextShift(shifts: ShiftInfo[], current: ShiftInfo | null): Sh
   if (!current) return shifts[0] ?? null;
   const idx = shifts.findIndex((s) => s.code === current.code);
   return shifts[idx + 1] ?? null;
+}
+
+export function getAssignmentWorkAreaId(
+  assignment: StationAssignment,
+  stations: Station[],
+): string | undefined {
+  return stations.find((s) => s.id === assignment.station_id)?.work_area_id;
+}
+
+export function getEmployeeActiveDepartmentIds(
+  employeeId: string,
+  assignments: StationAssignment[],
+  stations: Station[],
+): string[] {
+  return [
+    ...new Set(
+      assignments
+        .filter((a) => a.employee_id === employeeId)
+        .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
+        .filter((id): id is string => id !== undefined),
+    ),
+  ];
 }
 

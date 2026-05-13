@@ -333,7 +333,6 @@ export function RosterManageModal({
                             .filter((s) => s.work_area_id === deptId)
                             .forEach((s) => onUnassignFromStation(emp.id, s.id));
                         });
-                        onUpdate(emp.id, { activeDepartmentIds: ids });
                       }}
                     />
                   </td>

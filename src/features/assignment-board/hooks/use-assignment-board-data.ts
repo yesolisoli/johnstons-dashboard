@@ -12,6 +12,7 @@ import {
 } from "../mock-data";
 import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView } from "../types";
 import { getUnavailableStatusCodes } from "../components/status-select";
+import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds } from "../utils";
 import { useStatusConfigs } from "./use-status-configs";
 
 export function useAssignmentBoardData() {
@@ -64,26 +65,12 @@ export function useAssignmentBoardData() {
     setStatuses((prev) => ({ ...prev, [id]: status }));
     if (getUnavailableStatusCodes(statusConfigs).has(status)) {
       setAssignments((prev) => prev.filter((a) => a.employee_id !== id));
-      setEmployees((prev) => prev.map((e) =>
-        e.id === id ? { ...e, activeDepartmentIds: [] } : e,
-      ));
     }
   };
 
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (disabledIds.has(employeeId)) return;
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    const station = stations.find((s) => s.id === stationId);
-    const workAreaId = station?.work_area_id ?? "";
-    const emp = employees.find((e) => e.id === employeeId);
-    if (emp && workAreaId) {
-      const current = emp.activeDepartmentIds ?? [];
-      if (!current.includes(workAreaId)) {
-        setEmployees((prev) => prev.map((e) =>
-          e.id === employeeId ? { ...e, activeDepartmentIds: [...current, workAreaId] } : e,
-        ));
-      }
-    }
     setAssignments((prev) => [...prev, {
       id: `a_${Date.now()}`,
       employee_id: employeeId,
@@ -91,31 +78,10 @@ export function useAssignmentBoardData() {
       work_date: currentWorkDate,
       shift_code: shiftCode,
       mode_code: modeCode,
-      activeDepartmentId: workAreaId,
     }]);
   };
 
   const handleUnassign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
-    const emp = employees.find((e) => e.id === employeeId);
-
-    const remainingAssignments = assignments.filter(
-      (a) => a.employee_id === employeeId &&
-        !(a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode),
-    );
-
-    if (emp) {
-      const newActiveDeptIds = remainingAssignments.length === 0
-        ? []
-        : [...new Set(
-            remainingAssignments
-              .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
-              .filter((id): id is string => !!id),
-          )];
-      setEmployees((prev) => prev.map((e) =>
-        e.id === employeeId ? { ...e, activeDepartmentIds: newActiveDeptIds } : e,
-      ));
-    }
-
     setAssignments((prev) => prev.filter(
       (a) => !(a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode),
     ));
@@ -124,7 +90,6 @@ export function useAssignmentBoardData() {
   const handleUnassignAll = (employeeId: string, resetStatus = true) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
     if (resetStatus) setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
-    setEmployees((prev) => prev.map((e) => e.id === employeeId ? { ...e, activeDepartmentIds: [] } : e));
   };
 
   const handleUnassignFromStation = (employeeId: string, stationId: string) => {
@@ -133,17 +98,7 @@ export function useAssignmentBoardData() {
 
   const handleClearWorkArea = (workAreaId: string) => {
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    const remainingAssignments = assignments.filter((a) => !stationIds.has(a.station_id));
-    setAssignments(remainingAssignments);
-    setEmployees((prev) => prev.map((e) => {
-      const newActiveDeptIds = [...new Set(
-        remainingAssignments
-          .filter((a) => a.employee_id === e.id)
-          .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
-          .filter((id): id is string => !!id),
-      )];
-      return { ...e, activeDepartmentIds: newActiveDeptIds };
-    }));
+    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
   };
 
   const handleQuickAssign = (employeeId: string, stationId: string) => {
@@ -248,7 +203,7 @@ export function useAssignmentBoardData() {
       setAssignments((prev) =>
         prev.map((a) => {
           if (affectedStationIds.has(a.station_id)) return { ...a, mode_code: secondModeCode };
-          if (loanedOutEmpIds.has(a.employee_id) && a.activeDepartmentId !== id) return { ...a, mode_code: secondModeCode };
+          if (loanedOutEmpIds.has(a.employee_id) && getAssignmentWorkAreaId(a, stations) !== id) return { ...a, mode_code: secondModeCode };
           return a;
         }),
       );
@@ -364,16 +319,8 @@ export function useAssignmentBoardData() {
           work_date: currentWorkDate,
           shift_code: shift.code,
           mode_code: modeCode,
-          activeDepartmentId: station.work_area_id,
         })),
       ]);
-      // Update activeDepartmentIds for the new default employee
-      setEmployees((prev) => prev.map((e) => {
-        if (e.id !== empId) return e;
-        const current = e.activeDepartmentIds ?? [];
-        if (current.includes(station.work_area_id)) return e;
-        return { ...e, activeDepartmentIds: [...current, station.work_area_id] };
-      }));
     }
   };
 
@@ -418,14 +365,8 @@ export function useAssignmentBoardData() {
     }
   };
 
-  const getEmployeeEffectiveDepartmentIds = (emp: Employee): string[] => {
-    const assignedWaIds = assignments
-      .filter((a) => a.employee_id === emp.id)
-      .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
-      .filter((id): id is string => !!id);
-    const base = emp.activeDepartmentIds ?? [];
-    return [...new Set([...base, ...assignedWaIds])];
-  };
+  const getEmployeeEffectiveDepartmentIds = (emp: Employee): string[] =>
+    getEmployeeActiveDepartmentIds(emp.id, assignments, stations);
 
   const handleStationsChange = (next: Station[]) => setStations(next);
   const handleWorkAreasChange = (next: WorkArea[]) => setWorkAreas(next);

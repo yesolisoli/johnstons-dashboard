@@ -19,6 +19,7 @@ import type {
   WorkArea,
   WorkAreaModeView,
 } from "../types";
+import { getAssignmentWorkAreaId } from "../utils";
 import { AssignmentCell } from "./assignment-cell";
 import { ShiftModal } from "./modals/shift-modal";
 import { StationModal } from "./modals/station-modal";
@@ -430,7 +431,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 const loanedInEmps = [...new Set(
                   shiftAssignments
                     .filter((a) =>
-                      a.activeDepartmentId === selectedWorkAreaId &&
+                      getAssignmentWorkAreaId(a, stations) === selectedWorkAreaId &&
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
@@ -439,11 +440,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 const loanedOutEmps = [...new Set(
                   shiftAssignments
                     .filter((a) =>
-                      a.activeDepartmentId !== selectedWorkAreaId &&
+                      getAssignmentWorkAreaId(a, stations) !== selectedWorkAreaId &&
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
-                )].flatMap((id) => { const e = employees.find((e) => e.id === id); if (!e) return []; const asgn = shiftAssignments.find((a) => a.employee_id === id && a.activeDepartmentId !== selectedWorkAreaId); const dept = workAreas.find((w) => w.id === asgn?.activeDepartmentId)?.name ?? ""; return [{ name: e.full_name, dept }]; });
+                )].flatMap((id) => { const e = employees.find((e) => e.id === id); if (!e) return []; const asgn = shiftAssignments.find((a) => a.employee_id === id && getAssignmentWorkAreaId(a, stations) !== selectedWorkAreaId); const dept = workAreas.find((w) => asgn && w.id === getAssignmentWorkAreaId(asgn, stations))?.name ?? ""; return [{ name: e.full_name, dept }]; });
                 const loanedIn = loanedInEmps.length;
                 const loanedOut = loanedOutEmps.length;
                 return (
@@ -597,7 +598,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
                     <div className="h-full px-4 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
-                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} genderRestriction={station.gender_restriction} onEmployeeDoubleClick={onEmployeeDoubleClick} />
+                        assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} stations={stations} genderRestriction={station.gender_restriction} onEmployeeDoubleClick={onEmployeeDoubleClick} />
                     </div>
                   </td>
                 ))}

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
-import { abbrevDept, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
+import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
 import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
 
 const DEPT_ICONS: Record<string, React.ReactNode> = {
@@ -117,8 +117,8 @@ export function TVDisplay({
     const emp = activeEmployees.find((e) => e.id === asgn.employee_id);
     if (!emp) continue;
     const homeWaId = emp.homeDepartmentId;
-    if (!asgn.activeDepartmentId || asgn.activeDepartmentId === homeWaId) continue;
-    const activeWaId = asgn.activeDepartmentId;
+    const activeWaId = getAssignmentWorkAreaId(asgn, stations);
+    if (!activeWaId || activeWaId === homeWaId) continue;
     const activeWa = workAreas.find((wa) => wa.id === activeWaId);
     const currentModeForWa = activeWa ? getWaActiveMode(activeWa, nowMin) : "normal";
     if (asgn.mode_code !== currentModeForWa) continue;
@@ -293,7 +293,8 @@ export function TVDisplay({
                   );
                   const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
                   const isUnavailableEmp = emp ? unavailableCodes.has(statuses[emp.id] ?? "") : false;
-                  const isLoanedIn = asgn && emp ? asgn.activeDepartmentId !== emp.homeDepartmentId : false;
+                  const asgnWaId = asgn ? getAssignmentWorkAreaId(asgn, stations) : undefined;
+                  const isLoanedIn = !!asgnWaId && !!emp && asgnWaId !== emp.homeDepartmentId;
                   const dotColor = !emp || isUnavailableEmp
                     ? "bg-red-500"
                     : emp.temporary

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Employee, ModeCode, ShiftCode, StationAssignment, WorkArea } from "../types";
-import { isEmployeeEligibleForWorkArea } from "../utils";
+import type { Employee, ModeCode, ShiftCode, Station, StationAssignment, WorkArea } from "../types";
+import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
 import { EmployeeCard } from "./employee-card";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -25,7 +25,7 @@ type PendingMove = {
 };
 
 export function AssignmentCell({
-  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, genderRestriction, onEmployeeDoubleClick,
+  stationId, shiftCode, modeCode, color, assignments, allEmployees, statuses, disabledEmployeeIds, onAssign, onRemove, workAreaId, workAreas, stations, genderRestriction, onEmployeeDoubleClick,
 }: {
   stationId: string;
   shiftCode: ShiftCode;
@@ -39,6 +39,7 @@ export function AssignmentCell({
   onRemove: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void;
   workAreaId?: string;
   workAreas?: WorkArea[];
+  stations: Station[];
   genderRestriction?: "M" | "F";
   onEmployeeDoubleClick?: (name: string) => void;
 }) {
@@ -80,7 +81,7 @@ export function AssignmentCell({
   const isEligible = (e: Employee): boolean => {
     if (!workAreaId) return true;
     if (isEmployeeEligibleForWorkArea(e, workAreaId)) return true;
-    return assignments.some((a) => a.employee_id === e.id && a.activeDepartmentId === workAreaId);
+    return assignments.some((a) => a.employee_id === e.id && getAssignmentWorkAreaId(a, stations) === workAreaId);
   };
 
   const eligibleEmployees = workAreaId ? allEmployees.filter(isEligible) : allEmployees;
@@ -229,7 +230,8 @@ export function AssignmentCell({
               </div>
             )}
             {assignedWithInfo.map(({ asgn, emp }) => {
-              const isLoaned = asgn.activeDepartmentId !== emp.homeDepartmentId;
+              const activeWaId = getAssignmentWorkAreaId(asgn, stations);
+              const isLoaned = !!activeWaId && activeWaId !== emp.homeDepartmentId;
               const homeWaName = isLoaned ? workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name : undefined;
               const genderViolation = genderRestriction && emp.gender && emp.gender !== genderRestriction;
               return (

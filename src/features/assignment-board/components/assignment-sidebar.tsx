@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings } from "lucide-react";
-import { isEmployeeEligibleForWorkArea } from "../utils";
+import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
 import { StatusSelect, getUnavailableStatusCodes } from "./status-select";
@@ -275,7 +275,7 @@ export function AssignmentSidebar({
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
                   const assignedEmps = activeEmployees.filter((e) =>
-                    assignments.some((a) => a.employee_id === e.id && a.activeDepartmentId === wa.id)
+                    assignments.some((a) => a.employee_id === e.id && getAssignmentWorkAreaId(a, stations) === wa.id)
                   );
                   if (assignedEmps.length === 0) return null;
                   return (

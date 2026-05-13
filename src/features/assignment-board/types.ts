@@ -30,8 +30,7 @@ export type Employee = {
   homeDepartmentId: string | null;
   /** All work area ids this employee is qualified for (includes homeDepartmentId) */
   qualifiedDepartmentIds: string[];
-  /** Manually designated active departments for today (e.g. loan destinations) */
-  activeDepartmentIds?: string[];
+
   active: boolean;
   gender?: "M" | "F";
   level?: 1 | 2 | 3;
@@ -76,6 +75,5 @@ export type StationAssignment = {
   work_date: string;
   shift_code: ShiftCode;
   mode_code: ModeCode;
-  /** Work area id where the employee is currently active */
-  activeDepartmentId: string;
+
 };
