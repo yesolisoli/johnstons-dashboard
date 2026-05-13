@@ -54,6 +54,7 @@ export function getAssignmentWorkAreaId(
   assignment: StationAssignment,
   stations: Station[],
 ): string | undefined {
+  if (assignment.station_id === null) return assignment.work_area_id ?? undefined;
   return stations.find((s) => s.id === assignment.station_id)?.work_area_id;
 }
 
@@ -66,7 +67,7 @@ export function getEmployeeActiveDepartmentIds(
     ...new Set(
       assignments
         .filter((a) => a.employee_id === employeeId)
-        .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
+        .map((a) => getAssignmentWorkAreaId(a, stations))
         .filter((id): id is string => id !== undefined),
     ),
   ];

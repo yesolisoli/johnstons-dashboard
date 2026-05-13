@@ -71,9 +71,11 @@ export type EmployeeDailyStatus = {
 export type StationAssignment = {
   id: string;
   employee_id: string;
-  station_id: string;
+  /** null = active in department but not yet assigned to a real station */
+  station_id: string | null;
+  /** populated when station_id is null; identifies the work area for dept-only assignments */
+  work_area_id: string | null;
   work_date: string;
   shift_code: ShiftCode;
   mode_code: ModeCode;
-
 };

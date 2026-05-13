@@ -129,11 +129,12 @@ export function AssignmentSidebar({
                 {visibleWorkAreas.map((wa) => {
                   const deptEmps = activeEmployees.filter((e) => {
                     if (isUnavailable(e.id)) return false;
-                    if (assignments.some((a) => a.employee_id === e.id)) return false;
+                    if (assignments.some((a) => a.employee_id === e.id && a.station_id !== null && getAssignmentWorkAreaId(a, stations) === wa.id)) return false;
+                    const hasNullStation = assignments.some((a) => a.employee_id === e.id && a.station_id === null && a.work_area_id === wa.id);
                     if (selectedWa) {
-                      return isEmployeeEligibleForWorkArea(e, wa.id);
+                      return isEmployeeEligibleForWorkArea(e, wa.id) || hasNullStation;
                     }
-                    return e.homeDepartmentId === wa.id;
+                    return e.homeDepartmentId === wa.id || hasNullStation;
                   });
                   if (deptEmps.length === 0) return null;
                   return (
@@ -275,7 +276,7 @@ export function AssignmentSidebar({
                 {/* Assigned section */}
                 {visibleWorkAreas.map((wa) => {
                   const assignedEmps = activeEmployees.filter((e) =>
-                    assignments.some((a) => a.employee_id === e.id && getAssignmentWorkAreaId(a, stations) === wa.id)
+                    assignments.some((a) => a.employee_id === e.id && a.station_id !== null && getAssignmentWorkAreaId(a, stations) === wa.id)
                   );
                   if (assignedEmps.length === 0) return null;
                   return (
@@ -380,7 +381,7 @@ export function AssignmentSidebar({
           employee={assignModalEmp}
           workAreas={workAreas}
           stations={stations}
-          assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id).map((a) => a.station_id))}
+          assignedStationIds={new Set(assignments.filter((a) => a.employee_id === assignModalEmp.id && a.station_id !== null).map((a) => a.station_id!))}
           onSave={(waId: string, toAdd: string[], toRemove: string[]) => {
             const q = assignModalEmp.qualifiedDepartmentIds.includes(waId) ? assignModalEmp.qualifiedDepartmentIds : [waId, ...assignModalEmp.qualifiedDepartmentIds];
             onUpdate(assignModalEmp.id, { homeDepartmentId: waId, qualifiedDepartmentIds: q });

@@ -26,6 +26,8 @@ export function RosterManageModal({
   onUnassignAll,
   onAssignToStation,
   onUnassignFromStation,
+  onAssignToDepartment,
+  onUnassignFromDepartment,
   getEmployeeEffectiveDepartmentIds,
   onManageStatuses,
   onClose,
@@ -44,6 +46,8 @@ export function RosterManageModal({
   onUnassignAll: (empId: string, resetStatus?: boolean) => void;
   onAssignToStation: (empId: string, stationId: string) => void;
   onUnassignFromStation: (empId: string, stationId: string) => void;
+  onAssignToDepartment: (empId: string, workAreaId: string) => void;
+  onUnassignFromDepartment: (empId: string, workAreaId: string) => void;
   getEmployeeEffectiveDepartmentIds: (emp: Employee) => string[];
   onManageStatuses?: () => void;
   onClose: () => void;
@@ -87,7 +91,7 @@ export function RosterManageModal({
     if (effectiveDepts.length === 0) return false;
     return effectiveDepts.some((deptId) => {
       const deptStationIds = new Set(stations.filter((s) => s.work_area_id === deptId).map((s) => s.id));
-      return !assignments.some((a) => a.employee_id === emp.id && deptStationIds.has(a.station_id));
+      return !assignments.some((a) => a.employee_id === emp.id && a.station_id !== null && deptStationIds.has(a.station_id));
     });
   };
 
@@ -325,10 +329,13 @@ export function RosterManageModal({
                   <td className="px-4 py-2.5">
                     <ActiveDeptSelect
                       activeDepartmentIds={effectiveActiveDeptIds}
-                      workAreas={workAreas}
+                      workAreas={workAreas.filter((wa) => isEmployeeEligibleForWorkArea(emp, wa.id))}
                       onChange={(ids) => {
+                        const added = ids.filter((id) => !effectiveActiveDeptIds.includes(id));
                         const removed = effectiveActiveDeptIds.filter((id) => !ids.includes(id));
+                        added.forEach((deptId) => onAssignToDepartment(emp.id, deptId));
                         removed.forEach((deptId) => {
+                          onUnassignFromDepartment(emp.id, deptId);
                           stations
                             .filter((s) => s.work_area_id === deptId)
                             .forEach((s) => onUnassignFromStation(emp.id, s.id));

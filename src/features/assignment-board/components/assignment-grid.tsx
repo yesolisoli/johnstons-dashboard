@@ -156,7 +156,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       }));
       const stationIdSet = new Set(workAreaStations.map((s) => s.id));
       if (onUnassignProp) {
-        assignments.filter((a) => stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+        assignments.filter((a) => a.station_id !== null && stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id!, a.shift_code, a.mode_code));
       } else {
         console.warn("[AssignmentGrid] onUnassign handler missing — shift assignment cleanup not saved");
       }
@@ -307,7 +307,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     } else {
       setStations((prev) => prev.filter((s) => s.id !== stationId));
       if (onUnassignProp) {
-        assignments.filter((a) => a.station_id === stationId).forEach((a) => onUnassignProp(a.employee_id, a.station_id, a.shift_code, a.mode_code));
+        assignments.filter((a) => a.station_id === stationId).forEach((a) => onUnassignProp(a.employee_id, a.station_id!, a.shift_code, a.mode_code));
       } else {
         console.warn("[AssignmentGrid] onUnassign handler missing — station assignment cleanup not saved");
       }

@@ -49,6 +49,8 @@ export function AssignmentBoardClient() {
     handleUnassignAll,
     handleUnassignFromStation,
     handleClearWorkArea,
+    handleAssignToDepartment,
+    handleUnassignFromDepartment,
     handleQuickAssign,
     getEmployeeEffectiveDepartmentIds,
   } = useAssignmentBoardData();
@@ -211,6 +213,8 @@ export function AssignmentBoardClient() {
           onUnassignAll={handleUnassignAll}
           onAssignToStation={handleQuickAssign}
           onUnassignFromStation={handleUnassignFromStation}
+          onAssignToDepartment={handleAssignToDepartment}
+          onUnassignFromDepartment={handleUnassignFromDepartment}
           getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
           initialSearch={rosterSearch}
           onClose={() => { setRosterOpen(false); setRosterSearch(""); }}

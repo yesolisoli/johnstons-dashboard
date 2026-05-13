@@ -461,6 +461,7 @@ function mkA(
     id,
     employee_id: empId,
     station_id: stationId,
+    work_area_id: null,
     work_date: date,
     shift_code: shift as ShiftCode,
     mode_code: mode as ModeCode,

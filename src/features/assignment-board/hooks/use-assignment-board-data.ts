@@ -71,14 +71,19 @@ export function useAssignmentBoardData() {
   const handleAssign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
     if (disabledIds.has(employeeId)) return;
     if (assignments.some((a) => a.employee_id === employeeId && a.station_id === stationId && a.shift_code === shiftCode && a.mode_code === modeCode)) return;
-    setAssignments((prev) => [...prev, {
-      id: `a_${Date.now()}`,
-      employee_id: employeeId,
-      station_id: stationId,
-      work_date: currentWorkDate,
-      shift_code: shiftCode,
-      mode_code: modeCode,
-    }]);
+    const workAreaId = stations.find((s) => s.id === stationId)?.work_area_id;
+    setAssignments((prev) => [
+      ...prev.filter((a) => !(a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId)),
+      {
+        id: `a_${Date.now()}`,
+        employee_id: employeeId,
+        station_id: stationId,
+        work_area_id: null,
+        work_date: currentWorkDate,
+        shift_code: shiftCode,
+        mode_code: modeCode,
+      },
+    ]);
   };
 
   const handleUnassign = (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => {
@@ -97,8 +102,38 @@ export function useAssignmentBoardData() {
   };
 
   const handleClearWorkArea = (workAreaId: string) => {
-    const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
+    setAssignments((prev) => prev.filter((a) => getAssignmentWorkAreaId(a, stations) !== workAreaId));
+  };
+
+  const handleAssignToDepartment = (
+    employeeId: string,
+    workAreaId: string,
+    shiftCode?: ShiftCode,
+    modeCode?: ModeCode,
+  ) => {
+    if (disabledIds.has(employeeId)) return;
+    const wa = workAreas.find((w) => w.id === workAreaId);
+    const resolvedShift: ShiftCode | undefined = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code;
+    const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? "normal";
+    if (!resolvedShift) return;
+    if (assignments.some(
+      (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId && a.shift_code === resolvedShift && a.mode_code === resolvedMode,
+    )) return;
+    setAssignments((prev) => [...prev, {
+      id: `a_${Date.now()}`,
+      employee_id: employeeId,
+      station_id: null,
+      work_area_id: workAreaId,
+      work_date: currentWorkDate,
+      shift_code: resolvedShift,
+      mode_code: resolvedMode,
+    }]);
+  };
+
+  const handleUnassignFromDepartment = (employeeId: string, workAreaId: string) => {
+    setAssignments((prev) =>
+      prev.filter((a) => !(a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId)),
+    );
   };
 
   const handleQuickAssign = (employeeId: string, stationId: string) => {
@@ -116,7 +151,7 @@ export function useAssignmentBoardData() {
       [workAreaId]: (prev[workAreaId] ?? []).filter((s) => s.code !== code),
     }));
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    setAssignments((prev) => prev.filter((a) => !(stationIds.has(a.station_id) && a.shift_code === code)));
+    setAssignments((prev) => prev.filter((a) => !(a.station_id !== null && stationIds.has(a.station_id) && a.shift_code === code)));
   };
 
   const handleUpdateShift = (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => {
@@ -148,10 +183,9 @@ export function useAssignmentBoardData() {
   };
 
   const handleDeleteWorkArea = (workAreaId: string) => {
-    const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
     setWorkAreas((prev) => prev.filter((w) => w.id !== workAreaId));
     setStations((prev) => prev.filter((s) => s.work_area_id !== workAreaId));
-    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
+    setAssignments((prev) => prev.filter((a) => getAssignmentWorkAreaId(a, stations) !== workAreaId));
     setWorkAreaShifts((prev) => { const next = { ...prev }; delete next[workAreaId]; return next; });
   };
 
@@ -202,7 +236,7 @@ export function useAssignmentBoardData() {
       );
       setAssignments((prev) =>
         prev.map((a) => {
-          if (affectedStationIds.has(a.station_id)) return { ...a, mode_code: secondModeCode };
+          if (a.station_id !== null && affectedStationIds.has(a.station_id)) return { ...a, mode_code: secondModeCode };
           if (loanedOutEmpIds.has(a.employee_id) && getAssignmentWorkAreaId(a, stations) !== id) return { ...a, mode_code: secondModeCode };
           return a;
         }),
@@ -316,6 +350,7 @@ export function useAssignmentBoardData() {
           id: `a_${Date.now()}_${shift.code}`,
           employee_id: empId,
           station_id: stationId,
+          work_area_id: null,
           work_date: currentWorkDate,
           shift_code: shift.code,
           mode_code: modeCode,
@@ -419,6 +454,8 @@ export function useAssignmentBoardData() {
     handleUnassignAll,
     handleUnassignFromStation,
     handleClearWorkArea,
+    handleAssignToDepartment,
+    handleUnassignFromDepartment,
     handleQuickAssign,
     getEmployeeEffectiveDepartmentIds,
   };
