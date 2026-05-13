@@ -1,30 +1,53 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { WorkArea } from "../types";
 
-export function DeptSelect({ homeDepartmentId, qualifiedDepartmentIds, workAreas, onChangeHome, onChangeQualified }: {
+export function DeptSelect({
+  homeDepartmentId,
+  qualifiedDepartmentIds = [],
+  workAreas,
+  onChangeHome,
+  onChangeQualified,
+  showQualified = true,
+  placeholder = "Select dept...",
+  triggerClassName,
+}: {
   homeDepartmentId: string | null;
-  qualifiedDepartmentIds: string[];
+  qualifiedDepartmentIds?: string[];
   workAreas: WorkArea[];
   onChangeHome: (waId: string | null) => void;
-  onChangeQualified: (waIds: string[]) => void;
+  onChangeQualified?: (waIds: string[]) => void;
+  showQualified?: boolean;
+  placeholder?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, openUp: false });
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const openUp = rect.bottom + 320 > window.innerHeight;
+      setPos({ top: openUp ? rect.top : rect.bottom + 4, left: rect.left, width: rect.width, openUp });
+    }
+    setOpen((v) => !v);
+  };
+
   const homeWa = workAreas.find((w) => w.id === homeDepartmentId);
-  const label = homeWa ? homeWa.name : "— None —";
 
   const toggleQualified = (waId: string) => {
+    if (!onChangeQualified) return;
     if (qualifiedDepartmentIds.includes(waId)) {
       onChangeQualified(qualifiedDepartmentIds.filter((id) => id !== waId));
     } else {
@@ -32,48 +55,35 @@ export function DeptSelect({ homeDepartmentId, qualifiedDepartmentIds, workAreas
     }
   };
 
-  const setHome = (waId: string | null) => {
-    onChangeHome(waId);
-  };
+  const dropdown = open && (
+    <div
+      className="fixed z-200 min-w-48 rounded-lg border bg-white shadow-lg"
+      style={pos.openUp
+        ? { bottom: window.innerHeight - pos.top, left: pos.left, minWidth: Math.max(pos.width, 192) }
+        : { top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 192) }
+      }
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="border-b px-3 py-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Home Dept</p>
+      </div>
+      {workAreas.map((wa) => (
+        <button
+          key={`home-${wa.id}`}
+          onClick={() => { onChangeHome(wa.id); setOpen(false); }}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
+          style={{ color: wa.color_hex ?? "#475569" }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
+          {wa.name}
+          {homeDepartmentId === wa.id && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />}
+        </button>
+      ))}
 
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"
-        style={{ color: homeWa ? (homeWa.color_hex ?? "#475569") : "#94a3b8" }}
-      >
-        <span>{label}</span>
-        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-48 rounded-lg border bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
-          {/* Home Dept */}
-          <div className="border-b px-3 py-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Home Dept</p>
-          </div>
-          <button
-            onClick={() => { setHome(null); setOpen(false); }}
-            className="w-full px-3 py-1.5 text-left text-xs text-slate-400 hover:bg-slate-50"
-          >
-            — None —
-          </button>
-          {workAreas.map((wa) => (
-            <button
-              key={`home-${wa.id}`}
-              onClick={() => { setHome(wa.id); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50"
-              style={{ color: wa.color_hex ?? "#475569" }}
-            >
-              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#475569" }} />
-              {wa.name}
-              {homeDepartmentId === wa.id && <span className="ml-auto text-slate-400">●</span>}
-            </button>
-          ))}
-
-          {/* Can Work In */}
+      {showQualified && (
+        <>
           <div className="border-t px-3 py-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Can Work In</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Qualified Dept</p>
           </div>
           {workAreas.map((wa) => {
             const checked = qualifiedDepartmentIds.includes(wa.id);
@@ -94,8 +104,23 @@ export function DeptSelect({ homeDepartmentId, qualifiedDepartmentIds, workAreas
               </button>
             );
           })}
-        </div>
+        </>
       )}
+    </div>
+  );
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        className={triggerClassName ?? "flex items-center gap-1 rounded border border-transparent px-2 py-1 text-xs font-medium hover:border-slate-200 hover:bg-white"}
+        style={{ color: homeWa ? (homeWa.color_hex ?? "#475569") : "#94a3b8" }}
+      >
+        <span className="flex-1 text-left">{homeWa ? homeWa.name : placeholder}</span>
+        <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+      </button>
+      {typeof window !== "undefined" && dropdown && createPortal(dropdown, document.body)}
     </div>
   );
 }

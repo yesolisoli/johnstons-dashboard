@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { isEmployeeEligibleForWorkArea } from "../utils";
 import { Settings } from "lucide-react";
+import { isEmployeeEligibleForWorkArea } from "../utils";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
 import { StatusSelect, getUnavailableStatusCodes } from "./status-select";
@@ -55,8 +55,6 @@ export function AssignmentSidebar({
   getEmployeeEffectiveDepartmentIds: (emp: import("../types").Employee) => string[];
 }) {
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
   const [showManage, setShowManage] = useState(false);
   const [showRosterManage, setShowRosterManage] = useState(false);
 
@@ -78,24 +76,13 @@ export function AssignmentSidebar({
   const availableWorkforce = totalStaff - unavailableCount;
   const efficiency = availableWorkforce > 0 ? ((assignedCount / availableWorkforce) * 100).toFixed(1) : "0.0";
 
-  const handleSaveName = (id: string) => {
-    if (editingName.trim()) onUpdate(id, { full_name: editingName.trim() });
-    setEditingId(null);
-  };
 
   return (
     <div className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-hidden">
-      {/* Today's Status */}
+      {/* Workforce Overview */}
       <div className="shrink-0 rounded-lg border border-slate-700 bg-white p-5">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Today's Status</p>
-          <button
-            onClick={() => setShowManage(true)}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            title="Manage statuses"
-          >
-            <Settings size={14} />
-          </button>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Workforce Overview</p>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <StatCard label="Total Staff" value={totalStaff} bg="bg-[#FFFFFF]" labelColor="text-slate-400" color="text-[#334155]" borderColor="border-[#E2E8F0]" />
@@ -162,12 +149,6 @@ export function AssignmentSidebar({
                             key={emp.id}
                             className="group flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50"
                           >
-                            {editingId === emp.id ? (
-                              <input value={editingName} onChange={(e) => setEditingName(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(emp.id); if (e.key === "Escape") setEditingId(null); }}
-                                onBlur={() => handleSaveName(emp.id)}
-                                className="flex-1 rounded border px-2 py-0.5 text-sm" autoFocus />
-                            ) : (
                               <p
                                 draggable
                                 onDragStart={(e) => {
@@ -191,12 +172,10 @@ export function AssignmentSidebar({
                                   e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                                   setTimeout(() => document.body.removeChild(ghost), 0);
                                 }}
-                                className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
-                                onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}
-                                title="Drag to assign station · Double-click to edit">
+                                className="min-w-0 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing"
+                                title="Drag to assign station">
                                 {emp.full_name}
                               </p>
-                            )}
                             {emp.temporary && (
                               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide bg-orange-100 text-orange-500">TEMP</span>
                             )}
@@ -210,6 +189,7 @@ export function AssignmentSidebar({
                                 value={getStatus(emp.id)}
                                 configs={statusConfigs}
                                 onChange={(val) => onStatusChange(emp.id, val)}
+                                onManageStatuses={() => setShowManage(true)}
                               />
                             </div>
                           </div>
@@ -250,6 +230,7 @@ export function AssignmentSidebar({
                               value={getStatus(emp.id)}
                               configs={statusConfigs}
                               onChange={(val) => onStatusChange(emp.id, val)}
+                              onManageStatuses={() => setShowManage(true)}
                             />
                           </div>
                         </div>
@@ -282,6 +263,7 @@ export function AssignmentSidebar({
                                 onStatusChange(emp.id, val);
                               }
                             }}
+                            onManageStatuses={() => setShowManage(true)}
                           />
                         </div>
                       </div>
@@ -351,8 +333,7 @@ export function AssignmentSidebar({
                               e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
                               setTimeout(() => document.body.removeChild(ghost), 0);
                             }}
-                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 hover:text-blue-600 active:cursor-grabbing"
-                            onDoubleClick={() => { setEditingId(emp.id); setEditingName(emp.full_name); }}>
+                            className="flex-1 cursor-grab truncate text-sm font-medium text-slate-800 active:cursor-grabbing">
                             {emp.full_name}
                           </p>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -365,6 +346,7 @@ export function AssignmentSidebar({
                               value={getStatus(emp.id)}
                               configs={statusConfigs}
                               onChange={(val) => onStatusChange(emp.id, val)}
+                              onManageStatuses={() => setShowManage(true)}
                             />
                           </div>
                         </div>
@@ -426,6 +408,7 @@ export function AssignmentSidebar({
           onAssignToStation={onAssignToStation}
           onUnassignFromStation={onUnassignFromStation}
           getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
+          onManageStatuses={() => setShowManage(true)}
           onClose={() => setShowRosterManage(false)}
         />
       )}

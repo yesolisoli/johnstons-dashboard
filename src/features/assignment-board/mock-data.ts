@@ -804,7 +804,6 @@ export const mockAssignments: StationAssignment[] = [
   // Meat Cutting - emp_211-220 (hog_break + after_hog_break)
   mkA("a_new_192", "emp_211", "st_meat_saw",            D, "shift_1", "hog_break"),
   mkA("a_new_193", "emp_211", "st_ahb_meat_saw",        D, "shift_1", "after_hog_break"),
-  mkA("a_new_195", "emp_212", "st_ahb_meat_proof",      D, "shift_2", "after_hog_break"),
   mkA("a_new_196", "emp_213", "st_meat_proof",          D, "shift_3", "hog_break"),
   mkA("a_new_197", "emp_213", "st_ahb_meat_rib",        D, "shift_3", "after_hog_break"),
   mkA("a_new_198", "emp_214", "st_meat_skinner",        D, "shift_1", "hog_break"),
@@ -824,13 +823,10 @@ export const mockAssignments: StationAssignment[] = [
   // Meat Cutting supervisors - all 3 shifts
   mkA("a_sup_1",  "emp_221", "st_meat_supervisor",     D, "shift_1", "hog_break"),
   mkA("a_sup_2",  "emp_221", "st_ahb_meat_supervisor", D, "shift_1", "after_hog_break"),
-  mkA("a_sup_3",  "emp_222", "st_meat_supervisor",     D, "shift_2", "hog_break"),
-  mkA("a_sup_4",  "emp_222", "st_ahb_meat_supervisor", D, "shift_2", "after_hog_break"),
   mkA("a_sup_5",  "emp_223", "st_meat_supervisor",     D, "shift_3", "hog_break"),
   mkA("a_sup_6",  "emp_223", "st_ahb_meat_supervisor", D, "shift_3", "after_hog_break"),
   // HOG_BREAK loans → Meat Cutting shift_2 (emp_225-234)
   mkA("a_loan_36", "emp_230", "st_ahb_pack_downstairs", D, "shift_2", "after_hog_break"),
-  mkA("a_loan_44", "emp_234", "st_ahb_pack_cleanup",   D, "shift_2", "after_hog_break"),
   // Fill previously unassigned employees into empty stations
   mkA("a_fill_1",  "emp_50",  "st_supervisor",           D, "shift_3", "hog_break"),
   mkA("a_fill_2",  "emp_151", "st_lead",                 D, "shift_2", "hog_break"),

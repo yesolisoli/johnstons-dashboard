@@ -72,7 +72,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const [workAreaModal, setWorkAreaModal] = useState<"add" | WorkArea | null>(null);
   const [confirmDeleteWorkArea, setConfirmDeleteWorkArea] = useState<WorkArea | null>(null);
-  const [loanPopover, setLoanPopover] = useState<{ names: string[]; label: string; top: number; left: number } | null>(null);
+  const [loanPopover, setLoanPopover] = useState<{ entries: { name: string; dept: string }[]; label: string; top: number; left: number } | null>(null);
   const loanPopoverRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!loanPopover) return;
@@ -434,7 +434,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId !== selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
-                )].flatMap((id) => { const e = employees.find((e) => e.id === id); return e ? [e.full_name] : []; });
+                )].flatMap((id) => { const e = employees.find((e) => e.id === id); if (!e) return []; const dept = workAreas.find((w) => w.id === e.homeDepartmentId)?.name ?? ""; return [{ name: e.full_name, dept }]; });
                 // loanedOut: home dept employees working elsewhere (mode-filtered, loaned-out assignments are migrated to match mode)
                 const loanedOutEmps = [...new Set(
                   shiftAssignments
@@ -443,7 +443,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       employees.find((e) => e.id === a.employee_id)?.homeDepartmentId === selectedWorkAreaId
                     )
                     .map((a) => a.employee_id)
-                )].flatMap((id) => { const e = employees.find((e) => e.id === id); return e ? [e.full_name] : []; });
+                )].flatMap((id) => { const e = employees.find((e) => e.id === id); if (!e) return []; const asgn = shiftAssignments.find((a) => a.employee_id === id && a.activeDepartmentId !== selectedWorkAreaId); const dept = workAreas.find((w) => w.id === asgn?.activeDepartmentId)?.name ?? ""; return [{ name: e.full_name, dept }]; });
                 const loanedIn = loanedInEmps.length;
                 const loanedOut = loanedOutEmps.length;
                 return (
@@ -461,7 +461,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                         </span>
                         {loanedIn > 0 && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `in-${shift.code}` ? null : { names: loanedInEmps, label: `in-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
+                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `in-${shift.code}` ? null : { entries: loanedInEmps, label: `in-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
                             className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100 hover:bg-emerald-400/50"
                           >
                             ↓ {loanedIn} in
@@ -469,7 +469,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                         )}
                         {loanedOut > 0 && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `out-${shift.code}` ? null : { names: loanedOutEmps, label: `out-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
+                            onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `out-${shift.code}` ? null : { entries: loanedOutEmps, label: `out-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
                             className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100 hover:bg-orange-400/50"
                           >
                             ↑ {loanedOut} out
@@ -794,9 +794,15 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
             </p>
           </div>
           <div className="p-1.5">
-            {loanPopover.names.map((name) => (
-              <p key={name} className="px-2.5 py-1.5 text-sm font-medium text-slate-700">{name}</p>
-            ))}
+            {loanPopover.entries.map(({ name, dept }) => {
+              const abbrev = dept.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
+              return (
+                <div key={name} className="flex items-center justify-between gap-4 px-2.5 py-1.5">
+                  <span className="text-sm font-medium text-slate-700">{name}</span>
+                  {abbrev && <span className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">{abbrev}</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

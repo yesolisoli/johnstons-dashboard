@@ -133,7 +133,17 @@ export function useAssignmentBoardData() {
 
   const handleClearWorkArea = (workAreaId: string) => {
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    setAssignments((prev) => prev.filter((a) => !stationIds.has(a.station_id)));
+    const remainingAssignments = assignments.filter((a) => !stationIds.has(a.station_id));
+    setAssignments(remainingAssignments);
+    setEmployees((prev) => prev.map((e) => {
+      const newActiveDeptIds = [...new Set(
+        remainingAssignments
+          .filter((a) => a.employee_id === e.id)
+          .map((a) => stations.find((s) => s.id === a.station_id)?.work_area_id)
+          .filter((id): id is string => !!id),
+      )];
+      return { ...e, activeDepartmentIds: newActiveDeptIds };
+    }));
   };
 
   const handleQuickAssign = (employeeId: string, stationId: string) => {

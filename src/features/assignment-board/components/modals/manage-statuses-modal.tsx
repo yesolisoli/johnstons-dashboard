@@ -46,9 +46,10 @@ export function ManageStatusesModal({
 
   return (
     <Modal
-      title="Manage Statuses"
+      title="Employee Status Types"
       onClose={onClose}
-      width="w-[42rem] max-w-[calc(100vw-2rem)]"
+      zIndex="z-[60]"
+      width="w-[28rem] max-w-[calc(100vw-2rem)]"
       footer={
         <div className="flex items-center gap-2">
           <label className="relative shrink-0 cursor-pointer" title="Pick color">
