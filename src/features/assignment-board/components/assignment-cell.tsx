@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Employee, ModeCode, ShiftCode, Station, StationAssignment, WorkArea } from "../types";
 import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
-import { cfgBadge, type StatusConfig } from "./status-select";
+import { cfgBadge, STATUS_CODE_AVAILABLE, type StatusConfig } from "./status-select";
 import { EmployeeCard } from "./employee-card";
 
 type PendingMove = {
@@ -295,8 +295,8 @@ export function AssignmentCell({
                     </p>
                   )}
                   {filtered.map((emp) => {
-                    const status = statuses?.[emp.id] ?? "available";
-                    const statusCfg = statusConfigs?.find((c) => c.code === status) ?? statusConfigs?.find((c) => c.code === "available");
+                    const status = statuses?.[emp.id] ?? STATUS_CODE_AVAILABLE;
+                    const statusCfg = statusConfigs?.find((c) => c.code === status) ?? statusConfigs?.find((c) => c.code === STATUS_CODE_AVAILABLE);
                     const empAssignCount = assignments.filter((a) => a.employee_id === emp.id).length;
                     const crossDept = isCrossDept(emp);
                     return (

@@ -8,6 +8,8 @@ export type ModeCode =
   | "lunch"
   | "break_2";
 
+export const DEFAULT_MODE_CODE: ModeCode = "normal";
+
 export type EmployeeStatus = string;
 
 export type ShiftInfo = {

@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
+export const STATUS_CODE_AVAILABLE = "available" as const;
+export const STATUS_CODE_ASSIGNED = "assigned" as const;
+
 export type StatusConfig = {
   code: string;
   label: string;
@@ -59,7 +62,7 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const options = configs.filter((c) => c.code !== "assigned");
+  const options = configs.filter((c) => c.code !== STATUS_CODE_ASSIGNED);
   const current = options.find((c) => c.code === value) ?? options[0];
 
   useEffect(() => {

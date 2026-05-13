@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from "lucide-react";
 import { mockShifts } from "../mock-data";
+import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
 import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
 import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
@@ -120,7 +121,7 @@ export function TVDisplay({
     const activeWaId = getAssignmentWorkAreaId(asgn, stations);
     if (!activeWaId || activeWaId === homeWaId) continue;
     const activeWa = workAreas.find((wa) => wa.id === activeWaId);
-    const currentModeForWa = activeWa ? getWaActiveMode(activeWa, nowMin) : "normal";
+    const currentModeForWa = activeWa ? getWaActiveMode(activeWa, nowMin) : DEFAULT_MODE_CODE;
     if (asgn.mode_code !== currentModeForWa) continue;
     if (!loanedInByWaId[activeWaId]) continue;
     if (!loanedInByWaId[activeWaId].some((x) => x.emp.id === emp.id)) {
@@ -134,7 +135,7 @@ export function TVDisplay({
   const uniqueActiveModes = sortedWorkAreas
     .map((wa) => {
       const modeCode = getWaActiveMode(wa, nowMin);
-      if (modeCode === "normal") return null;
+      if (modeCode === DEFAULT_MODE_CODE) return null;
       const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
       return modeView ? { modeCode, label: modeView.label } : null;
     })

@@ -10,8 +10,9 @@ import {
   mockWorkAreas,
   mockWorkDate,
 } from "../mock-data";
+import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView } from "../types";
-import { getUnavailableStatusCodes } from "../components/status-select";
+import { getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "../components/status-select";
 import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds } from "../utils";
 import { useStatusConfigs } from "./use-status-configs";
 
@@ -96,7 +97,7 @@ export function useAssignmentBoardData() {
 
   const handleUnassignAll = (employeeId: string, resetStatus = true) => {
     setAssignments((prev) => prev.filter((a) => a.employee_id !== employeeId));
-    if (resetStatus) setStatuses((prev) => ({ ...prev, [employeeId]: "available" }));
+    if (resetStatus) setStatuses((prev) => ({ ...prev, [employeeId]: STATUS_CODE_AVAILABLE }));
   };
 
   const handleUnassignFromStation = (employeeId: string, stationId: string) => {
@@ -116,7 +117,7 @@ export function useAssignmentBoardData() {
     if (disabledIds.has(employeeId)) return;
     const wa = workAreas.find((w) => w.id === workAreaId);
     const resolvedShift: ShiftCode | undefined = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code;
-    const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? "normal";
+    const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
     if (!resolvedShift) return;
     if (assignments.some(
       (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId && a.shift_code === resolvedShift && a.mode_code === resolvedMode,
@@ -141,7 +142,7 @@ export function useAssignmentBoardData() {
   const handleQuickAssign = (employeeId: string, stationId: string) => {
     const station = stations.find((s) => s.id === stationId);
     const wa = workAreas.find((w) => w.id === station?.work_area_id);
-    const defaultMode: ModeCode = (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? "normal";
+    const defaultMode: ModeCode = (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
     const defaultShiftCode = workAreaShifts[wa?.id ?? ""]?.[0]?.code;
     if (!defaultShiftCode) return;
     handleAssign(employeeId, stationId, defaultShiftCode, defaultMode);
@@ -177,7 +178,7 @@ export function useAssignmentBoardData() {
     stations
       .filter((s) => s.work_area_id === workAreaId && s.defaultEmployeeId)
       .forEach((s) => {
-        const mode: ModeCode = s.mode_code ?? "normal";
+        const mode: ModeCode = s.mode_code ?? DEFAULT_MODE_CODE;
         if (!assignments.some((a) => a.station_id === s.id && a.shift_code === code && a.mode_code === mode)) {
           handleAssign(s.defaultEmployeeId!, s.id, code, mode);
         }

@@ -5,7 +5,7 @@ import { Settings } from "lucide-react";
 import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
-import { StatusSelect, getUnavailableStatusCodes } from "./status-select";
+import { StatusSelect, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "./status-select";
 import type { StatusConfig } from "./status-select";
 import { ManageStatusesModal } from "./modals/manage-statuses-modal";
 import { AssignmentModal } from "./modals/assignment-modal";
@@ -60,7 +60,7 @@ export function AssignmentSidebar({
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
   const [showManage, setShowManage] = useState(false);
 
-  const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
+  const getStatus = (id: string): EmployeeStatus => statuses[id] ?? STATUS_CODE_AVAILABLE;
 
   const activeEmployees = employees.filter((e) => e.active);
   const totalStaff = activeEmployees.length;
@@ -262,7 +262,7 @@ export function AssignmentSidebar({
                             value={getStatus(emp.id)}
                             configs={statusConfigs}
                             onChange={(val) => {
-                              if (val === "available") {
+                              if (val === STATUS_CODE_AVAILABLE) {
                                 onUnassignAll(emp.id);
                               } else {
                                 onStatusChange(emp.id, val);

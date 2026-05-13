@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
-import { StatusSelect, type StatusConfig } from "../status-select";
+import { StatusSelect, STATUS_CODE_AVAILABLE, STATUS_CODE_ASSIGNED, type StatusConfig } from "../status-select";
 import { MultiFilterSelect } from "../multi-filter-select";
 import { DeptSelect } from "../dept-select";
 import { StationSelect } from "../station-select";
@@ -79,10 +79,10 @@ export function RosterManageModal({
     </span>
   );
 
-  const getStatus = (id: string): EmployeeStatus => statuses[id] ?? "available";
+  const getStatus = (id: string): EmployeeStatus => statuses[id] ?? STATUS_CODE_AVAILABLE;
   const getDisplayStatus = (emp: Employee): EmployeeStatus => {
     const s = getStatus(emp.id);
-    if (s === "available" && emp.homeDepartmentId !== null) return "assigned";
+    if (s === STATUS_CODE_AVAILABLE && emp.homeDepartmentId !== null) return STATUS_CODE_ASSIGNED;
     return s;
   };
 
@@ -111,7 +111,7 @@ export function RosterManageModal({
   const filtered = active
     .filter((e) => {
       if (searchName && !e.full_name.toLowerCase().includes(searchName.toLowerCase())) return false;
-      if (filterStatus.length > 0 && !filterStatus.includes(statuses[e.id] ?? "available")) return false;
+      if (filterStatus.length > 0 && !filterStatus.includes(statuses[e.id] ?? STATUS_CODE_AVAILABLE)) return false;
       if (filterDept.length > 0) {
         const hasNoDeptFilter = filterDept.includes("");
         const deptIds = filterDept.filter((id) => id !== "");
@@ -148,7 +148,7 @@ export function RosterManageModal({
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
     const newId = `emp_${crypto.randomUUID()}`;
     onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), homeDepartmentId: newDeptId, qualifiedDepartmentIds: [newDeptId], active: true, ...(newTemporary ? { temporary: true } : {}) });
-    onStatusChange(newId, "available");
+    onStatusChange(newId, STATUS_CODE_AVAILABLE);
     setNewName("");
     setNewDeptId("");
     setNewTemporary(false);
@@ -211,7 +211,7 @@ export function RosterManageModal({
         />
         <MultiFilterSelect
           placeholder="Status"
-          options={statusConfigs.filter((c) => c.code !== "assigned").map((c) => ({ value: c.code, label: c.label }))}
+          options={statusConfigs.filter((c) => c.code !== STATUS_CODE_ASSIGNED).map((c) => ({ value: c.code, label: c.label }))}
           selected={filterStatus}
           onChange={setFilterStatus}
         />
@@ -385,7 +385,7 @@ export function RosterManageModal({
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusSelect
-                      value={statuses[emp.id] ?? "available"}
+                      value={statuses[emp.id] ?? STATUS_CODE_AVAILABLE}
                       configs={statusConfigs}
                       onChange={(val) => onStatusChange(emp.id, val)}
                       onManageStatuses={onManageStatuses}

@@ -9,6 +9,7 @@ import {
   mockStations,
   mockWorkAreas,
 } from "../mock-data";
+import { DEFAULT_MODE_CODE } from "../types";
 import type {
   Employee,
   ModeCode,
@@ -56,7 +57,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
   const selectedWorkAreaId = selectedWorkAreaIdProp ?? localSelectedWorkAreaId;
-  const [selectedMode, setSelectedMode] = useState<ModeCode>("normal");
+  const [selectedMode, setSelectedMode] = useState<ModeCode>(DEFAULT_MODE_CODE);
 
   const [editingShift, setEditingShift] = useState<{ code: ShiftCode; label: string; startTime: string; endTime: string } | null>(null);
   const [addingShift, setAddingShift] = useState<{ label: string; startTime: string; endTime: string } | null>(null);
@@ -99,7 +100,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setLocalSelectedWorkAreaId(waId);
     onWorkAreaChange?.(waId);
     const wa = workAreas.find((w) => w.id === waId);
-    setSelectedMode(wa?.mode_views?.[0]?.mode_code ?? "normal");
+    setSelectedMode(wa?.mode_views?.[0]?.mode_code ?? DEFAULT_MODE_CODE);
     setEditingShift(null);
     setAddingShift(null);
   };
@@ -138,7 +139,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       stations
         .filter((s) => s.work_area_id === selectedWorkAreaId && s.defaultEmployeeId)
         .forEach((s) => {
-          const mode = s.mode_code ?? "normal";
+          const mode = s.mode_code ?? DEFAULT_MODE_CODE;
           if (!slotHasAssignment(s.id, next, mode)) {
             handleAssign(s.defaultEmployeeId!, s.id, next, mode);
           }
@@ -205,7 +206,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
       });
       if (defaultEmployeeId && station) {
-        const modeCode: ModeCode = station.mode_code ?? "normal";
+        const modeCode: ModeCode = station.mode_code ?? DEFAULT_MODE_CODE;
         (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
           if (!slotHasAssignment(stationId, shift.code, modeCode)) {
             handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
@@ -233,7 +234,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   };
 
   const handleAddStation = (name: string, group: string, genderRestriction?: "M" | "F", defaultEmployeeId?: string) => {
-    const modeCode: ModeCode = hasModes ? selectedMode : "normal";
+    const modeCode: ModeCode = hasModes ? selectedMode : DEFAULT_MODE_CODE;
     if (onAddStationProp) {
       onAddStationProp({ workAreaId: selectedWorkAreaId, name, group: group || undefined, genderRestriction, defaultEmployeeId, modeCode });
     } else {
