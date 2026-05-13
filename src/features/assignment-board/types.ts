@@ -79,9 +79,3 @@ export type StationAssignment = {
   /** Work area id where the employee is currently active */
   activeDepartmentId: string;
 };
-
-export type AssignmentBoardFilters = {
-  work_date: string;
-  shift_code: ShiftCode;
-  mode_code: ModeCode;
-};
