@@ -1,11 +1,25 @@
 import { DEFAULT_MODE_CODE } from "./types";
 import type {
   Employee,
+  ShiftCode,
   ShiftInfo,
   Station,
   StationAssignment,
   WorkArea,
 } from "./types";
+
+/** Sentinel shift code used for dept-level assignments when no real shift is configured. */
+export const DEPT_ONLY_SHIFT_CODE: ShiftCode = "_dept";
+
+export function hasNullStationAssignment(
+  employeeId: string,
+  workAreaId: string,
+  assignments: StationAssignment[],
+): boolean {
+  return assignments.some(
+    (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId,
+  );
+}
 
 export function getEmployeeQualifiedWorkAreaIds(employee: Employee): string[] {
   return employee.qualifiedDepartmentIds;

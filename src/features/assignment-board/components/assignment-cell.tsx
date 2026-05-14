@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Employee, ModeCode, ShiftCode, Station, StationAssignment, WorkArea } from "../types";
-import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea } from "../utils";
+import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea, abbrevDept } from "../utils";
 import { cfgBadge, STATUS_CODE_AVAILABLE, type StatusConfig } from "./status-select";
 import { EmployeeCard } from "./employee-card";
 
@@ -96,8 +96,6 @@ export function AssignmentCell({
   const isCrossDept = (emp: Employee) =>
     !!workAreaId && !!emp.homeDepartmentId && emp.homeDepartmentId !== workAreaId;
 
-  const abbrevWa = (name: string) =>
-    name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   const openMoveModal = (
     emp: Employee,
@@ -314,7 +312,7 @@ export function AssignmentCell({
                         <div className="ml-2 flex shrink-0 items-center gap-1.5">
                           {crossDept && (
                             <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">
-                              {abbrevWa(workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
+                              {abbrevDept(workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
                             </span>
                           )}
                           {tab === "unassigned" ? (

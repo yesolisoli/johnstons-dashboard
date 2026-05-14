@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings } from "lucide-react";
-import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea, getEmployeeQualifiedWorkAreaIds } from "../utils";
+import { getAssignmentWorkAreaId, isEmployeeEligibleForWorkArea, getEmployeeQualifiedWorkAreaIds, hasNullStationAssignment, abbrevDept } from "../utils";
 import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
 import { StatusSelect, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "./status-select";
@@ -116,15 +116,13 @@ export function AssignmentSidebar({
               if (!selectedWa) return true;
               return isEmployeeEligibleForWorkArea(e, selectedWa.id);
             });
-            const abbrevWa = (name: string) =>
-              name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("");
             return (
               <>
                 {visibleWorkAreas.map((wa) => {
                   const deptEmps = activeEmployees.filter((e) => {
                     if (isUnavailable(e.id)) return false;
                     if (assignments.some((a) => a.employee_id === e.id && a.station_id !== null && getAssignmentWorkAreaId(a, stations) === wa.id)) return false;
-                    const hasNullStation = assignments.some((a) => a.employee_id === e.id && a.station_id === null && a.work_area_id === wa.id);
+                    const hasNullStation = hasNullStationAssignment(e.id, wa.id, assignments);
                     if (selectedWa) {
                       return isEmployeeEligibleForWorkArea(e, wa.id) || hasNullStation;
                     }
@@ -178,7 +176,7 @@ export function AssignmentSidebar({
                             <div className="ml-auto flex shrink-0 items-center gap-1.5">
                               {emp.homeDepartmentId !== wa.id && emp.homeDepartmentId && (
                                 <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
-                                  {abbrevWa(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
+                                  {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
                                 </span>
                               )}
                               <StatusSelect

@@ -13,7 +13,7 @@ import {
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView } from "../types";
 import { getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "../components/status-select";
-import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds } from "../utils";
+import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds, hasNullStationAssignment, DEPT_ONLY_SHIFT_CODE } from "../utils";
 import { useStatusConfigs } from "./use-status-configs";
 
 export function useAssignmentBoardData() {
@@ -116,11 +116,9 @@ export function useAssignmentBoardData() {
   ) => {
     if (disabledIds.has(employeeId)) return;
     const wa = workAreas.find((w) => w.id === workAreaId);
-    const resolvedShift: ShiftCode = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code ?? "_dept";
+    const resolvedShift: ShiftCode = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code ?? DEPT_ONLY_SHIFT_CODE;
     const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
-    if (assignments.some(
-      (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId && a.shift_code === resolvedShift && a.mode_code === resolvedMode,
-    )) return;
+    if (hasNullStationAssignment(employeeId, workAreaId, assignments)) return;
     setAssignments((prev) => [...prev, {
       id: `a_${crypto.randomUUID()}`,
       employee_id: employeeId,
