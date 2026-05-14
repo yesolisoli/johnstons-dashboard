@@ -25,6 +25,7 @@ export function AssignmentBoardClient() {
     workAreas,
     workAreaShifts,
     selectedWorkAreaId,
+    isHydrating,
     disabledIds,
     defaultShiftTemplate,
     handleDeleteShift,
@@ -79,6 +80,16 @@ export function AssignmentBoardClient() {
     window.addEventListener("announcement-edit", handler);
     return () => window.removeEventListener("announcement-edit", handler);
   }, [announcement]);
+
+  if (isHydrating) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+          Loading assignment board...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
