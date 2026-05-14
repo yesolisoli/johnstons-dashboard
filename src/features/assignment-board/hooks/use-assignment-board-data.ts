@@ -116,9 +116,8 @@ export function useAssignmentBoardData() {
   ) => {
     if (disabledIds.has(employeeId)) return;
     const wa = workAreas.find((w) => w.id === workAreaId);
-    const resolvedShift: ShiftCode | undefined = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code;
+    const resolvedShift: ShiftCode = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code ?? "_dept";
     const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
-    if (!resolvedShift) return;
     if (assignments.some(
       (a) => a.employee_id === employeeId && a.station_id === null && a.work_area_id === workAreaId && a.shift_code === resolvedShift && a.mode_code === resolvedMode,
     )) return;

@@ -7,6 +7,7 @@ import { AssignmentGrid } from "./assignment-grid";
 import { AssignmentSidebar } from "./assignment-sidebar";
 import { TVDisplay } from "./tv-display";
 import { RosterManageModal } from "./modals/roster-manage-modal";
+import { ManageStatusesModal } from "./modals/manage-statuses-modal";
 
 export function AssignmentBoardClient() {
   const {
@@ -62,6 +63,7 @@ export function AssignmentBoardClient() {
   const [rosterSearch, setRosterSearch] = useState("");
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementDraft, setAnnouncementDraft] = useState(announcement);
+  const [showManageStatuses, setShowManageStatuses] = useState(false);
 
   useEffect(() => {
     const handler = () => setShowTV(true);
@@ -115,6 +117,17 @@ export function AssignmentBoardClient() {
         </div>
       )}
 
+      {showManageStatuses && (
+        <ManageStatusesModal
+          configs={statusConfigs}
+          onUpdate={handleUpdateStatusConfig}
+          onDelete={handleDeleteStatusConfig}
+          onAdd={handleAddStatusConfig}
+          onReorder={handleReorderStatusConfig}
+          onClose={() => setShowManageStatuses(false)}
+        />
+      )}
+
       <div className="flex h-full items-stretch gap-0">
         {/* Sidebar + collapse toggle */}
         <div className={`relative flex shrink-0 transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0" : "w-72 opacity-100"}`}>
@@ -126,10 +139,6 @@ export function AssignmentBoardClient() {
             workAreas={workAreas}
             selectedWorkAreaId={selectedWorkAreaId}
             statusConfigs={statusConfigs}
-            onUpdateStatusConfig={handleUpdateStatusConfig}
-            onDeleteStatusConfig={handleDeleteStatusConfig}
-            onAddStatusConfig={handleAddStatusConfig}
-            onReorderStatusConfig={handleReorderStatusConfig}
             onAdd={handleAdd}
             onRemove={handleRemoveEmployee}
             onUpdate={handleUpdate}
@@ -140,6 +149,7 @@ export function AssignmentBoardClient() {
             onUnassignFromStation={handleUnassignFromStation}
             getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
             onOpenRoster={(search) => { setRosterSearch(search); setRosterOpen(true); }}
+            onManageStatuses={() => setShowManageStatuses(true)}
           />
         </div>
 
@@ -220,6 +230,7 @@ export function AssignmentBoardClient() {
           onUnassignFromDepartment={handleUnassignFromDepartment}
           getEmployeeEffectiveDepartmentIds={getEmployeeEffectiveDepartmentIds}
           initialSearch={rosterSearch}
+          onManageStatuses={() => setShowManageStatuses(true)}
           onClose={() => { setRosterOpen(false); setRosterSearch(""); }}
         />
       )}

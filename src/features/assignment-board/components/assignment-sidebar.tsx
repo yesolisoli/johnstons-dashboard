@@ -7,7 +7,6 @@ import type { Employee, Station, StationAssignment, WorkArea } from "../types";
 import { StatCard } from "./stat-card";
 import { StatusSelect, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "./status-select";
 import type { StatusConfig } from "./status-select";
-import { ManageStatusesModal } from "./modals/manage-statuses-modal";
 import { AssignmentModal } from "./modals/assignment-modal";
 
 type EmployeeStatus = string;
@@ -20,10 +19,6 @@ export function AssignmentSidebar({
   workAreas,
   selectedWorkAreaId,
   statusConfigs,
-  onUpdateStatusConfig,
-  onDeleteStatusConfig,
-  onAddStatusConfig,
-  onReorderStatusConfig,
   onAdd,
   onRemove,
   onUpdate,
@@ -34,6 +29,7 @@ export function AssignmentSidebar({
   onUnassignFromStation,
   getEmployeeEffectiveDepartmentIds,
   onOpenRoster,
+  onManageStatuses,
 }: {
   employees: Employee[];
   statuses: Record<string, EmployeeStatus>;
@@ -42,10 +38,6 @@ export function AssignmentSidebar({
   workAreas: WorkArea[];
   selectedWorkAreaId?: string;
   statusConfigs: StatusConfig[];
-  onUpdateStatusConfig: (code: string, updates: Partial<StatusConfig>) => void;
-  onDeleteStatusConfig: (code: string) => void;
-  onAddStatusConfig: (label: string, colorHex: string) => void;
-  onReorderStatusConfig: (configs: StatusConfig[]) => void;
   onAdd: (emp: Employee) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Omit<Employee, "qualifiedDepartmentIds">>) => void;
@@ -56,9 +48,9 @@ export function AssignmentSidebar({
   onUnassignFromStation: (empId: string, stationId: string) => void;
   getEmployeeEffectiveDepartmentIds: (emp: import("../types").Employee) => string[];
   onOpenRoster: (search: string) => void;
+  onManageStatuses: () => void;
 }) {
   const [assignModalEmp, setAssignModalEmp] = useState<Employee | null>(null);
-  const [showManage, setShowManage] = useState(false);
 
   const getStatus = (id: string): EmployeeStatus => statuses[id] ?? STATUS_CODE_AVAILABLE;
 
@@ -193,7 +185,7 @@ export function AssignmentSidebar({
                                 value={getStatus(emp.id)}
                                 configs={statusConfigs}
                                 onChange={(val) => onStatusChange(emp.id, val)}
-                                onManageStatuses={() => setShowManage(true)}
+                                onManageStatuses={onManageStatuses}
                               />
                             </div>
                           </div>
@@ -235,7 +227,7 @@ export function AssignmentSidebar({
                               value={getStatus(emp.id)}
                               configs={statusConfigs}
                               onChange={(val) => onStatusChange(emp.id, val)}
-                              onManageStatuses={() => setShowManage(true)}
+                              onManageStatuses={onManageStatuses}
                             />
                           </div>
                         </div>
@@ -268,7 +260,7 @@ export function AssignmentSidebar({
                                 onStatusChange(emp.id, val);
                               }
                             }}
-                            onManageStatuses={() => setShowManage(true)}
+                            onManageStatuses={onManageStatuses}
                           />
                         </div>
                       </div>
@@ -353,7 +345,7 @@ export function AssignmentSidebar({
                               value={getStatus(emp.id)}
                               configs={statusConfigs}
                               onChange={(val) => onStatusChange(emp.id, val)}
-                              onManageStatuses={() => setShowManage(true)}
+                              onManageStatuses={onManageStatuses}
                             />
                           </div>
                         </div>
@@ -366,17 +358,6 @@ export function AssignmentSidebar({
           })()}
         </div>
       </div>
-
-      {showManage && (
-        <ManageStatusesModal
-          configs={statusConfigs}
-          onUpdate={onUpdateStatusConfig}
-          onDelete={onDeleteStatusConfig}
-          onAdd={onAddStatusConfig}
-          onReorder={onReorderStatusConfig}
-          onClose={() => setShowManage(false)}
-        />
-      )}
 
       {assignModalEmp && (
         <AssignmentModal

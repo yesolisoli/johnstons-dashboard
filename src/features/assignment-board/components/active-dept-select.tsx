@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { WorkArea } from "../types";
-import { BaseDropdown, DropdownSection, DropdownItem } from "./base-dropdown";
+import { BaseDropdown, DropdownSection, DropdownItem, DROPDOWN_WIDTH } from "./base-dropdown";
 
 export function ActiveDeptSelect({ activeDepartmentIds, workAreas, onChange }: {
   activeDepartmentIds: string[];
@@ -41,7 +41,7 @@ export function ActiveDeptSelect({ activeDepartmentIds, workAreas, onChange }: {
         open={open}
         onClose={() => setOpen(false)}
         triggerRef={triggerRef}
-        minWidth={144}
+        minWidth={DROPDOWN_WIDTH.compact}
       >
         <DropdownSection title="Active Dept">
           {workAreas.map((wa) => {

@@ -6,7 +6,7 @@ import { StatusSelect, STATUS_CODE_AVAILABLE, STATUS_CODE_ASSIGNED, type StatusC
 import { MultiFilterSelect } from "../multi-filter-select";
 import { DeptSelect } from "../dept-select";
 import { ActiveDeptSelect } from "../active-dept-select";
-import { BaseDropdown, DropdownSection } from "../base-dropdown";
+import { BaseDropdown, DropdownSection, DROPDOWN_WIDTH } from "../base-dropdown";
 import type { Employee, Station, StationAssignment, WorkArea } from "../../types";
 import { getEmployeeQualifiedWorkAreaIds, isEmployeeEligibleForWorkArea } from "../../utils";
 
@@ -456,7 +456,7 @@ export function RosterManageModal({
           open={true}
           onClose={() => setStationPopover(null)}
           triggerEl={stationPopover.triggerEl}
-          minWidth={128}
+          minWidth={DROPDOWN_WIDTH.compact}
           offsetY={4}
         >
           <DropdownSection title="Stations">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BaseDropdown } from "./base-dropdown";
+import { BaseDropdown, DROPDOWN_WIDTH } from "./base-dropdown";
 
 export const STATUS_CODE_AVAILABLE = "available" as const;
 export const STATUS_CODE_ASSIGNED = "assigned" as const;
@@ -79,7 +79,7 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
         open={open}
         onClose={() => setOpen(false)}
         triggerRef={triggerRef}
-        minWidth={130}
+        minWidth={DROPDOWN_WIDTH.xsmall}
         offsetY={4}
       >
         <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
@@ -96,14 +96,14 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
             </button>
           )}
         </div>
-        <div className="p-1.5 space-y-0.5">
-          {options.map((cfg) => {
+        <div className="py-1.75">
+        {options.map((cfg) => {
             const active = cfg.code === value;
             return (
               <button
                 key={cfg.code}
                 onClick={() => { onChange(cfg.code); setOpen(false); }}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
+                className={`flex w-full items-center gap-2.5 px-3 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
               >
                 <span className={`shrink-0 ${cfgBadge(cfg).cls}`} style={cfgBadge(cfg).sty}>{cfg.label}</span>
                 {active && (

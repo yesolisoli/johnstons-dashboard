@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+export const DROPDOWN_WIDTH = { xsmall: 120, compact: 160, default: 192, wide: 240 } as const;
+
 export function BaseDropdown({
   open,
   onClose,
@@ -97,7 +99,7 @@ export function DropdownSection({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{title}</p>
         </div>
       )}
-      {children}
+      <div className="py-1.75">{children}</div>
     </>
   );
 }

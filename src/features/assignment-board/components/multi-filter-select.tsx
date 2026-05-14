@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BaseDropdown } from "./base-dropdown";
+import { BaseDropdown, DropdownSection, DROPDOWN_WIDTH } from "./base-dropdown";
 
 export function MultiFilterSelect({ placeholder, options, selected, onChange }: {
   placeholder: string;
@@ -37,18 +37,20 @@ export function MultiFilterSelect({ placeholder, options, selected, onChange }: 
         open={open}
         onClose={() => setOpen(false)}
         triggerRef={triggerRef}
-        minWidth={160}
+        minWidth={DROPDOWN_WIDTH.compact}
         offsetY={4}
       >
-        {options.map((opt) => (
-          <button key={opt.value} onClick={() => toggle(opt.value)}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50">
-            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected.includes(opt.value) ? "border-slate-700 bg-slate-700 text-white" : "border-slate-300"}`}>
-              {selected.includes(opt.value) && <svg viewBox="0 0 10 8" fill="currentColor" className="h-2.5 w-2.5"><path d="M1 4l3 3 5-6"/></svg>}
-            </span>
-            {opt.label}
-          </button>
-        ))}
+        <DropdownSection title={placeholder}>
+          {options.map((opt) => (
+            <button key={opt.value} onClick={() => toggle(opt.value)}
+              className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50">
+              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected.includes(opt.value) ? "border-slate-700 bg-slate-700 text-white" : "border-slate-300"}`}>
+                {selected.includes(opt.value) && <svg viewBox="0 0 10 8" fill="currentColor" className="h-2.5 w-2.5"><path d="M1 4l3 3 5-6"/></svg>}
+              </span>
+              {opt.label}
+            </button>
+          ))}
+        </DropdownSection>
       </BaseDropdown>
     </div>
   );
