@@ -204,7 +204,7 @@ export function AssignmentCell({
 
       <div
         ref={ref}
-        className="relative h-full min-h-12 rounded-md transition-all"
+        className="group/cell relative h-full min-h-12 rounded-md transition-all"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -252,7 +252,7 @@ export function AssignmentCell({
             <button
               ref={btnRef}
               onClick={handleOpen}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-600"
+              className={`flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-300 text-xs text-slate-400 transition-all hover:border-slate-500 hover:text-slate-600 group-hover/cell:opacity-100 ${isOpen ? "opacity-100" : "opacity-0"}`}
             >
               +
             </button>

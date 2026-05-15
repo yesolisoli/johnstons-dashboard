@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-export const DROPDOWN_WIDTH = { xsmall: 120, compact: 160, default: 192, wide: 240 } as const;
+export const DROPDOWN_WIDTH = { xsmall: 105, compact: 160, default: 192, wide: 240 } as const;
 
 export function BaseDropdown({
   open,

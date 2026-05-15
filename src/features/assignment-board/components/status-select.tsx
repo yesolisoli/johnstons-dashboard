@@ -30,6 +30,27 @@ export function cfgBadge(cfg: StatusConfig): { cls: string; sty?: React.CSSPrope
   return { cls: `rounded-md px-2.5 py-1 text-xs font-semibold ${cfg.className}` };
 }
 
+export function StatusBadge({ cfg, sizingLabel, showArrow = false, className = "" }: { cfg: StatusConfig; sizingLabel?: string; showArrow?: boolean; className?: string }) {
+  const badge = cfgBadge(cfg);
+  const widthLabel = sizingLabel ?? cfg.label;
+  return (
+    <span className={`inline-grid items-center ${badge.cls} ${className}`} style={badge.sty}>
+      <span className="invisible col-start-1 row-start-1 inline-flex items-center gap-1 whitespace-nowrap" aria-hidden="true">
+        {widthLabel}
+        {showArrow && (
+          <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+        )}
+      </span>
+      <span className={`col-start-1 row-start-1 inline-flex w-full items-center gap-1 ${showArrow ? "justify-between" : "justify-center"}`}>
+        <span>{cfg.label}</span>
+        {showArrow && (
+          <svg className="h-3 w-3 shrink-0 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+        )}
+      </span>
+    </span>
+  );
+}
+
 export const COLOR_OPTIONS: { label: string; colorHex: string }[] = [
   { label: "Green",  colorHex: "#15803d" },
   { label: "Blue",   colorHex: "#1d4ed8" },
@@ -63,17 +84,15 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const options = configs.filter((c) => c.code !== STATUS_CODE_ASSIGNED);
   const current = options.find((c) => c.code === value) ?? options[0];
+  const longestLabel = options.reduce((m, c) => (c.label.length > m.length ? c.label : m), "");
 
   return (
     <div className="relative">
       <button
         ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${cfgBadge(current).cls}`}
-        style={cfgBadge(current).sty}
       >
-        {current.label}
-        <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+        <StatusBadge cfg={current} sizingLabel={longestLabel} showArrow />
       </button>
       <BaseDropdown
         open={open}
@@ -103,14 +122,9 @@ export function StatusSelect({ value, configs, onChange, onManageStatuses }: {
               <button
                 key={cfg.code}
                 onClick={() => { onChange(cfg.code); setOpen(false); }}
-                className={`flex w-full items-center gap-2.5 px-3 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
+                className={`flex w-full items-center justify-center gap-2.5 px-3 py-1.5 transition-colors ${active ? "bg-slate-100" : "hover:bg-slate-50"}`}
               >
-                <span className={`shrink-0 ${cfgBadge(cfg).cls}`} style={cfgBadge(cfg).sty}>{cfg.label}</span>
-                {active && (
-                  <svg className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 8l4 4 6-7" />
-                  </svg>
-                )}
+                <StatusBadge cfg={cfg} sizingLabel={longestLabel} className="shrink-0" />
               </button>
             );
           })}

@@ -58,7 +58,6 @@ export function RosterManageModal({
   const [filterDept, setFilterDept] = useState<string[]>([]);
   const [newName, setNewName] = useState("");
   const [newDeptId, setNewDeptId] = useState<string>("");
-  const [newTemporary, setNewTemporary] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [confirmRemoveEmp, setConfirmRemoveEmp] = useState<Employee | null>(null);
@@ -150,11 +149,10 @@ export function RosterManageModal({
     }, 0);
     const nextCode = `E${String(maxNum + 1).padStart(3, "0")}`;
     const newId = `emp_${crypto.randomUUID()}`;
-    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), homeDepartmentId: newDeptId, qualifiedDepartmentIds: [newDeptId], active: true, ...(newTemporary ? { temporary: true } : {}) });
+    onAdd({ id: newId, employee_code: nextCode, full_name: newName.trim(), homeDepartmentId: newDeptId, qualifiedDepartmentIds: [newDeptId], active: true });
     onStatusChange(newId, STATUS_CODE_AVAILABLE);
     setNewName("");
     setNewDeptId("");
-    setNewTemporary(false);
     setPinnedNewIds((prev) => new Set([...prev, newId]));
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -186,15 +184,6 @@ export function RosterManageModal({
             placeholder="Home Dept"
             triggerClassName="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:border-slate-400 min-w-36"
           />
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-600 select-none">
-            <input
-              type="checkbox"
-              checked={newTemporary}
-              onChange={(e) => setNewTemporary(e.target.checked)}
-              className="accent-amber-500"
-            />
-            Temporary
-          </label>
           <button
             onClick={handleAdd}
             disabled={!newName.trim() || !newDeptId}

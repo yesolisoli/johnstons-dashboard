@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/shared/modal";
-import { cfgBadge, COLOR_OPTIONS, type StatusConfig } from "../status-select";
+import { StatusBadge, COLOR_OPTIONS, type StatusConfig } from "../status-select";
 
 export function ManageStatusesModal({
   configs,
@@ -26,6 +26,7 @@ export function ManageStatusesModal({
   const [newColorHex, setNewColorHex] = useState("#312e81");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const longestLabel = configs.reduce((m, c) => (c.label.length > m.length ? c.label : m), "");
 
   const startEdit = (cfg: StatusConfig) => {
     setEditingCode(cfg.code);
@@ -98,11 +99,10 @@ export function ManageStatusesModal({
                   setColorPickerFor(colorPickerFor === cfg.code ? null : cfg.code);
                   setEditingCode(null);
                 }}
-                className={`shrink-0 transition-transform hover:scale-105 ${cfgBadge(cfg).cls} ${cfg.protected ? "cursor-default" : "cursor-pointer"}`}
-                style={cfgBadge(cfg).sty}
+                className={`shrink-0 transition-transform hover:scale-105 ${cfg.protected ? "cursor-default" : "cursor-pointer"}`}
                 title={cfg.protected ? undefined : "Click to change color"}
               >
-                {cfg.label}
+                <StatusBadge cfg={cfg} sizingLabel={longestLabel} />
               </button>
 
               {editingCode === cfg.code ? (

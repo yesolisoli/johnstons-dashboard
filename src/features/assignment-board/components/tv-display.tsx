@@ -324,7 +324,7 @@ export function TVDisplay({
                               : isInjured
                               ? "bg-orange-400"
                               : emp.temporary
-                              ? "bg-sky-400"
+                              ? "bg-violet-400"
                               : "bg-green-500";
                             return (
                               <span key={emp.id} className="flex items-center gap-1.5 px-3 py-2">
@@ -333,11 +333,6 @@ export function TVDisplay({
                                   <>
                                     <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
                                     <span className="ml-auto flex shrink-0 items-center gap-1">
-                                      {emp.temporary && (
-                                        <span className="rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">
-                                          TEMP
-                                        </span>
-                                      )}
                                       {isLoanedIn && emp.homeDepartmentId && (
                                         <span className="rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] text-blue-600">
                                           {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}

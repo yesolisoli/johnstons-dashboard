@@ -58,16 +58,16 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
   type SubtitlePart = string | { dot: string; label: string };
   const subtitleParts: SubtitlePart[] = [
     isInjured ? "Injured" : null,
-    employee.temporary ? { dot: "#8b5cf6", label: "Temp" } : null,
+    employee.temporary ? "Temporary" : null,
     loanInfo?.isLoanedIn && loanInfo.homeWaName ? `from ${loanInfo.homeWaName}` : null,
-  ].filter((x): x is SubtitlePart => x !== null);
+  ].filter((x): x is string => x !== null);
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
       onDoubleClick={onDoubleClick}
-      className="group relative flex cursor-grab flex-col rounded-md bg-white px-3 py-2 text-sm shadow-sm active:cursor-grabbing overflow-hidden"
+      className="group relative flex cursor-grab flex-col rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm active:cursor-grabbing overflow-hidden"
     >
       <span
         className="absolute left-0 top-0 bottom-0 w-0.5"

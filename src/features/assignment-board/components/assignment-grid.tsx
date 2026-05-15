@@ -75,6 +75,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const [workAreaModal, setWorkAreaModal] = useState<"add" | WorkArea | null>(null);
   const [confirmDeleteWorkArea, setConfirmDeleteWorkArea] = useState<WorkArea | null>(null);
+  const [headerHover, setHeaderHover] = useState(false);
   const [loanPopover, setLoanPopover] = useState<{ entries: { name: string; dept: string }[]; label: string; top: number; left: number } | null>(null);
   const loanPopoverRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -409,16 +410,17 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       )}
 
       {/* Table */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-white">
-        <table className="w-full border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 160px + 3rem)` }}>
-          <thead className="sticky top-0 z-30">
+      <div className="min-h-0 flex-1 flex items-start gap-2">
+        <div className="min-h-0 min-w-0 h-full flex-1 overflow-auto rounded-lg border border-slate-300 bg-white">
+        <table className="w-full table-fixed border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 160px)` }}>
+          <thead className="sticky top-0 z-30" onMouseEnter={() => setHeaderHover(true)} onMouseLeave={() => setHeaderHover(false)}>
             <tr>
               {/* Station label */}
-              <th className="sticky left-0 z-10 bg-white px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 border-r border-slate-200" style={{ width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
+              <th className="sticky left-0 z-10 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white" style={{ width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem", backgroundColor: color }}>
                 <div className="flex items-center justify-between gap-2">
                   <span>Station</span>
                   <button onClick={() => setAddingStation(true)} title="Add station"
-                    className="flex h-5 w-5 items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 hover:border-slate-300 hover:text-white text-xs">
+                    className={`flex h-5 w-5 items-center justify-center rounded border border-dashed border-white/30 text-white/80 hover:border-white hover:text-white text-xs transition-opacity ${headerHover ? "opacity-100" : "opacity-0"}`}>
                     +
                   </button>
                 </div>
@@ -450,7 +452,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 const loanedIn = loanedInEmps.length;
                 const loanedOut = loanedOutEmps.length;
                 return (
-                  <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 12rem - 3rem) / ${currentShifts.length})`, minWidth: "160px" }}>
+                  <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 10.5rem) / ${currentShifts.length})`, minWidth: "160px" }}>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
                         <span className="cursor-pointer hover:opacity-80"
@@ -486,17 +488,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 );
               })}
 
-              {/* Add shift th */}
-              <th className="whitespace-nowrap px-3 py-3 text-left" style={{ backgroundColor: color }}>
-                <button onClick={() => setAddingShift({ label: "", startTime: "", endTime: "" })}
-                  className="flex h-6 w-6 items-center justify-center rounded-md border border-white/30 text-white/80 hover:border-white hover:text-white text-base leading-none">
-                  +
-                </button>
-              </th>
             </tr>
           </thead>
 
-          <tbody style={{ backgroundColor: color + "1a" }}>
+          <tbody style={{ backgroundColor: "#ffffff" }}>
             {(() => {
               let prevGroup: string | undefined = "__init__";
               return workAreaStations.map((station) => {
@@ -507,9 +502,9 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     {showGroupHeader && (
                       <tr className="group/grp">
                         <td
-                          colSpan={currentShifts.length + 2}
-                          className="border-t border-b py-0.5 text-center"
-                          style={{ borderTopColor: color + "40", borderBottomColor: color + "40", backgroundColor: color + "18" }}
+                          colSpan={currentShifts.length + 1}
+                          className="border-t border-b py-0.5 pl-5 text-left"
+                          style={{ borderTopColor: "#e2e8f0", borderBottomColor: "#e2e8f0", backgroundColor: "#f1f5f9" }}
                         >
                           {editingGroupKey === station.group ? (
                             <input
@@ -524,7 +519,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                             <span className="inline-flex items-center gap-2">
                               <span
                                 className="cursor-pointer text-xs font-semibold uppercase tracking-wider hover:opacity-80"
-                                style={{ color, letterSpacing: "0.08em" }}
+                                style={{ color: color + "b3", letterSpacing: "0.08em" }}
                                 onDoubleClick={() => { setEditingGroupKey(station.group!); setEditingGroupText(station.group!); }}
                                 title="Double-click to rename"
                               >
@@ -547,7 +542,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                     )}
                     <tr
                       className={`group border-t transition-colors ${dragOverStationId === station.id && dragStationId !== station.id ? "outline-2 -outline-offset-2" : ""}`}
-                      style={{ borderColor: color + "40", outlineColor: color }}
+                      style={{ borderColor: "#e2e8f0", outlineColor: color }}
                       draggable={!station.protected && editingStationId !== station.id}
                       onDragStart={() => setDragStationId(station.id)}
                       onDragEnd={() => { setDragStationId(null); setDragOverStationId(null); }}
@@ -598,15 +593,13 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 {/* Assignment cells */}
                 {currentShifts.map((shift) => (
                   <td key={shift.code} className="h-px border-t border-black/6 p-0 align-top">
-                    <div className="h-full px-4 py-4">
+                    <div className="h-full px-2 py-4">
                       <AssignmentCell stationId={station.id} shiftCode={shift.code} modeCode={selectedMode} color={color}
                         assignments={assignments} allEmployees={employees} statuses={statuses} disabledEmployeeIds={disabledEmployeeIds} onAssign={handleAssign} onRemove={handleRemove} workAreaId={selectedWorkArea.id} workAreas={workAreas} stations={stations} genderRestriction={station.gender_restriction} onEmployeeDoubleClick={onEmployeeDoubleClick} statusConfigs={statusConfigs} />
                     </div>
                   </td>
                 ))}
 
-                {/* Empty cell under + Shift column */}
-                <td className="border-t border-black/6" />
               </tr>
                   </React.Fragment>
                 );
@@ -615,6 +608,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           </tbody>
 
         </table>
+        </div>
+        <button
+          onClick={() => setAddingShift({ label: "", startTime: "", endTime: "" })}
+          onMouseEnter={() => setHeaderHover(true)}
+          onMouseLeave={() => setHeaderHover(false)}
+          className={`shrink-0 mt-3 flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-500 hover:border-slate-500 hover:text-slate-700 text-base leading-none transition-opacity ${headerHover ? "opacity-100" : "opacity-0"}`}
+          title="Add shift"
+        >
+          +
+        </button>
       </div>
 
       {/* Datalist for group autocomplete — must be outside <table> */}
