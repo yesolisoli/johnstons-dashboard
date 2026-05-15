@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function TimePickerInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TimePickerInput({ value, onChange, placeholder = "--:--" }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const hourRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,7 @@ export function TimePickerInput({ value, onChange }: { value: string; onChange: 
         onClick={() => setOpen((v) => !v)}
         className="w-full rounded-xl border border-slate-800 bg-slate-50 px-4 py-3 text-left text-sm font-medium transition-colors focus:bg-white focus:outline-none"
       >
-        {value ? <span className="text-slate-800">{value}</span> : <span className="text-slate-400">--:--</span>}
+        {value ? <span className="text-slate-800">{value}</span> : <span className="text-slate-400">{placeholder}</span>}
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">

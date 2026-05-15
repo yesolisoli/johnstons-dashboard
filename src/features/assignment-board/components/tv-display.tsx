@@ -5,7 +5,7 @@ import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from 
 import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
-import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift, getWaActiveMode } from "../utils";
+import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift } from "../utils";
 import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
 
 const DEPT_ICONS: Record<string, React.ReactNode> = {
@@ -97,14 +97,31 @@ export function TVDisplay({
 
   const activeShift = getActiveShift(shifts, effectiveDate);
   const nextShift = getNextShift(shifts, activeShift);
-  const nowMin = effectiveDate.getHours() * 60 + effectiveDate.getMinutes();
-
-  const activeEmployees = employees.filter((e) => e.active);
-  const shiftAssignments = activeShift
-    ? assignments.filter((a) => a.shift_code === activeShift.code)
-    : [];
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
+
+  const waActiveShift: Record<string, ShiftInfo | null> = {};
+  for (const wa of sortedWorkAreas) {
+    const waShifts = workAreaShifts?.[wa.id] ?? shifts;
+    waActiveShift[wa.id] = getActiveShift(waShifts, effectiveDate);
+  }
+  const anyWaActive = Object.values(waActiveShift).some((s) => s !== null);
+
+  const waActiveModeCode: Record<string, string> = {};
+  for (const wa of sortedWorkAreas) {
+    const codes = wa.mode_views?.map((mv) => mv.mode_code) ?? [];
+    if (codes.includes("hog_break")) waActiveModeCode[wa.id] = "hog_break";
+    else if (codes.includes("after_hog_break")) waActiveModeCode[wa.id] = "after_hog_break";
+    else waActiveModeCode[wa.id] = codes[0] ?? DEFAULT_MODE_CODE;
+  }
+
+  const activeEmployees = employees.filter((e) => e.active);
+  const activeAssignments = assignments.filter((a) => {
+    const waId = getAssignmentWorkAreaId(a, stations);
+    if (!waId) return false;
+    const s = waActiveShift[waId];
+    return s ? s.code === a.shift_code : false;
+  });
 
   const loanedOutByWaId: Record<string, Employee[]> = {};
   const loanedInByWaId: Record<string, { emp: Employee; homeWaId: string | null }[]> = {};
@@ -114,14 +131,13 @@ export function TVDisplay({
     loanedInByWaId[wa.id] = [];
   }
 
-  for (const asgn of shiftAssignments) {
+  for (const asgn of activeAssignments) {
     const emp = activeEmployees.find((e) => e.id === asgn.employee_id);
     if (!emp) continue;
     const homeWaId = emp.homeDepartmentId;
     const activeWaId = getAssignmentWorkAreaId(asgn, stations);
     if (!activeWaId || activeWaId === homeWaId) continue;
-    const activeWa = workAreas.find((wa) => wa.id === activeWaId);
-    const currentModeForWa = activeWa ? getWaActiveMode(activeWa, nowMin) : DEFAULT_MODE_CODE;
+    const currentModeForWa = waActiveModeCode[activeWaId] ?? DEFAULT_MODE_CODE;
     if (asgn.mode_code !== currentModeForWa) continue;
     if (!loanedInByWaId[activeWaId]) continue;
     if (!loanedInByWaId[activeWaId].some((x) => x.emp.id === emp.id)) {
@@ -134,7 +150,7 @@ export function TVDisplay({
 
   const uniqueActiveModes = sortedWorkAreas
     .map((wa) => {
-      const modeCode = getWaActiveMode(wa, nowMin);
+      const modeCode = waActiveModeCode[wa.id] ?? DEFAULT_MODE_CODE;
       if (modeCode === DEFAULT_MODE_CODE) return null;
       const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
       return modeView ? { modeCode, label: modeView.label } : null;
@@ -239,18 +255,19 @@ export function TVDisplay({
 
       {/* ── Content: department columns ── */}
       <div className="flex min-h-0 flex-1 overflow-x-auto">
-        {!activeShift ? (
+        {!anyWaActive ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-lg font-semibold text-slate-500">No active shift at this time</p>
           </div>
         ) : sortedWorkAreas.flatMap((wa) => {
-          const activeModeCode = getWaActiveMode(wa, nowMin);
+          const activeModeCode = waActiveModeCode[wa.id] ?? DEFAULT_MODE_CODE;
           const waStations = stations
             .filter((s) => s.work_area_id === wa.id && (s.mode_code === activeModeCode || s.mode_code == null))
             .sort((a, b) => a.display_order - b.display_order);
 
           if (waStations.length === 0) return [];
-          if (workAreaShifts && activeShift && !workAreaShifts[wa.id]?.some((s) => s.code === activeShift.code)) return [];
+          const waShift = waActiveShift[wa.id];
+          if (!waShift) return [];
 
           return [(
             <div key={wa.id} className="flex min-w-[180px] flex-1 flex-col border-r border-slate-200 last:border-r-0">
@@ -289,8 +306,8 @@ export function TVDisplay({
 
               <AutoScrollRows style={{ background: `linear-gradient(to right, #f8fafc 45%, white 45%)` }}>
                 {waStations.map((station) => {
-                  const stationAsgns = shiftAssignments.filter(
-                    (a) => a.station_id === station.id && a.mode_code === activeModeCode
+                  const stationAsgns = assignments.filter(
+                    (a) => a.shift_code === waShift.code && a.station_id === station.id && a.mode_code === activeModeCode
                   );
                   const assignedEmps = stationAsgns
                     .map((a) => ({ asgn: a, emp: activeEmployees.find((e) => e.id === a.employee_id) }))

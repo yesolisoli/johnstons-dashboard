@@ -5,8 +5,10 @@ import { Modal } from "@/components/shared/modal";
 import { TimePickerInput } from "./time-picker-input";
 import type { ShiftCode } from "../../types";
 
-export function ShiftModal({ initial, onClose, onSave }: {
+export function ShiftModal({ initial, defaultStart, defaultEnd, onClose, onSave }: {
   initial?: { code: ShiftCode; label: string; startTime: string; endTime: string };
+  defaultStart?: string;
+  defaultEnd?: string;
   onClose: () => void;
   onSave: (label: string, startTime: string, endTime: string) => void;
 }) {
@@ -50,11 +52,11 @@ export function ShiftModal({ initial, onClose, onSave }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="mb-1 text-xs font-medium text-slate-600">Start</p>
-              <TimePickerInput value={startTime} onChange={setStartTime} />
+              <TimePickerInput value={startTime} onChange={setStartTime} placeholder={defaultStart || "--:--"} />
             </div>
             <div>
               <p className="mb-1 text-xs font-medium text-slate-600">End</p>
-              <TimePickerInput value={endTime} onChange={setEndTime} />
+              <TimePickerInput value={endTime} onChange={setEndTime} placeholder={defaultEnd || "--:--"} />
             </div>
           </div>
         </div>

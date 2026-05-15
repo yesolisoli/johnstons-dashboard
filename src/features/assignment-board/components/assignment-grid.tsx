@@ -93,6 +93,19 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const selectedWorkArea = workAreas.find((wa) => wa.id === selectedWorkAreaId) ?? workAreas[0];
   const hasModes = !!selectedWorkArea?.mode_views?.length;
   const currentShifts = workAreaShifts[selectedWorkAreaId] ?? [];
+
+  const computeNextShiftDefaults = (): { startTime: string; endTime: string } => {
+    const last = currentShifts[currentShifts.length - 1];
+    const parts = last?.time_range?.split("-");
+    if (!parts || parts.length !== 2) return { startTime: "", endTime: "" };
+    const [hStr, mStr] = parts[1].split(":");
+    const h = Number(hStr);
+    const m = Number(mStr);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return { startTime: "", endTime: "" };
+    const endH = (h + 2) % 24;
+    const endStr = `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    return { startTime: parts[1], endTime: endStr };
+  };
   const workAreaStations = stations
     .filter((s) => s.work_area_id === selectedWorkAreaId && (!hasModes || s.mode_code === selectedMode))
     .sort((a, b) => a.display_order - b.display_order);
@@ -412,7 +425,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       {/* Table */}
       <div className="min-h-0 flex-1 flex items-start gap-2">
         <div className="min-h-0 min-w-0 h-full flex-1 overflow-auto rounded-lg border border-slate-300 bg-white">
-        <table className="w-full table-fixed border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 160px)` }}>
+        <table className="w-full table-fixed border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 280px)` }}>
           <thead className="sticky top-0 z-30" onMouseEnter={() => setHeaderHover(true)} onMouseLeave={() => setHeaderHover(false)}>
             <tr>
               {/* Station label */}
@@ -452,10 +465,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                 const loanedIn = loanedInEmps.length;
                 const loanedOut = loanedOutEmps.length;
                 return (
-                  <th key={shift.code} className="group/col px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 10.5rem) / ${currentShifts.length})`, minWidth: "160px" }}>
+                  <th key={shift.code} className="group/col whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-white" style={{ backgroundColor: color, width: `calc((100% - 10.5rem) / ${currentShifts.length})`, minWidth: "280px" }}>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="cursor-pointer hover:opacity-80"
+                        <span className="cursor-pointer whitespace-nowrap hover:opacity-80"
                           onDoubleClick={() => {
                             const [start, end] = (shift.time_range ?? "").split("-");
                             setEditingShift({ code: shift.code, label: shift.label, startTime: start ?? "", endTime: end ?? "" });
@@ -657,9 +670,17 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       )}
 
       {/* Add Shift Modal */}
-      {addingShift !== null && (
-        <ShiftModal onClose={() => setAddingShift(null)} onSave={handleAddShift} />
-      )}
+      {addingShift !== null && (() => {
+        const defaults = computeNextShiftDefaults();
+        return (
+          <ShiftModal
+            defaultStart={defaults.startTime}
+            defaultEnd={defaults.endTime}
+            onClose={() => setAddingShift(null)}
+            onSave={(label, startTime, endTime) => handleAddShift(label, startTime || defaults.startTime, endTime || defaults.endTime)}
+          />
+        );
+      })()}
 
       {/* Edit Shift Modal */}
       {editingShift !== null && (
