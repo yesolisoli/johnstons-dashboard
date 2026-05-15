@@ -460,7 +460,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                           }}
                           title="Double-click to edit">
                           {shift.label}
-                          {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80">{shift.time_range}</span>}
+                          {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80 whitespace-nowrap">{shift.time_range}</span>}
                         </span>
                         {loanedIn > 0 && (
                           <button

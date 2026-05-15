@@ -289,47 +289,70 @@ export function TVDisplay({
 
               <AutoScrollRows style={{ background: `linear-gradient(to right, #f8fafc 45%, white 45%)` }}>
                 {waStations.map((station) => {
-                  const asgn = shiftAssignments.find(
+                  const stationAsgns = shiftAssignments.filter(
                     (a) => a.station_id === station.id && a.mode_code === activeModeCode
                   );
-                  const emp = asgn ? activeEmployees.find((e) => e.id === asgn.employee_id) : null;
-                  const isUnavailableEmp = emp ? unavailableCodes.has(statuses[emp.id] ?? "") : false;
-                  const asgnWaId = asgn ? getAssignmentWorkAreaId(asgn, stations) : undefined;
-                  const isLoanedIn = !!asgnWaId && !!emp && asgnWaId !== emp.homeDepartmentId;
-                  const dotColor = !emp || isUnavailableEmp
-                    ? "bg-red-500"
-                    : emp.temporary
-                    ? "bg-amber-400"
-                    : "bg-green-500";
+                  const assignedEmps = stationAsgns
+                    .map((a) => ({ asgn: a, emp: activeEmployees.find((e) => e.id === a.employee_id) }))
+                    .filter((x): x is { asgn: typeof x.asgn; emp: NonNullable<typeof x.emp> } => !!x.emp);
 
                   return (
                     <div
                       key={station.id}
-                      className="flex items-stretch border-b border-slate-100 last:border-b-0"
+                      className="flex items-stretch border-b border-slate-300 last:border-b-0"
                     >
-                      <div className="flex w-[45%] shrink-0 items-center px-3 py-2">
+                      <div className="flex w-[45%] shrink-0 flex-col justify-start px-3 py-2">
                         <span className="truncate text-xs text-slate-500">{station.name}</span>
-                      </div>
-                      <span className="flex min-w-0 flex-1 items-center gap-1.5 bg-white px-3 py-2">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                        {emp && !isUnavailableEmp ? (
-                          <>
-                            <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
-                            {emp.temporary && (
-                              <span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[9px] font-bold text-amber-600">
-                                TEMP
-                              </span>
-                            )}
-                            {isLoanedIn && emp?.homeDepartmentId && (
-                              <span className="ml-auto shrink-0 rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
-                                {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs font-semibold text-red-500">Unassigned</span>
+                        {assignedEmps.length > 1 && (
+                          <span className="text-[10px] text-slate-400">{assignedEmps.length} people</span>
                         )}
-                      </span>
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col bg-white">
+                        {assignedEmps.length === 0 ? (
+                          <span className="flex items-center gap-1.5 px-3 py-2">
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                            <span className="text-xs font-semibold text-red-500">Unassigned</span>
+                          </span>
+                        ) : (
+                          assignedEmps.map(({ asgn, emp }) => {
+                            const isUnavailableEmp = unavailableCodes.has(statuses[emp.id] ?? "");
+                            const asgnWaId = getAssignmentWorkAreaId(asgn, stations);
+                            const isLoanedIn = !!asgnWaId && asgnWaId !== emp.homeDepartmentId;
+                            const isInjured = statuses[emp.id] === "injured";
+                            const dotColor = isUnavailableEmp
+                              ? "bg-red-500"
+                              : isInjured
+                              ? "bg-orange-400"
+                              : emp.temporary
+                              ? "bg-sky-400"
+                              : "bg-green-500";
+                            return (
+                              <span key={emp.id} className="flex items-center gap-1.5 px-3 py-2">
+                                <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                                {!isUnavailableEmp ? (
+                                  <>
+                                    <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
+                                    <span className="ml-auto flex shrink-0 items-center gap-1">
+                                      {emp.temporary && (
+                                        <span className="rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">
+                                          TEMP
+                                        </span>
+                                      )}
+                                      {isLoanedIn && emp.homeDepartmentId && (
+                                        <span className="rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
+                                          {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-semibold text-red-500">Unassigned</span>
+                                )}
+                              </span>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   );
                 })}

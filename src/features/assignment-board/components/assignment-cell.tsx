@@ -236,6 +236,7 @@ export function AssignmentCell({
                       onRemove={() => onRemove(emp.id, stationId, shiftCode, modeCode)}
                       loanInfo={{ isLoanedIn: isLoaned, homeWaName }}
                       onDoubleClick={() => onEmployeeDoubleClick?.(emp.full_name)}
+                      statusCode={statuses?.[emp.id]}
                     />
                   </div>
                   {genderViolation && (

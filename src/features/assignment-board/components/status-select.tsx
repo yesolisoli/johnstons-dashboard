@@ -48,7 +48,7 @@ export const DEFAULT_STATUS_CONFIGS: StatusConfig[] = [
   { code: "assigned",   label: "Assigned",   className: "bg-sky-50 text-sky-600",          colorHex: "#0284c7", protected: true },
   { code: "sick",       label: "Sick",       className: "bg-rose-50 text-rose-500",        colorHex: "#f43f5e", unavailable: true },
   { code: "vacation",   label: "Vacation",   className: "bg-amber-50 text-amber-500",      colorHex: "#f59e0b", unavailable: true },
-  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400",    colorHex: "#fb923c", unavailable: true },
+  { code: "injured",    label: "Injured",    className: "bg-orange-50 text-orange-400",    colorHex: "#fb923c" },
   { code: "training",   label: "Training",   className: "bg-violet-50 text-violet-400",    colorHex: "#a78bfa" },
   { code: "off_shift",  label: "Off Shift",  className: "bg-slate-100 text-slate-400",     colorHex: "#94a3b8", unavailable: true },
 ];
