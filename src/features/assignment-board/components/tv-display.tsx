@@ -334,12 +334,12 @@ export function TVDisplay({
                                     <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
                                     <span className="ml-auto flex shrink-0 items-center gap-1">
                                       {emp.temporary && (
-                                        <span className="rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">
+                                        <span className="rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">
                                           TEMP
                                         </span>
                                       )}
                                       {isLoanedIn && emp.homeDepartmentId && (
-                                        <span className="rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] font-bold text-blue-600">
+                                        <span className="rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] text-blue-600">
                                           {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
                                         </span>
                                       )}

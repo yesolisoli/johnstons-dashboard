@@ -58,7 +58,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
   type SubtitlePart = string | { dot: string; label: string };
   const subtitleParts: SubtitlePart[] = [
     isInjured ? "Injured" : null,
-    employee.temporary ? { dot: "#60a5fa", label: "Temp" } : null,
+    employee.temporary ? { dot: "#8b5cf6", label: "Temp" } : null,
     loanInfo?.isLoanedIn && loanInfo.homeWaName ? `from ${loanInfo.homeWaName}` : null,
   ].filter((x): x is SubtitlePart => x !== null);
 

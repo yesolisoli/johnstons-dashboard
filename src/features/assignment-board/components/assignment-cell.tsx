@@ -312,7 +312,7 @@ export function AssignmentCell({
                         </div>
                         <div className="ml-2 flex shrink-0 items-center gap-1.5">
                           {crossDept && (
-                            <span className="rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                            <span className="rounded px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 border border-blue-200">
                               {abbrevDept(workAreas?.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
                             </span>
                           )}

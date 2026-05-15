@@ -171,11 +171,11 @@ export function AssignmentSidebar({
                                 {emp.full_name}
                               </p>
                             {emp.temporary && (
-                              <span className="shrink-0 rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">TEMP</span>
+                              <span className="shrink-0 rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">TEMP</span>
                             )}
                             <div className="ml-auto flex shrink-0 items-center gap-1.5">
                               {emp.homeDepartmentId !== wa.id && emp.homeDepartmentId && (
-                                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">
+                                <span className="rounded px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 border border-blue-200">
                                   {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? "")}
                                 </span>
                               )}
@@ -218,7 +218,7 @@ export function AssignmentSidebar({
                             onDoubleClick={() => onOpenRoster(emp.full_name)}
                           >{emp.full_name}</p>
                           {emp.temporary && (
-                            <span className="shrink-0 rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">TEMP</span>
+                            <span className="shrink-0 rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">TEMP</span>
                           )}
                           <div className="ml-auto shrink-0">
                             <StatusSelect
@@ -245,7 +245,7 @@ export function AssignmentSidebar({
                       <div key={emp.id} className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-b-0 hover:bg-slate-50/50">
                         <p className="min-w-0 cursor-pointer truncate text-sm font-medium text-slate-400" onDoubleClick={() => onOpenRoster(emp.full_name)}>{emp.full_name}</p>
                         {emp.temporary && (
-                          <span className="shrink-0 rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">TEMP</span>
+                          <span className="shrink-0 rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">TEMP</span>
                         )}
                         <div className="ml-auto shrink-0">
                           <StatusSelect
@@ -298,7 +298,7 @@ export function AssignmentSidebar({
                               onDoubleClick={() => onOpenRoster(emp.full_name)}
                             >{emp.full_name}</p>
                             {emp.temporary && (
-                              <span className="shrink-0 rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">TEMP</span>
+                              <span className="shrink-0 rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">TEMP</span>
                             )}
                             <span className="ml-auto min-w-0 max-w-[45%] shrink-0 truncate text-right text-xs text-slate-400">{empStations.join(", ")}</span>
                           </div>

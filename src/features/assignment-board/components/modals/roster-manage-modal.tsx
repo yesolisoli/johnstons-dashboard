@@ -309,7 +309,7 @@ export function RosterManageModal({
                         </span>
                       )}
                       {emp.temporary && (
-                        <span className="shrink-0 rounded bg-sky-50 px-1 py-px text-[9px] text-sky-400 border border-sky-100">
+                        <span className="shrink-0 rounded bg-violet-50 px-1 py-px text-[9px] text-violet-500 border border-violet-100">
                           TEMP
                         </span>
                       )}
