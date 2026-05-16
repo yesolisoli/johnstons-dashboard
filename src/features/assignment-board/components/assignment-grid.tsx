@@ -24,6 +24,7 @@ import type {
 import { getAssignmentWorkAreaId } from "../utils";
 import { AssignmentCell } from "./assignment-cell";
 import type { StatusConfig } from "./status-select";
+import { LoanTag } from "./loan-tag";
 import { ShiftModal } from "./modals/shift-modal";
 import { StationModal } from "./modals/station-modal";
 import { WorkAreaModal } from "./modals/work-area-modal";
@@ -449,7 +450,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         </div>
         <button
           onClick={() => setConfirmClear(true)}
-          className="rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="mr-8 rounded-lg px-4 py-1.5 text-sm font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
           Clear All
         </button>
@@ -482,11 +483,11 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
           <thead className="sticky top-0 z-30" onMouseEnter={() => setHeaderHover(true)} onMouseLeave={() => setHeaderHover(false)}>
             <tr>
               {/* Station label */}
-              <th className="sticky left-0 z-10 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white" style={{ width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem", backgroundColor: color }}>
+              <th className="group/stnhdr sticky left-0 z-10 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white" style={{ width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem", backgroundColor: color }}>
                 <div className="flex items-center justify-between gap-2">
                   <span>Station</span>
                   <button onClick={() => setAddingStation(true)} title="Add station"
-                    className={`flex h-5 w-5 items-center justify-center rounded border border-dashed border-white/30 text-white/80 hover:border-white hover:text-white text-xs transition-opacity ${headerHover ? "opacity-100" : "opacity-0"}`}>
+                    className="flex h-5 w-5 items-center justify-center rounded border border-dashed border-white/30 text-white/80 hover:border-white hover:text-white text-xs opacity-0 transition-opacity group-hover/stnhdr:opacity-100">
                     +
                   </button>
                 </div>
@@ -531,20 +532,18 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                           {shift.time_range && <span className="ml-1.5 text-xs font-normal opacity-80 whitespace-nowrap">{shift.time_range}</span>}
                         </span>
                         {loanedIn > 0 && (
-                          <button
+                          <LoanTag
+                            direction="in"
+                            count={loanedIn}
                             onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `in-${shift.code}` ? null : { entries: loanedInEmps, label: `in-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
-                            className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-400/30 text-emerald-100 hover:bg-emerald-400/50"
-                          >
-                            ↓ {loanedIn} in
-                          </button>
+                          />
                         )}
                         {loanedOut > 0 && (
-                          <button
+                          <LoanTag
+                            direction="out"
+                            count={loanedOut}
                             onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setLoanPopover((prev) => prev?.label === `out-${shift.code}` ? null : { entries: loanedOutEmps, label: `out-${shift.code}`, top: r.bottom + 6, left: r.left }); }}
-                            className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-400/30 text-orange-100 hover:bg-orange-400/50"
-                          >
-                            ↑ {loanedOut} out
-                          </button>
+                          />
                         )}
                       </div>
                       <button onClick={() => handleDeleteShift(shift.code)}
@@ -617,7 +616,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       onDrop={() => handleStationDrop(station.id)}
                     >
                 {/* Station name */}
-                <td className="sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0", width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
+                <td className="group/stnname sticky left-0 z-20 border-t border-r border-slate-200 bg-white px-5 py-4 align-top group-hover:bg-slate-50" style={{ borderTopColor: "#e2e8f0", width: "10.5rem", minWidth: "10.5rem", maxWidth: "10.5rem" }}>
                   {station.protected ? (
                     <div className="flex flex-col gap-0.5">
                       <span
@@ -647,7 +646,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
                       </div>
                       <button
                         onClick={() => handleDeleteStation(station.id)}
-                        className="invisible ml-auto rounded px-1 text-xs group-hover:visible transition-colors"
+                        className="invisible ml-auto rounded px-1 text-xs group-hover/stnname:visible transition-colors"
                         style={{ color: color + "80" }}
                         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = color + "22"; (e.currentTarget as HTMLButtonElement).style.color = color; }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = ""; (e.currentTarget as HTMLButtonElement).style.color = color + "80"; }}

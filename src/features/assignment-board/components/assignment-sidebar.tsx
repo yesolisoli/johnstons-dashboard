@@ -131,7 +131,7 @@ export function AssignmentSidebar({
                   if (deptEmps.length === 0) return null;
                   return (
                     <div key={wa.id}>
-                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-300 bg-slate-100 px-4 py-2">
+                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-200 bg-slate-100 px-4 py-2">
                         <span className="h-2 w-2 rounded-full shrink-0 bg-red-500" />
                         <span className="text-xs font-semibold text-slate-600">No Station</span>
                         <span className="ml-auto text-xs text-slate-400">{deptEmps.length}</span>
@@ -194,7 +194,7 @@ export function AssignmentSidebar({
                 })}
                 {unassignedEmps.length > 0 && (
                   <div>
-                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-300 bg-slate-100 px-4 py-2">
+                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-200 bg-slate-100 px-4 py-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
                       <span className="text-xs font-semibold text-slate-600">Unassigned</span>
                       <span className="ml-auto text-xs text-slate-400">{unassignedEmps.length}</span>
@@ -236,7 +236,7 @@ export function AssignmentSidebar({
                 {/* Unavailable section */}
                 {unavailableEmps.length > 0 && (
                   <div>
-                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-300 bg-slate-100 px-4 py-2">
+                    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-200 bg-slate-100 px-4 py-2">
                       <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
                       <span className="text-xs font-semibold text-slate-600">Unavailable</span>
                       <span className="ml-auto text-xs text-slate-400">{unavailableEmps.length}</span>
@@ -273,7 +273,7 @@ export function AssignmentSidebar({
                   if (assignedEmps.length === 0) return null;
                   return (
                     <div key={`assigned-${wa.id}`}>
-                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-300 bg-slate-100 px-4 py-2">
+                      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-t border-slate-200 bg-slate-100 px-4 py-2">
                         <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: wa.color_hex ?? "#64748b" }} />
                         <span className="text-xs font-semibold text-slate-600">{wa.name}</span>
                         <span className="ml-auto text-xs text-slate-400">{assignedEmps.length}</span>
@@ -309,7 +309,7 @@ export function AssignmentSidebar({
                 })}
                 {noDept.length > 0 && (
                   <div>
-                    <div className="flex items-center gap-2 border-b border-t border-slate-300 bg-slate-100 px-4 py-2">
+                    <div className="flex items-center gap-2 border-b border-t border-slate-200 bg-slate-100 px-4 py-2">
                       <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
                       <span className="text-xs font-semibold text-slate-600">No Department</span>
                       <span className="ml-auto text-xs text-slate-400">{noDept.length}</span>

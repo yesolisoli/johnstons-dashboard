@@ -67,7 +67,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
       draggable
       onDragStart={handleDragStart}
       onDoubleClick={onDoubleClick}
-      className="group relative flex cursor-grab flex-col rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm active:cursor-grabbing overflow-hidden"
+      className="group/empcard relative flex cursor-grab flex-col rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm active:cursor-grabbing overflow-hidden"
     >
       <span
         className="absolute left-0 top-0 bottom-0 w-0.5"
@@ -77,7 +77,7 @@ export function EmployeeCard({ employee, stationId, shiftCode, modeCode, onRemov
         <div className="flex items-center gap-1.5 min-w-0">
           <p className="font-bold text-slate-700 truncate">{employee.full_name}</p>
         </div>
-        <button onClick={onRemove} className="invisible shrink-0 rounded px-1 text-xs text-slate-400 transition-colors group-hover:visible hover:bg-slate-100 hover:text-slate-700">
+        <button onClick={onRemove} className="invisible shrink-0 rounded px-1 text-xs text-slate-400 transition-colors group-hover/empcard:visible hover:bg-slate-100 hover:text-slate-700">
           ×
         </button>
       </div>

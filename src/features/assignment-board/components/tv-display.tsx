@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from "lucide-react";
+import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaShiftMap } from "../types";
-import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift } from "../utils";
+import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, parseTimeMin } from "../utils";
+import { TimePickerInput } from "./modals/time-picker-input";
 import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
 
 const DEPT_ICONS: Record<string, React.ReactNode> = {
@@ -69,6 +70,7 @@ export function TVDisplay({
   const unavailableCodes = getUnavailableStatusCodes(statusConfigs);
   const [now, setNow] = useState(new Date());
   const [previewMode, setPreviewMode] = useState(false);
+  const [headerOpen, setHeaderOpen] = useState(false);
   const [previewTime, setPreviewTime] = useState(() => {
     const n = new Date();
     return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
@@ -95,14 +97,20 @@ export function TVDisplay({
       .map((c) => ({ code: c, label: c, time_range: "" })),
   ];
 
-  const activeShift = getActiveShift(shifts, effectiveDate);
-  const nextShift = getNextShift(shifts, activeShift);
-
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
   // Shifts are mode-scoped, so the "active mode" depends on which mode has a
-  // shift covering the current time. We pick the first declared mode whose
-  // shift list yields an active shift at effectiveDate.
+  // shift covering the current time. First pass picks the first declared mode
+  // whose shift list has an active shift at effectiveDate. If nothing is
+  // currently active (e.g. we're between shifts, or before the day starts),
+  // fall back to the earliest upcoming shift across all modes so the dept
+  // column still renders with its next scheduled shift.
+  const nowMin = effectiveDate.getHours() * 60 + effectiveDate.getMinutes();
+  const startOf = (s: ShiftInfo): number | null => {
+    if (!s.time_range.includes("-")) return null;
+    const [a] = s.time_range.split("-").map((p) => p.trim());
+    return parseTimeMin(a);
+  };
   const waActiveModeCode: Record<string, ModeCode> = {};
   const waActiveShift: Record<string, ShiftInfo | null> = {};
   for (const wa of sortedWorkAreas) {
@@ -121,6 +129,23 @@ export function TVDisplay({
         break;
       }
     }
+
+    if (!chosenShift) {
+      let bestStart = Infinity;
+      for (const modeCode of modeCodes) {
+        const waShifts = workAreaShifts?.[wa.id]?.[modeCode] ?? [];
+        for (const s of waShifts) {
+          const start = startOf(s);
+          if (start === null) continue;
+          if (start >= nowMin && start < bestStart) {
+            bestStart = start;
+            chosenMode = modeCode;
+            chosenShift = s;
+          }
+        }
+      }
+    }
+
     waActiveModeCode[wa.id] = chosenMode;
     waActiveShift[wa.id] = chosenShift;
   }
@@ -159,37 +184,44 @@ export function TVDisplay({
     }
   }
 
-  const uniqueActiveModes = sortedWorkAreas
-    .map((wa) => {
-      const modeCode = waActiveModeCode[wa.id] ?? DEFAULT_MODE_CODE;
-      if (modeCode === DEFAULT_MODE_CODE) return null;
-      const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
-      return modeView ? { modeCode, label: modeView.label } : null;
-    })
-    .filter((m): m is { modeCode: ModeCode; label: string } => m !== null && m.modeCode !== "after_hog_break")
-    .filter((m, i, arr) => arr.findIndex((x) => x!.modeCode === m!.modeCode) === i);
+  const effectiveMin = effectiveDate.getHours() * 60 + effectiveDate.getMinutes();
+
+  // Per work area, if the current time falls inside the hog_break mode_view
+  // time window, compute remaining minutes and the after_hog_break start.
+  const getHogBreakStatus = (wa: WorkArea): { remainingMin: number; resumeAt: string | null } | null => {
+    const hogBreak = wa.mode_views?.find((mv) => mv.mode_code === "hog_break");
+    if (!hogBreak?.time_range) return null;
+    const parts = hogBreak.time_range.split("-").map((s) => s.trim());
+    if (parts.length !== 2) return null;
+    const startMin = parseTimeMin(parts[0]);
+    const endMin = parseTimeMin(parts[1]);
+    if (effectiveMin < startMin || effectiveMin > endMin) return null;
+    const afterHogBreak = wa.mode_views?.find((mv) => mv.mode_code === "after_hog_break");
+    let resumeAt: string | null = null;
+    if (afterHogBreak?.time_range) {
+      const ap = afterHogBreak.time_range.split("-").map((s) => s.trim());
+      if (ap.length === 2) resumeAt = ap[0];
+    }
+    return { remainingMin: Math.max(0, endMin - effectiveMin), resumeAt };
+  };
+
+  const formatRemaining = (min: number): string => {
+    if (min < 60) return `${min} min remaining`;
+    const hr = Math.floor(min / 60);
+    const m = min % 60;
+    return m > 0 ? `${hr} hr ${m} min remaining` : `${hr} hr remaining`;
+  };
 
   const fmt = (d: Date) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-  const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950">
-      {/* ── Header ── */}
-      <div className="flex shrink-0 items-center gap-4 bg-slate-900 px-6 py-3 border-b border-white/10">
-        <div className="flex items-center gap-5 shrink-0">
-          <span className="flex items-center gap-2 text-sm text-slate-300">
-            <svg className="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            {fmtDate(now)}
-          </span>
-          <span className="flex items-center gap-2 text-sm text-slate-300">
-            <svg className="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-            </svg>
-            {previewMode ? previewTime : fmt(now)}
-          </span>
-        </div>
+      {/* ── Collapsible header (slides; pushes content) ── */}
+      <div
+        className={`grid shrink-0 transition-[grid-template-rows] duration-300 ease-out ${headerOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex items-center gap-4 bg-slate-900 px-6 py-3 border-b border-white/10">
 
         <div className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-1">
           <button
@@ -208,12 +240,16 @@ export function TVDisplay({
 
         {previewMode && (
           <div className="flex shrink-0 items-center gap-2">
-            <input
-              type="time"
-              value={previewTime}
-              onChange={(e) => setPreviewTime(e.target.value)}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:border-white/40"
-            />
+            <div className="relative">
+              <Clock size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white" />
+              <TimePickerInput
+                value={previewTime}
+                onChange={setPreviewTime}
+                triggerClassName="w-30 rounded-lg border border-white/20 bg-white/10 pl-8 pr-3 py-1.5 text-center text-sm font-medium text-white hover:bg-white/15 focus:outline-none focus:border-white/40"
+                valueClassName="text-white"
+                placeholderClassName="text-white/60"
+              />
+            </div>
             <div className="flex items-center gap-1">
               {["06:00","08:00","10:00","12:00","14:00"].map((t) => (
                 <button
@@ -232,26 +268,8 @@ export function TVDisplay({
           </div>
         )}
 
-        <div className="flex flex-1 items-center justify-center gap-6">
-          <div className="flex flex-col items-center justify-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Current Shift</p>
-            <p className="text-3xl font-bold text-white leading-tight tracking-tight">
-              {activeShift?.time_range?.replace("-", "  –  ") ?? "—"}
-            </p>
-          </div>
-          {uniqueActiveModes.length > 0 && (
-            <div className="flex items-center gap-2">
-              {uniqueActiveModes.map((m) => (
-                <span
-                  key={m.modeCode}
-                  className="rounded-xl border border-white/20 bg-white/10 px-5 py-2 text-xl font-extrabold uppercase tracking-widest text-white/90"
-                >
-                  {m.label}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="flex flex-1 items-center justify-center" />
+
 
         <div className="flex items-center gap-3 shrink-0">
           <button
@@ -260,6 +278,21 @@ export function TVDisplay({
           >
             <Monitor size={14} />
             Admin View
+          </button>
+        </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Header toggle tab (overlay; reveals on hover, no flow space) ── */}
+      <div className="relative shrink-0">
+        <div className="group absolute inset-x-0 top-0 z-30 flex h-6 justify-center">
+          <button
+            onClick={() => setHeaderOpen((v) => !v)}
+            className="flex items-center justify-center rounded-b-md border border-t-0 border-white/10 bg-slate-900 px-3 py-0.5 text-white/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-slate-800 hover:text-white"
+            aria-label={headerOpen ? "Collapse header" : "Expand header"}
+          >
+            {headerOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
         </div>
       </div>
@@ -281,41 +314,48 @@ export function TVDisplay({
           if (!waShift) return [];
 
           return [(
-            <div key={wa.id} className="flex min-w-[180px] flex-1 flex-col border-r border-slate-200 last:border-r-0">
+            <div key={wa.id} className="flex min-w-[180px] flex-1 flex-col border-r border-slate-800 last:border-r-0">
               <div
-                className="shrink-0 flex items-center justify-center gap-2 px-3 py-2"
+                className="shrink-0 flex h-24 flex-col items-center justify-center gap-1 px-3"
                 style={{ backgroundColor: wa.color_hex ?? "#1e293b" }}
               >
-                <span className="text-white/80 shrink-0">{DEPT_ICONS[wa.name] ?? <Package size={13} />}</span>
-                <span className="text-sm font-bold uppercase tracking-widest text-white truncate">{wa.name}</span>
-              </div>
-
-              <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-1" style={{ backgroundColor: wa.color_hex ? `${wa.color_hex}99` : "#1e293b" }}>
-                {loanedOutByWaId[wa.id]?.length > 0 && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-white/80">
-                    ↑ {loanedOutByWaId[wa.id].length} Loaned Out
-                  </span>
-                )}
-                {loanedInByWaId[wa.id]?.length > 0 && (
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-blue-300/90">
-                    ↓ {loanedInByWaId[wa.id].length} Support In
-                  </span>
-                )}
-                {!loanedOutByWaId[wa.id]?.length && !loanedInByWaId[wa.id]?.length && (
-                  <span className="text-[10px] text-transparent select-none">·</span>
-                )}
-              </div>
-
-              <div className="flex shrink-0 border-b border-slate-300">
-                <div className="w-[45%] shrink-0 px-3 py-1.5 bg-slate-300">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Station</span>
+                <div className="flex h-5 items-center justify-center gap-2">
+                  <span className="text-white/80 shrink-0">{DEPT_ICONS[wa.name] ?? <Package size={13} />}</span>
+                  <span className="text-base font-bold uppercase tracking-widest text-white truncate">{wa.name}</span>
                 </div>
-                <div className="flex-1 bg-slate-300 px-3 py-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Employee</span>
+                {waShift.time_range && (
+                  <div className="flex h-5 items-center justify-center">
+                    <span className="text-sm font-normal tracking-wide text-white/80">
+                      {waShift.time_range.replace("-", " – ")}
+                    </span>
+                  </div>
+                )}
+                {(loanedInByWaId[wa.id]?.length > 0 || loanedOutByWaId[wa.id]?.length > 0) && (
+                  <div className="flex h-5 items-center justify-center gap-3">
+                    {loanedOutByWaId[wa.id]?.length > 0 && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                        ↑ {loanedOutByWaId[wa.id].length} LOANED OUT
+                      </span>
+                    )}
+                    {loanedInByWaId[wa.id]?.length > 0 && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400/80">
+                        ↓ {loanedInByWaId[wa.id].length} SUPPORT IN
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex h-6 shrink-0 border-b border-slate-800">
+                <div className="flex w-[45%] shrink-0 items-center px-3 bg-slate-900">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Station</span>
+                </div>
+                <div className="flex flex-1 items-center bg-slate-900 px-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Employee</span>
                 </div>
               </div>
 
-              <AutoScrollRows style={{ background: `linear-gradient(to right, #f8fafc 45%, white 45%)` }}>
+              <AutoScrollRows style={{ background: "#0b1220" }}>
                 {waStations.map((station) => {
                   const stationAsgns = assignments.filter(
                     (a) => a.shift_code === waShift.code && a.station_id === station.id && a.mode_code === activeModeCode
@@ -327,19 +367,19 @@ export function TVDisplay({
                   return (
                     <div
                       key={station.id}
-                      className="flex items-stretch border-b border-slate-300 last:border-b-0"
+                      className="flex items-stretch border-b border-slate-800 last:border-b-0"
                     >
                       <div className="flex w-[45%] shrink-0 flex-col justify-start px-3 py-2">
-                        <span className="truncate text-xs text-slate-500">{station.name}</span>
+                        <span className="truncate text-xs text-slate-300">{station.name}</span>
                         {assignedEmps.length > 1 && (
-                          <span className="text-[10px] text-slate-400">{assignedEmps.length} people</span>
+                          <span className="text-[10px] text-slate-500">{assignedEmps.length} people</span>
                         )}
                       </div>
-                      <div className="flex min-w-0 flex-1 flex-col bg-white">
+                      <div className="flex min-w-0 flex-1 flex-col">
                         {assignedEmps.length === 0 ? (
                           <span className="flex items-center gap-1.5 px-3 py-2">
                             <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                            <span className="text-xs font-semibold text-red-500">Unassigned</span>
+                            <span className="text-xs font-semibold text-red-400">Unassigned</span>
                           </span>
                         ) : (
                           assignedEmps.map(({ asgn, emp }) => {
@@ -359,17 +399,17 @@ export function TVDisplay({
                                 <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
                                 {!isUnavailableEmp ? (
                                   <>
-                                    <span className="truncate text-xs font-semibold text-slate-800">{emp.full_name}</span>
+                                    <span className="truncate text-xs font-semibold text-slate-100">{emp.full_name}</span>
                                     <span className="ml-auto flex shrink-0 items-center gap-1">
                                       {isLoanedIn && emp.homeDepartmentId && (
-                                        <span className="rounded border border-blue-200 bg-blue-50 px-1 py-px text-[9px] text-blue-600">
+                                        <span className="rounded border border-blue-400/30 bg-blue-500/15 px-1 py-px text-[9px] text-blue-300">
                                           {abbrevDept(workAreas.find((w) => w.id === emp.homeDepartmentId)?.name ?? emp.homeDepartmentId)}
                                         </span>
                                       )}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-xs font-semibold text-red-500">Unassigned</span>
+                                  <span className="text-xs font-semibold text-red-400">Unassigned</span>
                                 )}
                               </span>
                             );
@@ -385,6 +425,22 @@ export function TVDisplay({
         })}
       </div>
 
+      {/* ── Hog Break banner (global, just above footer) ── */}
+      {(() => {
+        const hogBreakWa = sortedWorkAreas.find((wa) => getHogBreakStatus(wa));
+        const status = hogBreakWa ? getHogBreakStatus(hogBreakWa) : null;
+        if (!status) return null;
+        return (
+          <div className="flex shrink-0 items-center justify-center gap-2 bg-linear-to-r from-indigo-950/90 via-indigo-700/70 to-indigo-950/90 px-6 py-1 text-xs font-semibold text-indigo-100">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-300" />
+            <span className="tracking-wide">
+              HOG BREAK · {formatRemaining(status.remainingMin)}
+              {status.resumeAt ? ` · resumes ${status.resumeAt}` : ""}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* ── Footer ── */}
       <div className="flex shrink-0 items-center justify-between border-t border-white/10 bg-slate-900 px-6 py-7">
         <div className="flex items-center gap-3">
@@ -395,11 +451,6 @@ export function TVDisplay({
           <span className="text-xl text-slate-300">{announcement}</span>
         </div>
         <div className="flex items-center gap-6 text-sm text-slate-400 shrink-0">
-          {nextShift && (
-            <span>
-              Next Shift <span className="font-semibold text-white">{nextShift.time_range}</span>
-            </span>
-          )}
           <span>
             Last Updated <span className="font-semibold text-white">{fmt(now)}</span>
           </span>
