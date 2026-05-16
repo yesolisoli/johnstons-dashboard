@@ -11,7 +11,7 @@ import {
   mockWorkDate,
 } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
-import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView } from "../types";
+import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView, WorkAreaShiftMap } from "../types";
 import { DEFAULT_STATUS_CONFIGS, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "../components/status-select";
 import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds, hasNullStationAssignment, DEPT_ONLY_SHIFT_CODE } from "../utils";
 import {
@@ -48,6 +48,21 @@ import {
 } from "../supabase";
 import { useStatusConfigs } from "./use-status-configs";
 
+function buildSeedShiftMap(workAreas: WorkArea[], template: ShiftInfo[]): WorkAreaShiftMap {
+  const map: WorkAreaShiftMap = {};
+  for (const wa of workAreas) {
+    const modeCodes: ModeCode[] = wa.mode_views?.length
+      ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
+      : [DEFAULT_MODE_CODE];
+    const perMode = {} as Record<ModeCode, ShiftInfo[]>;
+    for (const modeCode of modeCodes) {
+      perMode[modeCode] = template.map((s) => ({ ...s }));
+    }
+    map[wa.id] = perMode;
+  }
+  return map;
+}
+
 export function useAssignmentBoardData() {
   const supabaseReadEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const {
@@ -75,10 +90,8 @@ export function useAssignmentBoardData() {
   const [assignments, setAssignmentsState] = useState<StationAssignment[]>(supabaseReadEnabled ? [] : mockAssignments);
   const [stations, setStations] = useState<Station[]>(supabaseReadEnabled ? [] : mockStations);
   const [workAreas, setWorkAreas] = useState<WorkArea[]>(supabaseReadEnabled ? [] : mockWorkAreas);
-  const [workAreaShifts, setWorkAreaShifts] = useState<Record<string, ShiftInfo[]>>(() =>
-    supabaseReadEnabled
-      ? {}
-      : Object.fromEntries(mockWorkAreas.map((wa) => [wa.id, [...mockShifts]]))
+  const [workAreaShifts, setWorkAreaShifts] = useState<WorkAreaShiftMap>(() =>
+    supabaseReadEnabled ? {} : buildSeedShiftMap(mockWorkAreas, mockShifts),
   );
   const [selectedWorkAreaId, setSelectedWorkAreaId] = useState<string>(supabaseReadEnabled ? "" : getDefaultSelectedWorkAreaId());
   const persistedEmployeeIdsRef = useRef<Set<string>>(new Set(supabaseReadEnabled ? [] : mockEmployees.map((employee) => employee.id)));
@@ -106,7 +119,7 @@ export function useAssignmentBoardData() {
         setAssignmentsState(mockAssignments);
         setStations(mockStations);
         setWorkAreas(mockWorkAreas);
-        setWorkAreaShifts(Object.fromEntries(mockWorkAreas.map((wa) => [wa.id, [...mockShifts]])));
+        setWorkAreaShifts(buildSeedShiftMap(mockWorkAreas, mockShifts));
         setStatusConfigs(DEFAULT_STATUS_CONFIGS);
         persistedEmployeeIdsRef.current = new Set(mockEmployees.map((employee) => employee.id));
         setSelectedWorkAreaId(getDefaultSelectedWorkAreaId());
@@ -231,8 +244,12 @@ export function useAssignmentBoardData() {
       .map(([id]) => id),
   );
 
-  // Shift template used when seeding a newly created work area
-  const defaultShiftTemplate: ShiftInfo[] = workAreaShifts[workAreas[0]?.id] ?? [...mockShifts];
+  // Shift template used when seeding a newly created work area. Pull any mode's
+  // shift list from the first existing work area; all modes carry the same
+  // template entries, so any one of them works as the seed.
+  const firstWaShifts = workAreaShifts[workAreas[0]?.id];
+  const firstWaTemplate = firstWaShifts ? Object.values(firstWaShifts)[0] : undefined;
+  const defaultShiftTemplate: ShiftInfo[] = firstWaTemplate ?? [...mockShifts];
 
   const handleAdd = (emp: Employee) => {
     const qualificationIds = Array.from(
@@ -476,8 +493,8 @@ export function useAssignmentBoardData() {
   ) => {
     if (disabledIds.has(employeeId)) return;
     const wa = workAreas.find((w) => w.id === workAreaId);
-    const resolvedShift: ShiftCode = shiftCode ?? workAreaShifts[workAreaId]?.[0]?.code ?? DEPT_ONLY_SHIFT_CODE;
     const resolvedMode: ModeCode = modeCode ?? (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
+    const resolvedShift: ShiftCode = shiftCode ?? workAreaShifts[workAreaId]?.[resolvedMode]?.[0]?.code ?? DEPT_ONLY_SHIFT_CODE;
     if (hasNullStationAssignment(employeeId, workAreaId, assignments)) return;
     const newAssignment: StationAssignment = {
       id: `a_${crypto.randomUUID()}`,
@@ -522,28 +539,37 @@ export function useAssignmentBoardData() {
   const handleQuickAssign = (employeeId: string, stationId: string) => {
     const station = stations.find((s) => s.id === stationId);
     const wa = workAreas.find((w) => w.id === station?.work_area_id);
-    const defaultMode: ModeCode = (wa?.mode_views?.[0]?.mode_code as ModeCode) ?? DEFAULT_MODE_CODE;
-    const defaultShiftCode = workAreaShifts[wa?.id ?? ""]?.[0]?.code;
+    const resolvedMode: ModeCode =
+      (station?.mode_code as ModeCode | undefined) ??
+      (wa?.mode_views?.[0]?.mode_code as ModeCode) ??
+      DEFAULT_MODE_CODE;
+    const defaultShiftCode = workAreaShifts[wa?.id ?? ""]?.[resolvedMode]?.[0]?.code;
     if (!defaultShiftCode) return;
-    handleAssign(employeeId, stationId, defaultShiftCode, defaultMode);
+    handleAssign(employeeId, stationId, defaultShiftCode, resolvedMode);
   };
 
-  const handleDeleteShift = (workAreaId: string, code: ShiftCode) => {
+  const handleDeleteShift = (workAreaId: string, modeCode: ModeCode, code: ShiftCode) => {
     const stationIds = new Set(stations.filter((s) => s.work_area_id === workAreaId).map((s) => s.id));
-    const assignmentIdsToDelete = assignments
-      .filter((a) => a.station_id !== null && stationIds.has(a.station_id) && a.shift_code === code)
-      .map((a) => a.id);
+    const isOrphanedAssignment = (a: StationAssignment) =>
+      a.station_id !== null &&
+      stationIds.has(a.station_id) &&
+      a.shift_code === code &&
+      a.mode_code === modeCode;
+    const assignmentIdsToDelete = assignments.filter(isOrphanedAssignment).map((a) => a.id);
 
     setWorkAreaShifts((prev) => ({
       ...prev,
-      [workAreaId]: (prev[workAreaId] ?? []).filter((s) => s.code !== code),
+      [workAreaId]: {
+        ...(prev[workAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+        [modeCode]: (prev[workAreaId]?.[modeCode] ?? []).filter((s) => s.code !== code),
+      },
     }));
-    setAssignments((prev) => prev.filter((a) => !(a.station_id !== null && stationIds.has(a.station_id) && a.shift_code === code)));
+    setAssignments((prev) => prev.filter((a) => !isOrphanedAssignment(a)));
 
     void (async () => {
       try {
         await deleteAssignmentsByIds(assignmentIdsToDelete);
-        await deleteWorkAreaShiftRecord({ workAreaId, code });
+        await deleteWorkAreaShiftRecord({ workAreaId, modeCode, code });
       } catch (error) {
         console.error("[assignment-board] Failed to delete shift:", error);
         void restoreShiftsFromDb("handleDeleteShift");
@@ -552,18 +578,22 @@ export function useAssignmentBoardData() {
     })();
   };
 
-  const handleUpdateShift = (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => {
+  const handleUpdateShift = (workAreaId: string, modeCode: ModeCode, code: ShiftCode, label: string, startTime: string, endTime: string) => {
     const timeRange = startTime && endTime ? `${startTime}-${endTime}` : "";
 
     setWorkAreaShifts((prev) => ({
       ...prev,
-      [workAreaId]: (prev[workAreaId] ?? []).map((s) =>
-        s.code === code ? { ...s, label, time_range: timeRange } : s,
-      ),
+      [workAreaId]: {
+        ...(prev[workAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+        [modeCode]: (prev[workAreaId]?.[modeCode] ?? []).map((s) =>
+          s.code === code ? { ...s, label, time_range: timeRange } : s,
+        ),
+      },
     }));
 
     void updateWorkAreaShiftRecord({
       workAreaId,
+      modeCode,
       code,
       label,
       timeRange,
@@ -573,22 +603,23 @@ export function useAssignmentBoardData() {
     });
   };
 
-  const handleAddShift = (workAreaId: string, label: string, startTime: string, endTime: string) => {
+  const handleAddShift = (workAreaId: string, modeCode: ModeCode, label: string, startTime: string, endTime: string) => {
     const code = `shift_${crypto.randomUUID()}`;
     const timeRange = startTime && endTime ? `${startTime}-${endTime}` : "";
     const nextShift: ShiftInfo = { code, label, time_range: timeRange };
 
     setWorkAreaShifts((prev) => ({
       ...prev,
-      [workAreaId]: [
-        ...(prev[workAreaId] ?? []),
-        nextShift,
-      ],
+      [workAreaId]: {
+        ...(prev[workAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+        [modeCode]: [...(prev[workAreaId]?.[modeCode] ?? []), nextShift],
+      },
     }));
 
-    const displayOrder = (workAreaShifts[workAreaId] ?? []).length + 1;
+    const displayOrder = (workAreaShifts[workAreaId]?.[modeCode] ?? []).length + 1;
     void insertWorkAreaShift({
       workAreaId,
+      modeCode,
       code,
       label,
       timeRange,
@@ -599,11 +630,14 @@ export function useAssignmentBoardData() {
     });
 
     stations
-      .filter((s) => s.work_area_id === workAreaId && s.defaultEmployeeId)
+      .filter((s) => {
+        if (s.work_area_id !== workAreaId || !s.defaultEmployeeId) return false;
+        const stationMode: ModeCode = (s.mode_code as ModeCode | undefined) ?? DEFAULT_MODE_CODE;
+        return stationMode === modeCode;
+      })
       .forEach((s) => {
-        const mode: ModeCode = s.mode_code ?? DEFAULT_MODE_CODE;
-        if (!assignments.some((a) => a.station_id === s.id && a.shift_code === code && a.mode_code === mode)) {
-          handleAssign(s.defaultEmployeeId!, s.id, code, mode);
+        if (!assignments.some((a) => a.station_id === s.id && a.shift_code === code && a.mode_code === modeCode)) {
+          handleAssign(s.defaultEmployeeId!, s.id, code, modeCode);
         }
       });
   };
@@ -752,8 +786,15 @@ export function useAssignmentBoardData() {
       mode_views: modeViews.length ? modeViews : undefined,
     };
     setWorkAreas((prev) => [...prev, newWa]);
-    setWorkAreaShifts((prev) => ({ ...prev, [newId]: [...defaultShiftTemplate] }));
     const hasModes = modeViews.length > 0;
+    const seedModeCodes: ModeCode[] = hasModes
+      ? (modeViews.map((mv) => mv.mode_code) as ModeCode[])
+      : [DEFAULT_MODE_CODE];
+    const seedPerMode = {} as Record<ModeCode, ShiftInfo[]>;
+    for (const modeCode of seedModeCodes) {
+      seedPerMode[modeCode] = defaultShiftTemplate.map((s) => ({ ...s }));
+    }
+    setWorkAreaShifts((prev) => ({ ...prev, [newId]: seedPerMode }));
     const defaultStations: Station[] = hasModes
       ? modeViews.flatMap((mv) =>
           ["Station 1", "Station 2", "Station 3"].map((stName, i) => ({
@@ -794,14 +835,17 @@ export function useAssignmentBoardData() {
           })),
         });
 
-        for (const [index, shift] of defaultShiftTemplate.entries()) {
-          await insertWorkAreaShift({
-            workAreaId: newId,
-            code: shift.code,
-            label: shift.label,
-            timeRange: shift.time_range,
-            displayOrder: index + 1,
-          });
+        for (const modeCode of seedModeCodes) {
+          for (const [index, shift] of defaultShiftTemplate.entries()) {
+            await insertWorkAreaShift({
+              workAreaId: newId,
+              modeCode,
+              code: shift.code,
+              label: shift.label,
+              timeRange: shift.time_range,
+              displayOrder: index + 1,
+            });
+          }
         }
 
         for (const station of defaultStations) {
@@ -921,8 +965,8 @@ export function useAssignmentBoardData() {
     }
 
     if (params.defaultEmployeeId) {
-      const modeCode: ModeCode = station.mode_code ?? DEFAULT_MODE_CODE;
-      const shifts = workAreaShifts[station.work_area_id] ?? [];
+      const modeCode: ModeCode = (station.mode_code as ModeCode | undefined) ?? DEFAULT_MODE_CODE;
+      const shifts = workAreaShifts[station.work_area_id]?.[modeCode] ?? [];
       const empId = params.defaultEmployeeId;
       const existingStationAssignments = assignments.filter((a) => a.station_id === stationId);
       const nextDefaultAssignments: StationAssignment[] = shifts.map((shift) => ({
@@ -975,7 +1019,7 @@ export function useAssignmentBoardData() {
     const stationId = `st_${crypto.randomUUID()}`;
     const wa = workAreas.find((w) => w.id === params.workAreaId);
     const hasModes = !!(wa?.mode_views?.length);
-    const currentShifts = workAreaShifts[params.workAreaId] ?? [];
+    const currentShifts = workAreaShifts[params.workAreaId]?.[params.modeCode] ?? [];
     const displayOrder =
       stations.filter(
         (s) => s.work_area_id === params.workAreaId && (!hasModes || s.mode_code === params.modeCode),
@@ -1024,7 +1068,7 @@ export function useAssignmentBoardData() {
 
   const handleStationsChange = (next: Station[]) => setStations(next);
   const handleWorkAreasChange = (next: WorkArea[]) => setWorkAreas(next);
-  const handleWorkAreaShiftsChange = (next: Record<string, ShiftInfo[]>) => setWorkAreaShifts(next);
+  const handleWorkAreaShiftsChange = (next: WorkAreaShiftMap) => setWorkAreaShifts(next);
   const handleWorkAreaChange = (id: string) => setSelectedWorkAreaId(id);
   const handleAnnouncementChange = (text: string) => setAnnouncement(text);
 

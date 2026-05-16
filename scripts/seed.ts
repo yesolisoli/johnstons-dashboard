@@ -141,15 +141,21 @@ function buildModeViewRows() {
 }
 
 function buildShiftRows() {
-  return mockWorkAreas.flatMap((wa) =>
-    mockShifts.map((shift, index) => ({
-      work_area_id: wa.id,
-      code: shift.code,
-      label: shift.label,
-      time_range: shift.time_range,
-      display_order: index + 1,
-    })),
-  );
+  return mockWorkAreas.flatMap((wa) => {
+    const modeCodes = wa.mode_views?.length
+      ? wa.mode_views.map((mv) => mv.mode_code)
+      : ["normal"];
+    return modeCodes.flatMap((modeCode) =>
+      mockShifts.map((shift, index) => ({
+        work_area_id: wa.id,
+        mode_code: modeCode,
+        code: shift.code,
+        label: shift.label,
+        time_range: shift.time_range,
+        display_order: index + 1,
+      })),
+    );
+  });
 }
 
 function buildStatusConfigRows() {
@@ -230,7 +236,7 @@ async function seedModeViews(supabase: SeedClient) {
 }
 
 async function seedShifts(supabase: SeedClient) {
-  await upsertRows(supabase, "work_area_shifts", buildShiftRows(), "work_area_id,code");
+  await upsertRows(supabase, "work_area_shifts", buildShiftRows(), "work_area_id,mode_code,code");
 }
 
 async function seedStatusConfigs(supabase: SeedClient) {
@@ -267,7 +273,10 @@ async function seedStationAssignments(supabase: SeedClient) {
 
 async function verifyCounts(supabase: SeedClient) {
   const expectedModeViews = mockWorkAreas.reduce((sum, wa) => sum + (wa.mode_views?.length ?? 0), 0);
-  const expectedShifts = mockWorkAreas.length * mockShifts.length;
+  const expectedShifts = mockWorkAreas.reduce(
+    (sum, wa) => sum + (wa.mode_views?.length ?? 1) * mockShifts.length,
+    0,
+  );
   const expectedStatusConfigs = DEFAULT_STATUS_CONFIGS.filter((cfg) => cfg.code !== STATUS_CODE_ASSIGNED).length;
   const expectedQualifiedRows = mockEmployees.reduce((sum, emp) => sum + emp.qualifiedDepartmentIds.length, 0);
 

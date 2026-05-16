@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
-import type { Employee, EmployeeStatus, ShiftInfo, Station, StationAssignment, WorkArea } from "../types";
+import type { Employee, EmployeeStatus, ModeCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaShiftMap } from "../types";
 import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, getNextShift } from "../utils";
 import { getUnavailableStatusCodes, type StatusConfig } from "./status-select";
 
@@ -61,7 +61,7 @@ export function TVDisplay({
   stations: Station[];
   workAreas: WorkArea[];
   shifts?: ShiftInfo[];
-  workAreaShifts?: Record<string, ShiftInfo[]>;
+  workAreaShifts?: WorkAreaShiftMap;
   statusConfigs: StatusConfig[];
   announcement?: string;
   onClose: () => void;
@@ -100,20 +100,31 @@ export function TVDisplay({
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 
+  // Shifts are mode-scoped, so the "active mode" depends on which mode has a
+  // shift covering the current time. We pick the first declared mode whose
+  // shift list yields an active shift at effectiveDate.
+  const waActiveModeCode: Record<string, ModeCode> = {};
   const waActiveShift: Record<string, ShiftInfo | null> = {};
   for (const wa of sortedWorkAreas) {
-    const waShifts = workAreaShifts?.[wa.id] ?? shifts;
-    waActiveShift[wa.id] = getActiveShift(waShifts, effectiveDate);
+    const modeCodes: ModeCode[] = wa.mode_views?.length
+      ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
+      : [DEFAULT_MODE_CODE];
+
+    let chosenMode: ModeCode = modeCodes[0] ?? DEFAULT_MODE_CODE;
+    let chosenShift: ShiftInfo | null = null;
+    for (const modeCode of modeCodes) {
+      const waShifts = workAreaShifts?.[wa.id]?.[modeCode] ?? shifts;
+      const active = getActiveShift(waShifts, effectiveDate);
+      if (active) {
+        chosenMode = modeCode;
+        chosenShift = active;
+        break;
+      }
+    }
+    waActiveModeCode[wa.id] = chosenMode;
+    waActiveShift[wa.id] = chosenShift;
   }
   const anyWaActive = Object.values(waActiveShift).some((s) => s !== null);
-
-  const waActiveModeCode: Record<string, string> = {};
-  for (const wa of sortedWorkAreas) {
-    const codes = wa.mode_views?.map((mv) => mv.mode_code) ?? [];
-    if (codes.includes("hog_break")) waActiveModeCode[wa.id] = "hog_break";
-    else if (codes.includes("after_hog_break")) waActiveModeCode[wa.id] = "after_hog_break";
-    else waActiveModeCode[wa.id] = codes[0] ?? DEFAULT_MODE_CODE;
-  }
 
   const activeEmployees = employees.filter((e) => e.active);
   const activeAssignments = assignments.filter((a) => {
@@ -155,8 +166,8 @@ export function TVDisplay({
       const modeView = wa.mode_views?.find((mv) => mv.mode_code === modeCode);
       return modeView ? { modeCode, label: modeView.label } : null;
     })
-    .filter((m): m is { modeCode: string; label: string } => m !== null && m.modeCode !== "after_hog_break")
-    .filter((m, i, arr) => arr.findIndex((x) => x.modeCode === m.modeCode) === i);
+    .filter((m): m is { modeCode: ModeCode; label: string } => m !== null && m.modeCode !== "after_hog_break")
+    .filter((m, i, arr) => arr.findIndex((x) => x!.modeCode === m!.modeCode) === i);
 
   const fmt = (d: Date) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
   const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

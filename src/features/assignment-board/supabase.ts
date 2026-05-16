@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 
 import { DEFAULT_STATUS_CONFIGS, STATUS_CODE_ASSIGNED, type StatusConfig } from "./components/status-select";
 import { mockStations, mockWorkAreas } from "./mock-data";
-import type { Employee, EmployeeStatus, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView } from "./types";
+import { DEFAULT_MODE_CODE, type Employee, type EmployeeStatus, type ModeCode, type ShiftCode, type ShiftInfo, type Station, type StationAssignment, type WorkArea, type WorkAreaModeView, type WorkAreaShiftMap } from "./types";
 import { DEPT_ONLY_SHIFT_CODE } from "./utils";
 
 type WorkAreaRow = {
@@ -24,6 +24,7 @@ type WorkAreaModeViewRow = {
 
 type WorkAreaShiftRow = {
   work_area_id: string;
+  mode_code: string;
   code: string;
   label: string;
   time_range: string;
@@ -86,7 +87,7 @@ export type AssignmentBoardSnapshot = {
   assignments: StationAssignment[];
   stations: Station[];
   workAreas: WorkArea[];
-  workAreaShifts: Record<string, ShiftInfo[]>;
+  workAreaShifts: WorkAreaShiftMap;
   statusConfigs: StatusConfig[];
 };
 
@@ -200,22 +201,33 @@ function buildWorkAreas(
 function buildWorkAreaShifts(
   workAreas: WorkArea[],
   shiftRows: WorkAreaShiftRow[],
-): Record<string, ShiftInfo[]> {
-  const shiftsByWorkArea = new Map<string, ShiftInfo[]>();
+): WorkAreaShiftMap {
+  const shiftsByKey = new Map<string, ShiftInfo[]>();
+  const keyFor = (workAreaId: string, modeCode: string) => `${workAreaId}::${modeCode}`;
 
   for (const row of shiftRows) {
-    const current = shiftsByWorkArea.get(row.work_area_id) ?? [];
+    const key = keyFor(row.work_area_id, row.mode_code);
+    const current = shiftsByKey.get(key) ?? [];
     current.push({
       code: row.code,
       label: row.label,
       time_range: row.time_range,
     });
-    shiftsByWorkArea.set(row.work_area_id, current);
+    shiftsByKey.set(key, current);
   }
 
-  return Object.fromEntries(
-    workAreas.map((wa) => [wa.id, shiftsByWorkArea.get(wa.id) ?? []]),
-  );
+  const result: WorkAreaShiftMap = {};
+  for (const wa of workAreas) {
+    const modeCodes: ModeCode[] = wa.mode_views?.length
+      ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
+      : [DEFAULT_MODE_CODE];
+    const perMode: Record<ModeCode, ShiftInfo[]> = {} as Record<ModeCode, ShiftInfo[]>;
+    for (const modeCode of modeCodes) {
+      perMode[modeCode] = shiftsByKey.get(keyFor(wa.id, modeCode)) ?? [];
+    }
+    result[wa.id] = perMode;
+  }
+  return result;
 }
 
 function buildEmployees(
@@ -325,12 +337,13 @@ async function fetchAssignmentsForDate(workDate: string): Promise<StationAssignm
   return buildAssignments((data ?? []) as StationAssignmentRow[]);
 }
 
-async function fetchWorkAreaShiftsSnapshot(workAreas: WorkArea[]): Promise<Record<string, ShiftInfo[]>> {
+async function fetchWorkAreaShiftsSnapshot(workAreas: WorkArea[]): Promise<WorkAreaShiftMap> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("work_area_shifts")
-    .select("work_area_id, code, label, time_range, display_order")
+    .select("work_area_id, mode_code, code, label, time_range, display_order")
     .order("work_area_id", { ascending: true })
+    .order("mode_code", { ascending: true })
     .order("display_order", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -373,7 +386,7 @@ export async function refetchStationsSnapshot(localOverlayStations: Station[] = 
   return fetchStationsSnapshot(localOverlayStations);
 }
 
-export async function refetchWorkAreaShiftsSnapshot(workAreas: WorkArea[]): Promise<Record<string, ShiftInfo[]>> {
+export async function refetchWorkAreaShiftsSnapshot(workAreas: WorkArea[]): Promise<WorkAreaShiftMap> {
   return fetchWorkAreaShiftsSnapshot(workAreas);
 }
 
@@ -573,6 +586,7 @@ export async function insertStation(params: {
 
 export async function insertWorkAreaShift(params: {
   workAreaId: string;
+  modeCode: ModeCode;
   code: string;
   label: string;
   timeRange: string;
@@ -583,6 +597,7 @@ export async function insertWorkAreaShift(params: {
     .from("work_area_shifts")
     .insert({
       work_area_id: params.workAreaId,
+      mode_code: params.modeCode,
       code: params.code,
       label: params.label,
       time_range: params.timeRange,
@@ -594,6 +609,7 @@ export async function insertWorkAreaShift(params: {
 
 export async function updateWorkAreaShiftRecord(params: {
   workAreaId: string;
+  modeCode: ModeCode;
   code: string;
   label?: string;
   timeRange?: string;
@@ -609,6 +625,7 @@ export async function updateWorkAreaShiftRecord(params: {
     .from("work_area_shifts")
     .update(updates)
     .eq("work_area_id", params.workAreaId)
+    .eq("mode_code", params.modeCode)
     .eq("code", params.code);
 
   if (error) throw new Error(error.message);
@@ -616,6 +633,7 @@ export async function updateWorkAreaShiftRecord(params: {
 
 export async function deleteWorkAreaShiftRecord(params: {
   workAreaId: string;
+  modeCode: ModeCode;
   code: string;
 }): Promise<void> {
   const supabase = createClient();
@@ -623,6 +641,7 @@ export async function deleteWorkAreaShiftRecord(params: {
     .from("work_area_shifts")
     .delete()
     .eq("work_area_id", params.workAreaId)
+    .eq("mode_code", params.modeCode)
     .eq("code", params.code);
 
   if (error) throw new Error(error.message);
@@ -938,8 +957,9 @@ export async function fetchAssignmentBoardSnapshot(
         .order("display_order", { ascending: true }),
       supabase
         .from("work_area_shifts")
-        .select("work_area_id, code, label, time_range, display_order")
+        .select("work_area_id, mode_code, code, label, time_range, display_order")
         .order("work_area_id", { ascending: true })
+        .order("mode_code", { ascending: true })
         .order("display_order", { ascending: true }),
       supabase
         .from("status_configs")

@@ -19,6 +19,7 @@ import type {
   StationAssignment,
   WorkArea,
   WorkAreaModeView,
+  WorkAreaShiftMap,
 } from "../types";
 import { getAssignmentWorkAreaId } from "../utils";
 import { AssignmentCell } from "./assignment-cell";
@@ -27,7 +28,7 @@ import { ShiftModal } from "./modals/shift-modal";
 import { StationModal } from "./modals/station-modal";
 import { WorkAreaModal } from "./modals/work-area-modal";
 
-export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, defaultShifts: defaultShiftsProp, onEmployeeDoubleClick, statusConfigs }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: Record<string, ShiftInfo[]>; onWorkAreaShiftsChange?: (v: Record<string, ShiftInfo[]>) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; defaultShifts?: ShiftInfo[]; onEmployeeDoubleClick?: (name: string) => void; statusConfigs?: StatusConfig[] } = {}) {
+export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, defaultShifts: defaultShiftsProp, onEmployeeDoubleClick, statusConfigs }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, modeCode: ModeCode, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, modeCode: ModeCode, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, modeCode: ModeCode, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: WorkAreaShiftMap; onWorkAreaShiftsChange?: (v: WorkAreaShiftMap) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; defaultShifts?: ShiftInfo[]; onEmployeeDoubleClick?: (name: string) => void; statusConfigs?: StatusConfig[] } = {}) {
   const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
@@ -42,11 +43,20 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setLocalStations(next);
     onStationsChange?.(next);
   };
-  const [localWorkAreaShifts, setLocalWorkAreaShifts] = useState<Record<string, ShiftInfo[]>>(() =>
-    Object.fromEntries(mockWorkAreas.map((wa) => [wa.id, [...mockShifts]])),
-  );
+  const [localWorkAreaShifts, setLocalWorkAreaShifts] = useState<WorkAreaShiftMap>(() => {
+    const seed: WorkAreaShiftMap = {};
+    for (const wa of mockWorkAreas) {
+      const modeCodes: ModeCode[] = wa.mode_views?.length
+        ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
+        : [DEFAULT_MODE_CODE];
+      const perMode = {} as Record<ModeCode, ShiftInfo[]>;
+      for (const modeCode of modeCodes) perMode[modeCode] = mockShifts.map((s) => ({ ...s }));
+      seed[wa.id] = perMode;
+    }
+    return seed;
+  });
   const workAreaShifts = workAreaShiftsProp ?? localWorkAreaShifts;
-  const setWorkAreaShifts = (updater: Record<string, ShiftInfo[]> | ((prev: Record<string, ShiftInfo[]>) => Record<string, ShiftInfo[]>)) => {
+  const setWorkAreaShifts = (updater: WorkAreaShiftMap | ((prev: WorkAreaShiftMap) => WorkAreaShiftMap)) => {
     const next = typeof updater === "function" ? updater(workAreaShifts) : updater;
     setLocalWorkAreaShifts(next);
     onWorkAreaShiftsChange?.(next);
@@ -92,7 +102,24 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
   const selectedWorkArea = workAreas.find((wa) => wa.id === selectedWorkAreaId) ?? workAreas[0];
   const hasModes = !!selectedWorkArea?.mode_views?.length;
-  const currentShifts = workAreaShifts[selectedWorkAreaId] ?? [];
+  // Shifts are scoped by (workAreaId, modeCode). Non-moded work areas store
+  // their shifts under DEFAULT_MODE_CODE. For moded work areas, `selectedMode`
+  // may not yet match this work area's modes (e.g. on first mount, before any
+  // tab click) — in that case, resolve to the work area's first declared mode.
+  const waModeCodes = (selectedWorkArea?.mode_views?.map((mv) => mv.mode_code) ?? []) as ModeCode[];
+  const currentModeCode: ModeCode = hasModes
+    ? (waModeCodes.includes(selectedMode) ? selectedMode : (waModeCodes[0] ?? DEFAULT_MODE_CODE))
+    : DEFAULT_MODE_CODE;
+  const currentShifts: ShiftInfo[] = workAreaShifts[selectedWorkAreaId]?.[currentModeCode] ?? [];
+
+  // TEMP DIAGNOSTIC — remove after verifying shift columns render
+  console.log("[assignment-grid] shift lookup", {
+    selectedWorkAreaId,
+    selectedMode,
+    currentModeCode,
+    waModeKeys: Object.keys(workAreaShifts[selectedWorkAreaId] ?? {}),
+    currentShifts,
+  });
 
   const computeNextShiftDefaults = (): { startTime: string; endTime: string } => {
     const last = currentShifts[currentShifts.length - 1];
@@ -123,13 +150,16 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const handleSaveEditShift = (label: string, startTime: string, endTime: string) => {
     if (!editingShift) return;
     if (onUpdateShiftProp) {
-      onUpdateShiftProp(selectedWorkAreaId, editingShift.code, label, startTime, endTime);
+      onUpdateShiftProp(selectedWorkAreaId, currentModeCode, editingShift.code, label, startTime, endTime);
     } else {
       setWorkAreaShifts((prev) => ({
         ...prev,
-        [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).map((s) =>
-          s.code === editingShift.code ? { ...s, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" } : s,
-        ),
+        [selectedWorkAreaId]: {
+          ...(prev[selectedWorkAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+          [currentModeCode]: (prev[selectedWorkAreaId]?.[currentModeCode] ?? []).map((s) =>
+            s.code === editingShift.code ? { ...s, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" } : s,
+          ),
+        },
       }));
     }
     setEditingShift(null);
@@ -140,22 +170,28 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const handleAddShift = (label: string, startTime: string, endTime: string) => {
     if (onAddShiftProp) {
-      onAddShiftProp(selectedWorkAreaId, label, startTime, endTime);
+      onAddShiftProp(selectedWorkAreaId, currentModeCode, label, startTime, endTime);
     } else {
       const next = `shift_${crypto.randomUUID()}`;
       setWorkAreaShifts((prev) => ({
         ...prev,
-        [selectedWorkAreaId]: [
-          ...(prev[selectedWorkAreaId] ?? []),
-          { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
-        ],
+        [selectedWorkAreaId]: {
+          ...(prev[selectedWorkAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+          [currentModeCode]: [
+            ...(prev[selectedWorkAreaId]?.[currentModeCode] ?? []),
+            { code: next, label, time_range: startTime && endTime ? `${startTime}-${endTime}` : "" },
+          ],
+        },
       }));
       stations
-        .filter((s) => s.work_area_id === selectedWorkAreaId && s.defaultEmployeeId)
+        .filter((s) => {
+          if (s.work_area_id !== selectedWorkAreaId || !s.defaultEmployeeId) return false;
+          const stationMode: ModeCode = (s.mode_code as ModeCode | undefined) ?? DEFAULT_MODE_CODE;
+          return stationMode === currentModeCode;
+        })
         .forEach((s) => {
-          const mode = s.mode_code ?? DEFAULT_MODE_CODE;
-          if (!slotHasAssignment(s.id, next, mode)) {
-            handleAssign(s.defaultEmployeeId!, s.id, next, mode);
+          if (!slotHasAssignment(s.id, next, currentModeCode)) {
+            handleAssign(s.defaultEmployeeId!, s.id, next, currentModeCode);
           }
         });
     }
@@ -164,15 +200,26 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
   const handleDeleteShift = (code: ShiftCode) => {
     if (onDeleteShiftProp) {
-      onDeleteShiftProp(selectedWorkAreaId, code);
+      onDeleteShiftProp(selectedWorkAreaId, currentModeCode, code);
     } else {
       setWorkAreaShifts((prev) => ({
         ...prev,
-        [selectedWorkAreaId]: (prev[selectedWorkAreaId] ?? []).filter((s) => s.code !== code),
+        [selectedWorkAreaId]: {
+          ...(prev[selectedWorkAreaId] ?? ({} as Record<ModeCode, ShiftInfo[]>)),
+          [currentModeCode]: (prev[selectedWorkAreaId]?.[currentModeCode] ?? []).filter((s) => s.code !== code),
+        },
       }));
       const stationIdSet = new Set(workAreaStations.map((s) => s.id));
       if (onUnassignProp) {
-        assignments.filter((a) => a.station_id !== null && stationIdSet.has(a.station_id) && a.shift_code === code).forEach((a) => onUnassignProp(a.employee_id, a.station_id!, a.shift_code, a.mode_code));
+        assignments
+          .filter(
+            (a) =>
+              a.station_id !== null &&
+              stationIdSet.has(a.station_id) &&
+              a.shift_code === code &&
+              a.mode_code === currentModeCode,
+          )
+          .forEach((a) => onUnassignProp(a.employee_id, a.station_id!, a.shift_code, a.mode_code));
       } else {
         console.warn("[AssignmentGrid] onUnassign handler missing — shift assignment cleanup not saved");
       }
@@ -220,8 +267,8 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
         return prev.map((s) => updated.find((u) => u.id === s.id) ?? s);
       });
       if (defaultEmployeeId && station) {
-        const modeCode: ModeCode = station.mode_code ?? DEFAULT_MODE_CODE;
-        (workAreaShifts[station.work_area_id] ?? []).forEach((shift) => {
+        const modeCode: ModeCode = (station.mode_code as ModeCode | undefined) ?? DEFAULT_MODE_CODE;
+        (workAreaShifts[station.work_area_id]?.[modeCode] ?? []).forEach((shift) => {
           if (!slotHasAssignment(stationId, shift.code, modeCode)) {
             handleAssign(defaultEmployeeId, stationId, shift.code, modeCode);
           }
@@ -341,7 +388,13 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       } else {
         const newWa: WorkArea = { id: `wa_${crypto.randomUUID()}`, name, color_hex: color, display_order: workAreas.length + 1, mode_views: modeViews.length ? modeViews : undefined };
         setWorkAreas((prev) => [...prev, newWa]);
-        setWorkAreaShifts((prev) => ({ ...prev, [newWa.id]: [...(defaultShiftsProp ?? mockShifts)] }));
+        const seedTemplate: ShiftInfo[] = defaultShiftsProp ?? mockShifts;
+        const seedModeCodes: ModeCode[] = modeViews.length
+          ? (modeViews.map((mv) => mv.mode_code) as ModeCode[])
+          : [DEFAULT_MODE_CODE];
+        const seedPerMode = {} as Record<ModeCode, ShiftInfo[]>;
+        for (const modeCode of seedModeCodes) seedPerMode[modeCode] = seedTemplate.map((s) => ({ ...s }));
+        setWorkAreaShifts((prev) => ({ ...prev, [newWa.id]: seedPerMode }));
         setWorkAreaModal(null);
         selectWorkArea(newWa.id);
         if (modeViews.length > 0) setSelectedMode(modeViews[0].mode_code as ModeCode);

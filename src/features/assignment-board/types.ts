@@ -18,6 +18,12 @@ export type ShiftInfo = {
   time_range: string;
 };
 
+/**
+ * Shifts are scoped by (work_area_id, mode_code). Work areas without modes
+ * store their shifts under DEFAULT_MODE_CODE ("normal").
+ */
+export type WorkAreaShiftMap = Record<string, Record<ModeCode, ShiftInfo[]>>;
+
 export type WorkAreaModeView = {
   mode_code: ModeCode;
   label: string;
