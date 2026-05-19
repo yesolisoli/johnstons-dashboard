@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor, ChevronDown, ChevronUp } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaShiftMap } from "../types";
@@ -238,43 +238,62 @@ export function TVDisplay({
           </button>
         </div>
 
-        {previewMode && (
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="relative">
-              <Clock size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white" />
+        <div className="flex flex-1 items-center justify-center gap-4">
+          {!previewMode ? (
+            <div className="flex items-baseline gap-2 text-white">
+              <span className="text-2xl font-light tabular-nums tracking-tight leading-none">
+                {now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }).replace(/\s?(AM|PM)$/i, "")}
+              </span>
+              <span className="text-sm font-normal tracking-wide">
+                {now.getHours() >= 12 ? "PM" : "AM"}
+              </span>
+            </div>
+          ) : (
+            <>
               <TimePickerInput
                 value={previewTime}
                 onChange={setPreviewTime}
-                triggerClassName="w-30 rounded-lg border border-white/20 bg-white/10 pl-8 pr-3 py-1.5 text-center text-sm font-medium text-white hover:bg-white/15 focus:outline-none focus:border-white/40"
-                valueClassName="text-white"
-                placeholderClassName="text-white/60"
+                triggerClassName="flex items-baseline gap-2 rounded-md px-3 py-1 text-white hover:bg-white/10 focus:outline-none transition-colors"
+                renderValue={(v) => {
+                  const [hStr, mStr] = v.split(":");
+                  const h = Number(hStr);
+                  const ampm = h >= 12 ? "PM" : "AM";
+                  const h12 = h % 12 === 0 ? 12 : h % 12;
+                  return (
+                    <>
+                      <span className="text-2xl font-light tabular-nums tracking-tight leading-none">
+                        {`${String(h12).padStart(2, "0")}:${mStr}`}
+                      </span>
+                      <span className="text-sm font-normal tracking-wide">{ampm}</span>
+                      <ChevronDown size={14} className="self-center text-white/70" />
+                    </>
+                  );
+                }}
               />
-            </div>
-            <div className="flex items-center gap-1">
-              {["06:00","08:00","10:00","12:00","14:00"].map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setPreviewTime(t)}
-                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                    previewTime === t
-                      ? "bg-blue-600 text-white"
-                      : "bg-white/10 text-slate-300 hover:bg-white/20"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-1 items-center justify-center" />
+              <div className="flex items-center gap-1">
+                {["06:00","08:00","10:00","12:00","14:00"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setPreviewTime(t)}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                      previewTime === t
+                        ? "bg-blue-600 text-white"
+                        : "bg-white/10 text-slate-300 hover:bg-white/20"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
 
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-white bg-transparent px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
           >
             <Monitor size={14} />
             Admin View

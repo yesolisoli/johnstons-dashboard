@@ -69,6 +69,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
   const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
   const selectedWorkAreaId = selectedWorkAreaIdProp ?? localSelectedWorkAreaId;
   const [selectedMode, setSelectedMode] = useState<ModeCode>(DEFAULT_MODE_CODE);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [editingShift, setEditingShift] = useState<{ code: ShiftCode; label: string; startTime: string; endTime: string } | null>(null);
   const [addingShift, setAddingShift] = useState<{ label: string; startTime: string; endTime: string } | null>(null);
@@ -145,6 +146,10 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
     setSelectedMode(wa?.mode_views?.[0]?.mode_code ?? DEFAULT_MODE_CODE);
     setEditingShift(null);
     setAddingShift(null);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+      scrollContainerRef.current.scrollTop = 0;
+    }
   };
 
   // ── Shift handlers ──
@@ -478,7 +483,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
 
       {/* Table */}
       <div className="min-h-0 flex-1 flex items-start gap-2">
-        <div className="min-h-0 min-w-0 h-full flex-1 overflow-auto rounded-lg border border-slate-300 bg-white">
+        <div ref={scrollContainerRef} className="min-h-0 min-w-0 h-full flex-1 overflow-auto rounded-lg border border-slate-300 bg-white">
         <table className="w-full table-fixed border-separate border-spacing-0" style={{ minWidth: `calc(10.5rem + ${currentShifts.length} * 280px)` }}>
           <thead className="sticky top-0 z-30" onMouseEnter={() => setHeaderHover(true)} onMouseLeave={() => setHeaderHover(false)}>
             <tr>
