@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAssignmentBoardData } from "../hooks/use-assignment-board-data";
+import { useSnapshotCapture } from "../hooks/use-snapshot-capture";
 import { AssignmentGrid } from "./assignment-grid";
 import { AssignmentSidebar } from "./assignment-sidebar";
 import { TVDisplay } from "./tv-display";
@@ -16,6 +17,7 @@ export function AssignmentBoardClient() {
     handleDeleteStatusConfig,
     handleAddStatusConfig,
     handleReorderStatusConfig,
+    currentWorkDate,
     announcement,
     handleAnnouncementChange,
     employees,
@@ -57,6 +59,22 @@ export function AssignmentBoardClient() {
     handleQuickAssign,
     getEmployeeEffectiveDepartmentIds,
   } = useAssignmentBoardData();
+
+  const supabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  useSnapshotCapture({
+    enabled: supabaseEnabled && !isHydrating,
+    workDate: currentWorkDate,
+    snapshot: {
+      employees,
+      statuses,
+      assignments,
+      stations,
+      workAreas,
+      workAreaShifts,
+      statusConfigs,
+    },
+    workAreaShifts,
+  });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showTV, setShowTV] = useState(false);

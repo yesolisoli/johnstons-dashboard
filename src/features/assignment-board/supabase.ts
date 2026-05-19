@@ -1036,3 +1036,64 @@ export async function fetchAssignmentBoardSnapshot(
 export function getDefaultSelectedWorkAreaId(): string {
   return mockWorkAreas[0].id;
 }
+
+export type SnapshotListItem = {
+  id: string;
+  work_date: string;
+  captured_at: string;
+};
+
+export type SnapshotRecord = SnapshotListItem & {
+  snapshot: AssignmentBoardSnapshot;
+};
+
+export async function snapshotExistsForDate(workDate: string): Promise<boolean> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("assignment_board_snapshots")
+    .select("id")
+    .eq("work_date", workDate)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+export async function saveAssignmentBoardSnapshot(params: {
+  workDate: string;
+  snapshot: AssignmentBoardSnapshot;
+}): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("assignment_board_snapshots")
+    .insert({
+      work_date: params.workDate,
+      snapshot: params.snapshot,
+    });
+  if (error) {
+    // 23505 = unique_violation — another writer beat us. Ignore.
+    if ((error as { code?: string }).code === "23505") return;
+    throw new Error(error.message);
+  }
+}
+
+export async function listAssignmentBoardSnapshots(): Promise<SnapshotListItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("assignment_board_snapshots")
+    .select("id, work_date, captured_at")
+    .order("work_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SnapshotListItem[];
+}
+
+export async function loadAssignmentBoardSnapshot(workDate: string): Promise<SnapshotRecord | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("assignment_board_snapshots")
+    .select("id, work_date, captured_at, snapshot")
+    .eq("work_date", workDate)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return data as SnapshotRecord;
+}
