@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Truck, Package, Settings, Scissors, Archive, Megaphone, Monitor, ChevronDown, ChevronUp } from "lucide-react";
+import { Truck, Package, Settings, Scissors, Archive, Megaphone, LayoutGrid, ChevronDown, ChevronUp } from "lucide-react";
 import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaShiftMap } from "../types";
@@ -295,7 +295,7 @@ export function TVDisplay({
             onClick={onClose}
             className="flex items-center gap-2 rounded-lg border border-white bg-transparent px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
           >
-            <Monitor size={14} />
+            <LayoutGrid size={14} />
             Admin View
           </button>
         </div>

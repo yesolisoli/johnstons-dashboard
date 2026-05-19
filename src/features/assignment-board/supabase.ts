@@ -1076,14 +1076,14 @@ export async function saveAssignmentBoardSnapshot(params: {
   }
 }
 
-export async function listAssignmentBoardSnapshots(): Promise<SnapshotListItem[]> {
+export async function listAssignmentBoardSnapshots(): Promise<SnapshotRecord[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("assignment_board_snapshots")
-    .select("id, work_date, captured_at")
+    .select("id, work_date, captured_at, snapshot")
     .order("work_date", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as SnapshotListItem[];
+  return (data ?? []) as SnapshotRecord[];
 }
 
 export async function loadAssignmentBoardSnapshot(workDate: string): Promise<SnapshotRecord | null> {

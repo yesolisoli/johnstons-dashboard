@@ -10,7 +10,6 @@ import {
   Package,
   CalendarRange,
   Settings,
-  Archive,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -21,7 +20,6 @@ const items = [
   { href: "/primal-calc", label: "Primal Calc", icon: Calculator },
   { href: "/orders-allocation", label: "Orders & Allocation", icon: Package },
   { href: "/production-planner", label: "Production Planner", icon: CalendarRange },
-  { href: "/history", label: "History", icon: Archive },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
