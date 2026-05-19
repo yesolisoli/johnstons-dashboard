@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SUPABASE_ENABLED } from "@/lib/config";
 import { useAssignmentBoardData } from "../hooks/use-assignment-board-data";
 import { useSnapshotCapture } from "../hooks/use-snapshot-capture";
 import { AssignmentGrid } from "./assignment-grid";
@@ -60,9 +61,8 @@ export function AssignmentBoardClient() {
     getEmployeeEffectiveDepartmentIds,
   } = useAssignmentBoardData();
 
-  const supabaseEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   useSnapshotCapture({
-    enabled: supabaseEnabled && !isHydrating,
+    enabled: SUPABASE_ENABLED && !isHydrating,
     workDate: currentWorkDate,
     snapshot: {
       employees,

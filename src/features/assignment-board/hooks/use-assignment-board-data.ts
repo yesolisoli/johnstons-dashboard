@@ -47,6 +47,7 @@ import {
   writeRealStationAssignment,
 } from "../supabase";
 import { useStatusConfigs } from "./use-status-configs";
+import { SUPABASE_ENABLED } from "@/lib/config";
 
 function buildSeedShiftMap(workAreas: WorkArea[], template: ShiftInfo[]): WorkAreaShiftMap {
   const map: WorkAreaShiftMap = {};
@@ -64,7 +65,7 @@ function buildSeedShiftMap(workAreas: WorkArea[], template: ShiftInfo[]): WorkAr
 }
 
 export function useAssignmentBoardData() {
-  const supabaseReadEnabled = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseReadEnabled = SUPABASE_ENABLED;
   const {
     statusConfigs,
     setStatusConfigs,
