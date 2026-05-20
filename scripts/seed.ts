@@ -202,6 +202,8 @@ function buildStationRows() {
     mode_code: station.mode_code ?? null,
     gender_restriction: station.gender_restriction ?? null,
     default_employee_id: station.defaultEmployeeId ?? null,
+    protected: station.protected ?? false,
+    station_group: station.group ?? null,
   }));
 }
 

@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/client";
 
 import { DEFAULT_STATUS_CONFIGS, STATUS_CODE_ASSIGNED, type StatusConfig } from "./components/status-select";
-import { mockStations } from "./mock-data";
 import { DEFAULT_MODE_CODE, type Employee, type EmployeeStatus, type ModeCode, type ShiftCode, type ShiftInfo, type Station, type StationAssignment, type WorkArea, type WorkAreaModeView, type WorkAreaShiftMap } from "./types";
 import { DEPT_ONLY_SHIFT_CODE } from "./utils";
 
@@ -64,6 +63,8 @@ type StationRow = {
   mode_code: string | null;
   gender_restriction: "M" | "F" | null;
   default_employee_id: string | null;
+  protected: boolean;
+  station_group: string | null;
 };
 
 type EmployeeDailyStatusRow = {
@@ -257,10 +258,11 @@ function buildEmployees(
 
 function buildStations(rows: StationRow[], localOverlayStations: Station[] = []): Station[] {
   const localStationsById = new Map(localOverlayStations.map((station) => [station.id, station]));
-  const mockStationsById = new Map(mockStations.map((station) => [station.id, station]));
 
   return rows.map((row) => {
-    const fallback = localStationsById.get(row.id) ?? mockStationsById.get(row.id);
+    const local = localStationsById.get(row.id);
+    const isProtected = row.protected || !!local?.protected;
+    const group = row.station_group ?? local?.group;
     return {
       id: row.id,
       work_area_id: row.work_area_id,
@@ -270,8 +272,8 @@ function buildStations(rows: StationRow[], localOverlayStations: Station[] = [])
       ...(row.mode_code ? { mode_code: row.mode_code as Station["mode_code"] } : {}),
       ...(row.gender_restriction ? { gender_restriction: row.gender_restriction } : {}),
       ...(row.default_employee_id ? { defaultEmployeeId: row.default_employee_id } : {}),
-      ...(fallback?.protected ? { protected: true } : {}),
-      ...(fallback?.group ? { group: fallback.group } : {}),
+      ...(isProtected ? { protected: true } : {}),
+      ...(group ? { group } : {}),
     };
   });
 }
@@ -354,7 +356,7 @@ async function fetchStationsSnapshot(localOverlayStations: Station[] = []): Prom
   const supabase = createClient();
   const { data, error } = await supabase
     .from("stations")
-    .select("id, work_area_id, name, required_headcount, display_order, mode_code, gender_restriction, default_employee_id")
+    .select("id, work_area_id, name, required_headcount, display_order, mode_code, gender_restriction, default_employee_id, protected, station_group")
     .order("work_area_id", { ascending: true })
     .order("display_order", { ascending: true });
 
@@ -568,6 +570,8 @@ export async function insertStation(params: {
   modeCode?: string;
   genderRestriction?: "M" | "F";
   defaultEmployeeId?: string;
+  protected?: boolean;
+  group?: string;
 }): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("stations").insert({
@@ -579,6 +583,8 @@ export async function insertStation(params: {
     mode_code: params.modeCode ?? null,
     gender_restriction: params.genderRestriction ?? null,
     default_employee_id: params.defaultEmployeeId ?? null,
+    protected: params.protected ?? false,
+    station_group: params.group ?? null,
   });
 
   if (error) throw new Error(error.message);
@@ -656,6 +662,8 @@ export async function updateStationRecord(params: {
   modeCode?: string | null;
   genderRestriction?: "M" | "F" | null;
   defaultEmployeeId?: string | null;
+  protected?: boolean;
+  group?: string | null;
 }): Promise<void> {
   const updates: Record<string, unknown> = {};
   if (params.workAreaId !== undefined) updates.work_area_id = params.workAreaId;
@@ -665,6 +673,8 @@ export async function updateStationRecord(params: {
   if (params.modeCode !== undefined) updates.mode_code = params.modeCode;
   if (params.genderRestriction !== undefined) updates.gender_restriction = params.genderRestriction;
   if (params.defaultEmployeeId !== undefined) updates.default_employee_id = params.defaultEmployeeId;
+  if (params.protected !== undefined) updates.protected = params.protected;
+  if (params.group !== undefined) updates.station_group = params.group;
 
   const supabase = createClient();
   const { error } = await supabase
@@ -695,6 +705,8 @@ export async function replaceStationOrder(stations: Station[]): Promise<void> {
     mode_code: station.mode_code ?? null,
     gender_restriction: station.gender_restriction ?? null,
     default_employee_id: station.defaultEmployeeId ?? null,
+    protected: station.protected ?? false,
+    station_group: station.group ?? null,
   }));
 
   if (dbStations.length === 0) return;
@@ -976,7 +988,7 @@ export async function fetchAssignmentBoardSnapshot(
         .order("work_area_id", { ascending: true }),
       supabase
         .from("stations")
-        .select("id, work_area_id, name, required_headcount, display_order, mode_code, gender_restriction, default_employee_id")
+        .select("id, work_area_id, name, required_headcount, display_order, mode_code, gender_restriction, default_employee_id, protected, station_group")
         .order("work_area_id", { ascending: true })
         .order("display_order", { ascending: true }),
       supabase

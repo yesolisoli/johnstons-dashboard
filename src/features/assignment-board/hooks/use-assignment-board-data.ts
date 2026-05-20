@@ -708,6 +708,7 @@ export function useAssignmentBoardData() {
               requiredHeadcount: station.required_headcount,
               displayOrder: station.display_order,
               modeCode: station.mode_code,
+              group: station.group,
             });
           }
 
@@ -816,6 +817,7 @@ export function useAssignmentBoardData() {
             requiredHeadcount: station.required_headcount,
             displayOrder: station.display_order,
             modeCode: station.mode_code,
+            group: station.group,
           });
         }
       } catch (error) {
@@ -910,6 +912,7 @@ export function useAssignmentBoardData() {
     void updateStationRecord({
       id: stationId,
       name: params.name,
+      group: newGroup ?? null,
       genderRestriction: params.genderRestriction ?? null,
       defaultEmployeeId: params.defaultEmployeeId ?? null,
     }).catch((error) => {
@@ -1009,6 +1012,7 @@ export function useAssignmentBoardData() {
       modeCode: hasModes ? params.modeCode : undefined,
       genderRestriction: params.genderRestriction,
       defaultEmployeeId: params.defaultEmployeeId,
+      group: params.group,
     }).catch((error) => {
       console.error("[assignment-board] Failed to add station:", error);
       void restoreStationsFromDb("handleAddStation");
