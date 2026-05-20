@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Truck, Package, Settings, Scissors, Archive, Megaphone, LayoutGrid, ChevronDown, ChevronUp } from "lucide-react";
-import { mockShifts } from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaShiftMap } from "../types";
 import { abbrevDept, getAssignmentWorkAreaId, getActiveShift, parseTimeMin } from "../utils";
@@ -50,7 +49,7 @@ export function TVDisplay({
   assignments,
   stations,
   workAreas,
-  shifts: shiftsProp,
+  shifts,
   workAreaShifts,
   statusConfigs,
   announcement = "Please clean your work area and report any equipment issues.",
@@ -61,7 +60,7 @@ export function TVDisplay({
   assignments: StationAssignment[];
   stations: Station[];
   workAreas: WorkArea[];
-  shifts?: ShiftInfo[];
+  shifts: ShiftInfo[];
   workAreaShifts?: WorkAreaShiftMap;
   statusConfigs: StatusConfig[];
   announcement?: string;
@@ -88,14 +87,6 @@ export function TVDisplay({
     d.setHours(h, m, 0, 0);
     return d;
   })();
-
-  const usedCodes = [...new Set(assignments.map((a) => a.shift_code))];
-  const shifts: ShiftInfo[] = shiftsProp ?? [
-    ...mockShifts,
-    ...usedCodes
-      .filter((c) => !mockShifts.some((s) => s.code === c))
-      .map((c) => ({ code: c, label: c, time_range: "" })),
-  ];
 
   const sortedWorkAreas = [...workAreas].sort((a, b) => a.display_order - b.display_order);
 

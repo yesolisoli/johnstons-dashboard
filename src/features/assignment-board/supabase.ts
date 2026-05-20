@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 import { DEFAULT_STATUS_CONFIGS, STATUS_CODE_ASSIGNED, type StatusConfig } from "./components/status-select";
-import { mockStations, mockWorkAreas } from "./mock-data";
+import { mockStations } from "./mock-data";
 import { DEFAULT_MODE_CODE, type Employee, type EmployeeStatus, type ModeCode, type ShiftCode, type ShiftInfo, type Station, type StationAssignment, type WorkArea, type WorkAreaModeView, type WorkAreaShiftMap } from "./types";
 import { DEPT_ONLY_SHIFT_CODE } from "./utils";
 
@@ -1030,10 +1030,6 @@ export async function fetchAssignmentBoardSnapshot(
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Assignment board fetch failed: ${message}`);
   }
-}
-
-export function getDefaultSelectedWorkAreaId(): string {
-  return mockWorkAreas[0].id;
 }
 
 export type SnapshotListItem = {

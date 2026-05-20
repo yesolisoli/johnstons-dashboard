@@ -9,7 +9,7 @@ import type {
   WorkArea,
 } from "./types";
 
-export const mockWorkDate = "2026-04-16";
+const mockWorkDate = "2026-04-16";
 
 export const mockShifts: ShiftInfo[] = [
   { code: "shift_1", label: "1st Shift", time_range: "05:00-07:30" },

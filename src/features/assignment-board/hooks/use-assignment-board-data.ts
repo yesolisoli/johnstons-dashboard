@@ -1,18 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  mockAssignments,
-  mockEmployeeStatuses,
-  mockEmployees,
-  mockShifts,
-  mockStations,
-  mockWorkAreas,
-  mockWorkDate,
-} from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type { Employee, EmployeeStatus, ModeCode, ShiftCode, ShiftInfo, Station, StationAssignment, WorkArea, WorkAreaModeView, WorkAreaShiftMap } from "../types";
-import { DEFAULT_STATUS_CONFIGS, getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "../components/status-select";
+import { getUnavailableStatusCodes, STATUS_CODE_AVAILABLE } from "../components/status-select";
 import { getAssignmentWorkAreaId, getEmployeeActiveDepartmentIds, hasNullStationAssignment, DEPT_ONLY_SHIFT_CODE } from "../utils";
 import {
   deleteEmployee,
@@ -24,7 +15,6 @@ import {
   deleteWorkAreaRecord,
   deleteWorkAreaShiftRecord,
   fetchAssignmentBoardSnapshot,
-  getDefaultSelectedWorkAreaId,
   insertEmployee,
   insertStation,
   insertWorkArea,
@@ -47,25 +37,9 @@ import {
   writeRealStationAssignment,
 } from "../supabase";
 import { useStatusConfigs } from "./use-status-configs";
-import { SUPABASE_ENABLED } from "@/lib/config";
-
-function buildSeedShiftMap(workAreas: WorkArea[], template: ShiftInfo[]): WorkAreaShiftMap {
-  const map: WorkAreaShiftMap = {};
-  for (const wa of workAreas) {
-    const modeCodes: ModeCode[] = wa.mode_views?.length
-      ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
-      : [DEFAULT_MODE_CODE];
-    const perMode = {} as Record<ModeCode, ShiftInfo[]>;
-    for (const modeCode of modeCodes) {
-      perMode[modeCode] = template.map((s) => ({ ...s }));
-    }
-    map[wa.id] = perMode;
-  }
-  return map;
-}
+import { INITIAL_WORK_DATE, SUPABASE_ENABLED } from "@/lib/config";
 
 export function useAssignmentBoardData() {
-  const supabaseReadEnabled = SUPABASE_ENABLED;
   const {
     statusConfigs,
     setStatusConfigs,
@@ -73,34 +47,27 @@ export function useAssignmentBoardData() {
     handleDeleteConfig: handleDeleteStatusConfig,
     handleAddConfig: handleAddStatusConfig,
     handleReorderConfig: handleReorderStatusConfig,
-  } = useStatusConfigs(supabaseReadEnabled ? [] : DEFAULT_STATUS_CONFIGS);
+  } = useStatusConfigs([]);
 
-  const [currentWorkDate] = useState<string>(mockWorkDate);
+  const [currentWorkDate] = useState<string>(INITIAL_WORK_DATE);
   const [announcement, setAnnouncement] = useState("Please clean your work area and report any equipment issues.");
-  const [isHydrating, setIsHydrating] = useState<boolean>(supabaseReadEnabled);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const [employees, setEmployees] = useState<Employee[]>(supabaseReadEnabled ? [] : mockEmployees);
-  const [statuses, setStatuses] = useState<Record<string, EmployeeStatus>>(() => {
-    if (supabaseReadEnabled) return {};
-    const map: Record<string, EmployeeStatus> = {};
-    mockEmployeeStatuses
-      .filter((s) => s.work_date === mockWorkDate)
-      .forEach((s) => { map[s.employee_id] = s.status; });
-    return map;
-  });
-  const [assignments, setAssignmentsState] = useState<StationAssignment[]>(supabaseReadEnabled ? [] : mockAssignments);
-  const [stations, setStations] = useState<Station[]>(supabaseReadEnabled ? [] : mockStations);
-  const [workAreas, setWorkAreas] = useState<WorkArea[]>(supabaseReadEnabled ? [] : mockWorkAreas);
-  const [workAreaShifts, setWorkAreaShifts] = useState<WorkAreaShiftMap>(() =>
-    supabaseReadEnabled ? {} : buildSeedShiftMap(mockWorkAreas, mockShifts),
+  const [isHydrating, setIsHydrating] = useState<boolean>(SUPABASE_ENABLED);
+  const [loadError, setLoadError] = useState<string | null>(
+    SUPABASE_ENABLED ? null : "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
   );
-  const [selectedWorkAreaId, setSelectedWorkAreaId] = useState<string>(supabaseReadEnabled ? "" : getDefaultSelectedWorkAreaId());
-  const persistedEmployeeIdsRef = useRef<Set<string>>(new Set(supabaseReadEnabled ? [] : mockEmployees.map((employee) => employee.id)));
+
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, EmployeeStatus>>({});
+  const [assignments, setAssignmentsState] = useState<StationAssignment[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [workAreas, setWorkAreas] = useState<WorkArea[]>([]);
+  const [workAreaShifts, setWorkAreaShifts] = useState<WorkAreaShiftMap>({});
+  const [selectedWorkAreaId, setSelectedWorkAreaId] = useState<string>("");
+  const persistedEmployeeIdsRef = useRef<Set<string>>(new Set());
   const pendingEmployeeInsertionsRef = useRef<Map<string, Promise<void>>>(new Map());
 
   useEffect(() => {
-    if (!supabaseReadEnabled) {
+    if (!SUPABASE_ENABLED) {
       setIsHydrating(false);
       return;
     }
@@ -123,7 +90,7 @@ export function useAssignmentBoardData() {
         setSelectedWorkAreaId((prev) =>
           snapshot.workAreas.some((wa) => wa.id === prev)
             ? prev
-            : (snapshot.workAreas[0]?.id ?? getDefaultSelectedWorkAreaId()),
+            : (snapshot.workAreas[0]?.id ?? ""),
         );
         setLoadError(null);
         setIsHydrating(false);
@@ -141,7 +108,7 @@ export function useAssignmentBoardData() {
     return () => {
       isCancelled = true;
     };
-  }, [currentWorkDate, setStatusConfigs, supabaseReadEnabled]);
+  }, [currentWorkDate, setStatusConfigs]);
 
   const setAssignments = (updater: StationAssignment[] | ((prev: StationAssignment[]) => StationAssignment[])) => {
     setAssignmentsState((prev) => typeof updater === "function" ? updater(prev) : updater);
@@ -242,7 +209,7 @@ export function useAssignmentBoardData() {
   // template entries, so any one of them works as the seed.
   const firstWaShifts = workAreaShifts[workAreas[0]?.id];
   const firstWaTemplate = firstWaShifts ? Object.values(firstWaShifts)[0] : undefined;
-  const defaultShiftTemplate: ShiftInfo[] = firstWaTemplate ?? [...mockShifts];
+  const defaultShiftTemplate: ShiftInfo[] = firstWaTemplate ?? [];
 
   const handleAdd = (emp: Employee) => {
     const qualificationIds = Array.from(

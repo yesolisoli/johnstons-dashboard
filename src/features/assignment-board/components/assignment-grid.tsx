@@ -2,13 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/shared/modal";
-// Standalone fallback defaults — only used when AssignmentGrid is rendered without props
-import {
-  mockAssignments,
-  mockShifts,
-  mockStations,
-  mockWorkAreas,
-} from "../mock-data";
 import { DEFAULT_MODE_CODE } from "../types";
 import type {
   Employee,
@@ -30,43 +23,32 @@ import { StationModal } from "./modals/station-modal";
 import { WorkAreaModal } from "./modals/work-area-modal";
 
 export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmployeeIds, assignments: assignmentsProp, onAssign: onAssignProp, onUnassign: onUnassignProp, onClearWorkArea, stations: stationsProp, onStationsChange, onAddStation: onAddStationProp, onUpdateStation: onUpdateStationProp, onDeleteStation: onDeleteStationProp, onReorderStation: onReorderStationProp, onAddWorkArea: onAddWorkAreaProp, onUpdateWorkArea: onUpdateWorkAreaProp, onDeleteWorkArea: onDeleteWorkAreaProp, onAddShift: onAddShiftProp, onUpdateShift: onUpdateShiftProp, onDeleteShift: onDeleteShiftProp, workAreas: workAreasProp, onWorkAreasChange, workAreaShifts: workAreaShiftsProp, onWorkAreaShiftsChange, selectedWorkAreaId: selectedWorkAreaIdProp, onWorkAreaChange, defaultShifts: defaultShiftsProp, onEmployeeDoubleClick, statusConfigs }: { employees?: Employee[]; statuses?: Record<string, string>; disabledEmployeeIds?: Set<string>; assignments?: StationAssignment[]; onAssign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onUnassign?: (employeeId: string, stationId: string, shiftCode: ShiftCode, modeCode: ModeCode) => void; onClearWorkArea?: (workAreaId: string) => void; stations?: Station[]; onStationsChange?: (s: Station[]) => void; onAddStation?: (params: { workAreaId: string; name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string; modeCode: ModeCode }) => void; onUpdateStation?: (stationId: string, params: { name: string; group?: string; genderRestriction?: "M" | "F"; defaultEmployeeId?: string }) => void; onDeleteStation?: (stationId: string) => void; onReorderStation?: (draggedStationId: string, targetStationId: string) => void; onAddWorkArea?: (name: string, color: string, modeViews: WorkAreaModeView[]) => string; onUpdateWorkArea?: (id: string, name: string, color: string, modeViews: WorkAreaModeView[]) => void; onDeleteWorkArea?: (workAreaId: string) => void; onAddShift?: (workAreaId: string, modeCode: ModeCode, label: string, startTime: string, endTime: string) => void; onUpdateShift?: (workAreaId: string, modeCode: ModeCode, code: ShiftCode, label: string, startTime: string, endTime: string) => void; onDeleteShift?: (workAreaId: string, modeCode: ModeCode, code: ShiftCode) => void; workAreas?: WorkArea[]; onWorkAreasChange?: (wa: WorkArea[]) => void; workAreaShifts?: WorkAreaShiftMap; onWorkAreaShiftsChange?: (v: WorkAreaShiftMap) => void; selectedWorkAreaId?: string; onWorkAreaChange?: (id: string) => void; defaultShifts?: ShiftInfo[]; onEmployeeDoubleClick?: (name: string) => void; statusConfigs?: StatusConfig[] } = {}) {
-  const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>(mockWorkAreas);
+  const [localWorkAreas, setLocalWorkAreas] = useState<WorkArea[]>([]);
   const workAreas = workAreasProp ?? localWorkAreas;
   const setWorkAreas = (updater: WorkArea[] | ((prev: WorkArea[]) => WorkArea[])) => {
     const next = typeof updater === "function" ? updater(workAreas) : updater;
     setLocalWorkAreas(next);
     onWorkAreasChange?.(next);
   };
-  const [localStations, setLocalStations] = useState<Station[]>(mockStations);
+  const [localStations, setLocalStations] = useState<Station[]>([]);
   const stations = stationsProp ?? localStations;
   const setStations = (updater: Station[] | ((prev: Station[]) => Station[])) => {
     const next = typeof updater === "function" ? updater(stations) : updater;
     setLocalStations(next);
     onStationsChange?.(next);
   };
-  const [localWorkAreaShifts, setLocalWorkAreaShifts] = useState<WorkAreaShiftMap>(() => {
-    const seed: WorkAreaShiftMap = {};
-    for (const wa of mockWorkAreas) {
-      const modeCodes: ModeCode[] = wa.mode_views?.length
-        ? (wa.mode_views.map((mv) => mv.mode_code) as ModeCode[])
-        : [DEFAULT_MODE_CODE];
-      const perMode = {} as Record<ModeCode, ShiftInfo[]>;
-      for (const modeCode of modeCodes) perMode[modeCode] = mockShifts.map((s) => ({ ...s }));
-      seed[wa.id] = perMode;
-    }
-    return seed;
-  });
+  const [localWorkAreaShifts, setLocalWorkAreaShifts] = useState<WorkAreaShiftMap>({});
   const workAreaShifts = workAreaShiftsProp ?? localWorkAreaShifts;
   const setWorkAreaShifts = (updater: WorkAreaShiftMap | ((prev: WorkAreaShiftMap) => WorkAreaShiftMap)) => {
     const next = typeof updater === "function" ? updater(workAreaShifts) : updater;
     setLocalWorkAreaShifts(next);
     onWorkAreaShiftsChange?.(next);
   };
-  const [localAssignments] = useState<StationAssignment[]>(mockAssignments);
+  const [localAssignments] = useState<StationAssignment[]>([]);
   const assignments = assignmentsProp ?? localAssignments;
   const employees = (employeesProp ?? []).filter((e) => e.active);
 
-  const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState(mockWorkAreas[0].id);
+  const [localSelectedWorkAreaId, setLocalSelectedWorkAreaId] = useState<string>("");
   const selectedWorkAreaId = selectedWorkAreaIdProp ?? localSelectedWorkAreaId;
   const [selectedMode, setSelectedMode] = useState<ModeCode>(DEFAULT_MODE_CODE);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -394,7 +376,7 @@ export function AssignmentGrid({ employees: employeesProp, statuses, disabledEmp
       } else {
         const newWa: WorkArea = { id: `wa_${crypto.randomUUID()}`, name, color_hex: color, display_order: workAreas.length + 1, mode_views: modeViews.length ? modeViews : undefined };
         setWorkAreas((prev) => [...prev, newWa]);
-        const seedTemplate: ShiftInfo[] = defaultShiftsProp ?? mockShifts;
+        const seedTemplate: ShiftInfo[] = defaultShiftsProp ?? [];
         const seedModeCodes: ModeCode[] = modeViews.length
           ? (modeViews.map((mv) => mv.mode_code) as ModeCode[])
           : [DEFAULT_MODE_CODE];
