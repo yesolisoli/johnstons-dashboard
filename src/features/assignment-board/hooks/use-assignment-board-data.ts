@@ -78,6 +78,7 @@ export function useAssignmentBoardData() {
   const [currentWorkDate] = useState<string>(mockWorkDate);
   const [announcement, setAnnouncement] = useState("Please clean your work area and report any equipment issues.");
   const [isHydrating, setIsHydrating] = useState<boolean>(supabaseReadEnabled);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [employees, setEmployees] = useState<Employee[]>(supabaseReadEnabled ? [] : mockEmployees);
   const [statuses, setStatuses] = useState<Record<string, EmployeeStatus>>(() => {
@@ -107,41 +108,32 @@ export function useAssignmentBoardData() {
     let isCancelled = false;
 
     async function loadFromSupabase() {
-      const snapshot = await fetchAssignmentBoardSnapshot(currentWorkDate);
-      if (isCancelled) return;
-      if (!snapshot) {
-        const mockStatusMap: Record<string, EmployeeStatus> = {};
-        mockEmployeeStatuses
-          .filter((s) => s.work_date === mockWorkDate)
-          .forEach((s) => { mockStatusMap[s.employee_id] = s.status; });
+      try {
+        const snapshot = await fetchAssignmentBoardSnapshot(currentWorkDate);
+        if (isCancelled) return;
 
-        setEmployees(mockEmployees);
-        setStatuses(mockStatusMap);
-        setAssignmentsState(mockAssignments);
-        setStations(mockStations);
-        setWorkAreas(mockWorkAreas);
-        setWorkAreaShifts(buildSeedShiftMap(mockWorkAreas, mockShifts));
-        setStatusConfigs(DEFAULT_STATUS_CONFIGS);
-        persistedEmployeeIdsRef.current = new Set(mockEmployees.map((employee) => employee.id));
-        setSelectedWorkAreaId(getDefaultSelectedWorkAreaId());
+        setEmployees(snapshot.employees);
+        setStatuses(snapshot.statuses);
+        setAssignmentsState(snapshot.assignments);
+        setStations(snapshot.stations);
+        setWorkAreas(snapshot.workAreas);
+        setWorkAreaShifts(snapshot.workAreaShifts);
+        setStatusConfigs(snapshot.statusConfigs);
+        persistedEmployeeIdsRef.current = new Set(snapshot.employees.map((employee) => employee.id));
+        setSelectedWorkAreaId((prev) =>
+          snapshot.workAreas.some((wa) => wa.id === prev)
+            ? prev
+            : (snapshot.workAreas[0]?.id ?? getDefaultSelectedWorkAreaId()),
+        );
+        setLoadError(null);
         setIsHydrating(false);
-        return;
+      } catch (error) {
+        if (isCancelled) return;
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[assignment-board] Initial load failed:", message);
+        setLoadError(message);
+        setIsHydrating(false);
       }
-
-      setEmployees(snapshot.employees);
-      setStatuses(snapshot.statuses);
-      setAssignmentsState(snapshot.assignments);
-      setStations(snapshot.stations);
-      setWorkAreas(snapshot.workAreas);
-      setWorkAreaShifts(snapshot.workAreaShifts);
-      setStatusConfigs(snapshot.statusConfigs);
-      persistedEmployeeIdsRef.current = new Set(snapshot.employees.map((employee) => employee.id));
-      setSelectedWorkAreaId((prev) =>
-        snapshot.workAreas.some((wa) => wa.id === prev)
-          ? prev
-          : (snapshot.workAreas[0]?.id ?? getDefaultSelectedWorkAreaId()),
-      );
-      setIsHydrating(false);
     }
 
     void loadFromSupabase();
@@ -1094,6 +1086,7 @@ export function useAssignmentBoardData() {
     workAreaShifts,
     selectedWorkAreaId,
     isHydrating,
+    loadError,
     disabledIds,
     defaultShiftTemplate,
     handleDeleteShift,

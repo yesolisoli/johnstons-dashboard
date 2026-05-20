@@ -29,6 +29,7 @@ export function AssignmentBoardClient() {
     workAreaShifts,
     selectedWorkAreaId,
     isHydrating,
+    loadError,
     disabledIds,
     defaultShiftTemplate,
     handleDeleteShift,
@@ -104,6 +105,20 @@ export function AssignmentBoardClient() {
       <div className="flex h-full items-center justify-center">
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
           Loading assignment board...
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="max-w-lg rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 shadow-sm">
+          <p className="font-semibold">Could not load assignment board</p>
+          <p className="mt-1 wrap-break-word text-xs text-red-600">{loadError}</p>
+          <p className="mt-3 text-xs text-red-500">
+            Check Supabase connectivity and reload the page. The board is intentionally blank to avoid showing stale or mock data.
+          </p>
         </div>
       </div>
     );

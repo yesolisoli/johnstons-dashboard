@@ -931,7 +931,7 @@ export async function deleteAssignmentsByIds(ids: string[]): Promise<void> {
 
 export async function fetchAssignmentBoardSnapshot(
   workDate: string,
-): Promise<AssignmentBoardSnapshot | null> {
+): Promise<AssignmentBoardSnapshot> {
   const supabase = createClient();
 
   try {
@@ -1028,8 +1028,7 @@ export async function fetchAssignmentBoardSnapshot(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[assignment-board] Supabase read failed, using mock data: ${message}`);
-    return null;
+    throw new Error(`Assignment board fetch failed: ${message}`);
   }
 }
 
